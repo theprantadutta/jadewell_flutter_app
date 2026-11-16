@@ -113,16 +113,26 @@ class _JwListRowState extends State<JwListRow> {
               JwIconWell(icon: widget.icon!, color: widget.destructive ? jw.danger : jw.accent),
               const SizedBox(width: 16),
             ],
-            Expanded(
-              child: Text(widget.title, style: jw.text.body.copyWith(fontSize: 16.5, color: titleColor)),
-            ),
-            if (widget.value != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                widget.value!,
-                style: widget.monoValue
-                    ? jw.text.numM.copyWith(fontSize: 15, color: jw.textMuted)
-                    : jw.text.callout.copyWith(fontSize: 15.5, fontWeight: FontWeight.w400, color: jw.textMuted),
+            // With a value, the title keeps its natural width and the value
+            // takes the rest (ellipsized), so a long value (an email) never
+            // squeezes the title into wrapping.
+            if (widget.value == null)
+              Expanded(
+                child: Text(widget.title, style: jw.text.body.copyWith(fontSize: 16.5, color: titleColor)),
+              )
+            else ...[
+              Text(widget.title, maxLines: 1, style: jw.text.body.copyWith(fontSize: 16.5, color: titleColor)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.value!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: widget.monoValue
+                      ? jw.text.numM.copyWith(fontSize: 15, color: jw.textMuted)
+                      : jw.text.callout.copyWith(fontSize: 15.5, fontWeight: FontWeight.w400, color: jw.textMuted),
+                ),
               ),
             ],
             if (widget.trailing != null) ...[const SizedBox(width: 8), widget.trailing!],
