@@ -1,0 +1,19 @@
+# Native splash: the flat background with the mark's tiles at their final pose
+# (design/splash/SPLASH.md option A). The Flutter splash continues from this frame.
+# Regenerate: dart run flutter_native_splash:create
+# After regenerating, restore windowDrawsSystemBarBackgrounds=true in the Android
+# styles (the generator resets it; needed for Android 15 edge-to-edge).
+flutter_native_splash:
+  color: "#F6E9E1"
+  color_dark: "#241F1C"
+  image: assets/splash/splash_mark.png
+  image_dark: assets/splash/splash_mark.png
+  android_12:
+    image: assets/splash/splash_android12.png
+    image_dark: assets/splash/splash_android12.png
+    color: "#F6E9E1"
+    color_dark: "#241F1C"
+  android: true
+  ios: true
+  web: false
+  fullscreen: false
