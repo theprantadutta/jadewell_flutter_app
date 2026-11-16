@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "chapters": [
+    {
+      "id": "classics",
+      "name": "Classics",
+      "order": 1,
+      "unlock": {
+        "type": "always"
+      },
+      "layouts": [
+        {
+          "id": "pyramid",
+          "requiresChapterClears": 0
+        },
+        {
+          "id": "turtle",
+          "requiresChapterClears": 0
+        },
+        {
+          "id": "fortress",
+          "requiresChapterClears": 0
+        },
+        {
+          "id": "bridge",
+          "requiresChapterClears": 0
+        }
+      ]
+    },
+    {
+      "id": "creatures",
+      "name": "Creatures",
+      "order": 2,
+      "unlock": {
+        "type": "chapterClears",
+        "chapter": "classics",
+        "count": 3
+      },
+      "layouts": [
+        {
+          "id": "crab",
+          "requiresChapterClears": 0
+        },
+        {
+          "id": "dragon",
+          "requiresChapterClears": 1
+        },
+        {
+          "id": "butterfly",
+          "requiresChapterClears": 2
+        },
+        {
+          "id": "cat",
+          "requiresChapterClears": 3
+        }
+      ]
+    },
+    {
+      "id": "wonders",
+      "name": "Wonders",
+      "order": 3,
+      "unlock": {
+        "type": "totalClears",
+        "count": 8
+      },
+      "layouts": [
+        {
+          "id": "spiral",
+          "requiresChapterClears": 0
+        },
+        {
+          "id": "temple",
+          "requiresChapterClears": 1
+        },
+        {
+          "id": "arena",
+          "requiresChapterClears": 2
+        },
+        {
+          "id": "tower",
+          "requiresChapterClears": 3
+        }
+      ]
+    }
+  ],
+  "dailyPool": [
+    "lotus",
+    "lantern",
+    "fan",
+    "bonsai",
+    "koi",
+    "gate",
+    "moon",
+    "bell"
+  ]
+}
