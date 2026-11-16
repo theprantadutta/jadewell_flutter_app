@@ -31,7 +31,7 @@ Package: `flutter_inapp_purchase` (same family as snake-classic, now on 11.x). T
 ## The flow
 
 1. **Listeners first, then `initConnection`.** StoreKit replays unfinished transactions the moment the connection opens.
-2. **Fetch the product.** No billing (no Play Store, sideloaded build, simulator without StoreKit config, connection error) → `StoreUnavailable`. Store answers but has no such product → `StoreProductMissing`. Both render "Not available yet". A product created later is picked up on the next resume (`reconcile()` re-fetches while there is no price).
+2. **Fetch the product.** No billing (no Play Store, sideloaded build, simulator without StoreKit config, connection error) → `StoreUnavailable`. Store answers but has no such product (Play returns an unfetched placeholder with an empty price; seen on the device in Nov 2026) → `StoreProductMissing`. Both render "Not available yet". A product created later is picked up on the next resume (`reconcile()` re-fetches while there is no price).
 3. **Buy** → `StorePurchasing` (spinner). The result arrives on the listeners:
    - **PURCHASED** → granted locally at once (the player paid; the Drift row is the local truth), `StoreVerifying`, then `POST /purchases/verify`.
    - **PENDING** (cash, carrier billing, parental approval) → "Payment pending". Nothing granted, nothing finished. Play re-reports it as PURCHASED when it clears; the listener or the next resume reconcile picks it up.

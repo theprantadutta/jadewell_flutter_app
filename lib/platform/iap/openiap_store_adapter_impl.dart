@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_inapp_purchase/flutter_inapp_purchase.dart';
 
 import 'purchase_service.dart';
@@ -36,6 +37,7 @@ class OpenIapStoreAdapter implements StoreAdapter {
     final products = await _iap.fetchProducts<Product>(skus: [productId], type: ProductQueryType.InApp);
     for (final p in products) {
       if (p.id == productId && p.displayPrice.isNotEmpty) return p.displayPrice;
+      debugPrint('iap: store returned an unusable product (id: ${p.id}, price: "${p.displayPrice}")');
     }
     return null;
   }
