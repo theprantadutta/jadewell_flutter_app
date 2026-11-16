@@ -134,6 +134,22 @@ SharedPreferences only for device-only flags (onboarding done, JWT, install id, 
 
 ## 4. State (Riverpod)
 
+**Decision: Riverpod 3 (latest 3.x), manual providers, no codegen.** Chosen over Bloc after comparing both (Nov 2026):
+
+- One library covers state, async caching **and** DI with overrides (debug/no-op/release platform services, test fakes). Bloc would need get_it alongside it, the mix snake-classic ended up with.
+- The engine already is the event/state machine (`command → (GameState, events)`); a Bloc on top would restate the same events. A `Notifier` is a thin adapter.
+- Drift streams, leaderboards, friends and auth map directly onto `StreamProvider` / `AsyncNotifier`.
+- Tests use `ProviderContainer(overrides: …)` without widget scaffolding.
+
+**Rules:**
+1. Only `Provider`, `Notifier`, `AsyncNotifier`, `StreamNotifier`, `FutureProvider`, `StreamProvider` (+ `.family`, `.autoDispose`). No legacy `StateProvider` / `StateNotifierProvider` / `ChangeNotifierProvider`; no experimental mutations or offline persistence (Drift owns persistence).
+2. Automatic retry is **disabled globally** (`ProviderScope(retry: (_, _) => null)`); network read providers opt in with their own retry policy.
+3. Platform services are `Provider<Interface>` that throw by default and are overridden in `main.dart` (release vs debug impls) and in tests.
+4. The game controller is kept alive for the board's lifetime (`ref.keepAlive()` link released on exit); its clock pauses on `AppLifecycleState` changes, not on provider pausing.
+5. Animations subscribe to the controller's `Stream<GameEvent>` (`ref.listen` / subscription in the board's `State`) and drive `AnimationController`s; widgets `select` the minimal slice of state, so the board never rebuilds per frame.
+6. No `ref.read` in `build`; `ref.watch` for rendering, `ref.read` in callbacks, `ref.listen` for side effects (navigation, sheets, haptics).
+7. Providers live in `lib/state/`, one file per feature, named `xxxProvider`; notifiers are classes named `XxxController`.
+
 - `gameControllerProvider(layoutId | daily)`: `Notifier` holding `GameState` + clock + an event stream for the board. Owns the timer (pauses on background/pause sheet), fires analytics, writes results through repositories.
 - `settingsProvider`, `progressProvider`, `dailyProvider`, `leaderboardProvider(tab)`, `friendsProvider`, `authProvider`, `entitlementProvider`, `adGateProvider`.
 - Platform services exposed via providers with interface types; `main.dart` overrides them with real impls (release) or debug/no-op impls.
