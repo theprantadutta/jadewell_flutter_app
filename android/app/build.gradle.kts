@@ -9,6 +9,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// AdMob app id from the gitignored android/ads.properties (written by
+// `dart run tool/gen_ad_ids.dart`, docs/ADS.md). Without it the build uses
+// Google's sample app id, which serves test ads only.
+val adsProperties = java.util.Properties().apply {
+    val file = rootProject.file("ads.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val admobAppId: String = adsProperties.getProperty("admobAppId")?.takeIf { it.isNotBlank() }
+    ?: "ca-app-pub-3940256099942544~3347511713"
+
 android {
     namespace = "com.pranta.jadewell"
     compileSdk = flutter.compileSdkVersion
@@ -32,6 +42,7 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     buildTypes {

@@ -1,1 +1,7 @@
 #include "Generated.xcconfig"
+
+// AdMob app id: Google's sample iOS app id (test ads only) unless the
+// gitignored Ads.xcconfig, written by `dart run tool/gen_ad_ids.dart`,
+// overrides it (docs/ADS.md). Later definitions win, so keep this order.
+ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+#include? "Ads.xcconfig"

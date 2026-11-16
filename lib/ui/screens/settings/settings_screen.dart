@@ -37,6 +37,7 @@ class SettingsScreen extends ConsumerWidget {
     final s = ref.watch(settingsProvider).value ?? const AppSettings();
     final session = ref.watch(sessionProvider).value;
     final adsRemoved = ref.watch(adServiceProvider).adsRemoved;
+    final ads = ref.watch(adServiceProvider);
     final version = ref.watch(appVersionProvider).value;
     final haptic = ref.watch(hapticsProvider).selection;
     final jw = context.jw;
@@ -177,14 +178,16 @@ class SettingsScreen extends ConsumerWidget {
                 onHaptic: haptic,
                 onTap: () => _openPrivacy(context),
               ),
-              JwListRow(
-                icon: JwIcons.eye,
-                title: l.settingsAdPrivacy,
-                chevron: true,
-                onHaptic: haptic,
-                // TODO(Phase 8): ConsentInformation.showPrivacyOptionsForm (UMP).
-                onTap: () => showJwToast(context, l.settingsAdPrivacySoon),
-              ),
+              // UMP decides whether a privacy options entry point is required
+              // (e.g. EEA/UK); elsewhere the row would open nothing.
+              if (ads.privacyOptionsRequired)
+                JwListRow(
+                  icon: JwIcons.eye,
+                  title: l.settingsAdPrivacy,
+                  chevron: true,
+                  onHaptic: haptic,
+                  onTap: () => unawaited(ads.showPrivacyOptions()),
+                ),
               JwListRow(
                 icon: JwIcons.trash,
                 title: l.settingsResetProgress,

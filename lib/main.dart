@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'data/api/install_identity.dart';
 import 'firebase_options.dart';
+import 'platform/ads/ad_gate_store_impl.dart';
+import 'platform/ads/ad_service_impl.dart';
 import 'platform/analytics/debug_print_analytics_impl.dart';
 import 'platform/analytics/firebase_analytics_impl.dart';
 import 'platform/audio/audio_service_impl.dart';
@@ -59,6 +61,11 @@ Future<void> main() async {
       analyticsProvider.overrideWithValue(kReleaseMode ? FirebaseAnalyticsImpl() : DebugPrintAnalytics()),
       audioProvider.overrideWithValue(AudioServiceImpl(SoLoudAudioEngine())),
       hapticsProvider.overrideWithValue(HapticServiceImpl()),
+      adServiceProvider.overrideWith((ref) {
+        final ads = AdServiceImpl(store: SharedPrefsAdGateStore(prefs), analytics: ref.watch(analyticsProvider));
+        ref.onDispose(ads.dispose);
+        return ads;
+      }),
       settingsRepositoryProvider.overrideWith((ref) => ref.watch(driftSettingsRepositoryProvider)),
       progressRepositoryProvider.overrideWith((ref) => ref.watch(driftProgressRepositoryProvider)),
       statsRepositoryProvider.overrideWith((ref) => ref.watch(driftStatsRepositoryProvider)),
@@ -73,6 +80,9 @@ Future<void> main() async {
   }));
 
   PlatformBridge.start(container); // settings + lifecycle → audio/haptics; audio starts after first frame
+
+  // Ads: consent (UMP/ATT), SDK and preloads start after the first frame, never blocking start-up.
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(container.read(adServiceProvider).init()));
 
   runApp(UncontrolledProviderScope(container: container, child: const JadewellApp()));
 }

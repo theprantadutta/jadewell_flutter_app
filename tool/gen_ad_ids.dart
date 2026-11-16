@@ -1,0 +1,214 @@
+// Generates the AdMob id files from the gitignored ADMOB-NOTE.txt (docs/ADS.md).
+//
+//   dart run tool/gen_ad_ids.dart                 # reads ADMOB-NOTE.txt
+//   dart run tool/gen_ad_ids.dart --note <file>   # reads another copy of the note
+//
+// Writes (all gitignored, never committed; the repo is public):
+//   lib/platform/ads/ad_ids.dart   release unit ids (debug/profile use Google's test ids)
+//   android/ads.properties         admobAppId, read by android/app/build.gradle.kts
+//   ios/Flutter/Ads.xcconfig       ADMOB_APP_ID, optionally included by Debug/Release.xcconfig
+//
+// Without a note it still writes lib/platform/ads/ad_ids.dart with empty ids
+// (same shape as the committed ad_ids.example.dart) so a fresh clone compiles;
+// release builds then request no ads, and the native app ids fall back to
+// Google's test app ids. Refuses to write any output git does not ignore.
+//
+// Pure Dart (dart:io only).
+
+import 'dart:io';
+
+const String kNotePath = 'ADMOB-NOTE.txt';
+const String kDartOut = 'lib/platform/ads/ad_ids.dart';
+const String kAndroidOut = 'android/ads.properties';
+const String kIosOut = 'ios/Flutter/Ads.xcconfig';
+
+/// One platform's ids. Empty string = not provided.
+class PlatformAdIds {
+  const PlatformAdIds({
+    this.appId = '',
+    this.interstitial = '',
+    this.rewarded = '',
+    this.rewardedInterstitial = '',
+    this.appOpen = '',
+  });
+
+  final String appId;
+  final String interstitial;
+  final String rewarded;
+  final String rewardedInterstitial;
+  final String appOpen;
+
+  PlatformAdIds copyWith({
+    String? appId,
+    String? interstitial,
+    String? rewarded,
+    String? rewardedInterstitial,
+    String? appOpen,
+  }) =>
+      PlatformAdIds(
+        appId: appId ?? this.appId,
+        interstitial: interstitial ?? this.interstitial,
+        rewarded: rewarded ?? this.rewarded,
+        rewardedInterstitial: rewardedInterstitial ?? this.rewardedInterstitial,
+        appOpen: appOpen ?? this.appOpen,
+      );
+
+  Map<String, String> get units => {
+        'Interstitial': interstitial,
+        'Rewarded': rewarded,
+        'RewardedInterstitial': rewardedInterstitial,
+        'AppOpen': appOpen,
+      };
+}
+
+class AdIdsNote {
+  const AdIdsNote({this.android = const PlatformAdIds(), this.ios = const PlatformAdIds()});
+  final PlatformAdIds android;
+  final PlatformAdIds ios;
+}
+
+final RegExp _appId = RegExp(r'^ca-app-pub-\d{16}~\d{10}$');
+final RegExp _unitId = RegExp(r'^ca-app-pub-\d{16}/\d{10}$');
+final RegExp _anyId = RegExp(r'ca-app-pub-\d+[~/]\d+');
+
+/// Parses the note's ANDROID and iOS sections. Lines are `Label ...: value`;
+/// placeholder values (`ca-app-pub-...`) and blanks count as not provided.
+/// Throws [FormatException] for a malformed id.
+AdIdsNote parseNote(String text) {
+  var android = const PlatformAdIds();
+  var ios = const PlatformAdIds();
+  String? section;
+  for (final raw in text.split(RegExp(r'\r?\n'))) {
+    final line = raw.trim();
+    if (line.startsWith('---')) {
+      final upper = line.toUpperCase();
+      section = upper.contains('ANDROID')
+          ? 'android'
+          : upper.contains('IOS')
+              ? 'ios'
+              : null;
+      continue;
+    }
+    if (section == null) continue;
+    final colon = line.indexOf(':');
+    if (colon <= 0) continue;
+    final label = line.substring(0, colon).toLowerCase();
+    final valuePart = line.substring(line.lastIndexOf(': ') >= 0 ? line.lastIndexOf(': ') + 1 : colon + 1);
+    final value = _anyId.firstMatch(valuePart)?.group(0) ?? '';
+
+    String? field;
+    if (label.startsWith('app id')) {
+      field = 'appId';
+    } else if (label.startsWith('rewarded interstitial')) {
+      field = 'rewardedInterstitial';
+    } else if (label.startsWith('rewarded')) {
+      field = 'rewarded';
+    } else if (label.startsWith('interstitial')) {
+      field = 'interstitial';
+    } else if (label.startsWith('app open')) {
+      field = 'appOpen';
+    }
+    if (field == null) continue;
+    if (value.isNotEmpty) {
+      final ok = field == 'appId' ? _appId.hasMatch(value) : _unitId.hasMatch(value);
+      if (!ok) throw FormatException('$section $field: malformed AdMob id "$value"');
+    }
+    PlatformAdIds set(PlatformAdIds p) => switch (field) {
+          'appId' => p.copyWith(appId: value),
+          'interstitial' => p.copyWith(interstitial: value),
+          'rewarded' => p.copyWith(rewarded: value),
+          'rewardedInterstitial' => p.copyWith(rewardedInterstitial: value),
+          _ => p.copyWith(appOpen: value),
+        };
+    if (section == 'android') {
+      android = set(android);
+    } else {
+      ios = set(ios);
+    }
+  }
+  return AdIdsNote(android: android, ios: ios);
+}
+
+/// The Dart source of lib/platform/ads/ad_ids.dart (same shape as
+/// ad_ids.example.dart).
+String renderDart(AdIdsNote note, {required bool fromNote}) {
+  final b = StringBuffer()
+    ..writeln('// GENERATED by tool/gen_ad_ids.dart from ADMOB-NOTE.txt. Gitignored: never commit.')
+    ..writeln(fromNote
+        ? '// Release-only AdMob unit ids; debug/profile builds use Google\'s test ids.'
+        : '// No ADMOB-NOTE.txt was found: every id is empty, so release builds request no ads.')
+    ..writeln('// Regenerate with `dart run tool/gen_ad_ids.dart` (docs/ADS.md).')
+    ..writeln()
+    ..writeln('abstract final class AdIds {');
+  for (final (platform, ids) in [('android', note.android), ('ios', note.ios)]) {
+    for (final e in ids.units.entries) {
+      b.writeln("  static const String $platform${e.key} = '${e.value}';");
+    }
+  }
+  b.writeln('}');
+  return b.toString();
+}
+
+/// True when git ignores [path] (or git is unavailable, which only happens
+/// outside a clone, where nothing can be committed anyway).
+bool isGitIgnored(String path) {
+  try {
+    final r = Process.runSync('git', ['check-ignore', '-q', path]);
+    if (r.exitCode == 0) return true;
+    if (r.exitCode == 1) return false;
+    return true; // 128: not a git repository
+  } on ProcessException {
+    return true;
+  }
+}
+
+void _write(String path, String content) {
+  if (!isGitIgnored(path)) {
+    stderr.writeln('gen_ad_ids: refusing to write $path: it is not gitignored (the repo is public).');
+    exit(1);
+  }
+  File(path)
+    ..parent.createSync(recursive: true)
+    ..writeAsStringSync(content);
+  stdout.writeln('gen_ad_ids: wrote $path');
+}
+
+void main(List<String> args) {
+  final i = args.indexOf('--note');
+  final notePath = (i != -1 && i + 1 < args.length) ? args[i + 1] : kNotePath;
+  final noteFile = File(notePath);
+
+  if (!noteFile.existsSync()) {
+    stdout.writeln('gen_ad_ids: $notePath not found; writing empty ids (release builds will request no ads).');
+    _write(kDartOut, renderDart(const AdIdsNote(), fromNote: false));
+    return;
+  }
+
+  final AdIdsNote note;
+  try {
+    note = parseNote(noteFile.readAsStringSync());
+  } on FormatException catch (e) {
+    stderr.writeln('gen_ad_ids: ${e.message}');
+    exit(1);
+  }
+
+  _write(kDartOut, renderDart(note, fromNote: true));
+
+  if (note.android.appId.isNotEmpty) {
+    _write(kAndroidOut, '# GENERATED by tool/gen_ad_ids.dart from ADMOB-NOTE.txt. Gitignored: never commit.\n'
+        'admobAppId=${note.android.appId}\n');
+  } else {
+    stdout.writeln('gen_ad_ids: no Android app id in the note; Android keeps Google\'s test app id.');
+  }
+  if (note.ios.appId.isNotEmpty) {
+    _write(kIosOut, '// GENERATED by tool/gen_ad_ids.dart from ADMOB-NOTE.txt. Gitignored: never commit.\n'
+        'ADMOB_APP_ID = ${note.ios.appId}\n');
+  } else {
+    stdout.writeln('gen_ad_ids: no iOS app id in the note; iOS keeps Google\'s test app id.');
+  }
+
+  for (final (name, ids) in [('Android', note.android), ('iOS', note.ios)]) {
+    final missing = ids.units.entries.where((e) => e.value.isEmpty).map((e) => e.key).toList();
+    if (missing.isNotEmpty) stdout.writeln('gen_ad_ids: $name has no id for ${missing.join(', ')} (that format stays off in release).');
+  }
+}

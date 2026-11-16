@@ -26,6 +26,13 @@ abstract final class AnalyticsEvents {
   static const streakRepaired = 'streak_repaired';
   static const settingsChanged = 'settings_changed';
   static const accountLinked = 'account_linked';
+
+  // Ads (docs/ADS.md). `ad_reward` is reserved by Firebase, hence the prefix.
+  static const adGate = 'ad_gate'; // trigger, reason: every gate decision
+  static const adShown = 'ad_shown'; // format, placement, reason
+  static const adReward = 'jw_ad_reward'; // placement, format
+  static const adLoadFailed = 'ad_load_failed'; // format, code
+  static const adRevenue = 'ad_revenue'; // format, value_micros, currency, precision
 }
 
 class NoOpAnalytics implements AnalyticsService {

@@ -150,6 +150,7 @@ class GameController extends Notifier<GameViewState> {
       _log(AnalyticsEvents.layoutStart, {'layout_id': info.id, 'daily': launch.daily ? 1 : 0, 'resumed': resumed ? 1 : 0});
       if (launch.daily) _log(AnalyticsEvents.dailyStart, {'layout_id': info.id});
       _syncClock();
+      _ads.onBoardStarted(); // a late interstitial for the previous clear must not land on this board
       if (game.isDeadlocked) _emit(const [Deadlock()], source: _Source.system);
     } catch (e, st) {
       debugPrint('game: failed to load $launch: $e\n$st');

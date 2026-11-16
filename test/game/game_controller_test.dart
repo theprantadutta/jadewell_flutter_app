@@ -44,7 +44,14 @@ class TestAds implements AdService {
 
   @override
   Future<void> init() async {}
-
+  @override
+  void setAdsRemoved(bool removed) {}
+  @override
+  bool get privacyOptionsRequired => false;
+  @override
+  Future<void> showPrivacyOptions() async {}
+  @override
+  void onBoardStarted() {}
   @override
   bool isRewardedReady(RewardedPlacement placement) => true;
 

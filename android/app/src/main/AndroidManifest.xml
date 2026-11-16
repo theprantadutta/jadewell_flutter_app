@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Advertising ID for AdMob (Android 13+). Consent and Remove ads are
+         enforced in AdServiceImpl, not here. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <application
         android:label="Jadewell"
         android:name="${applicationName}"
@@ -26,6 +29,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- AdMob app id: the admobAppId placeholder comes from android/ads.properties
+             (gitignored, docs/ADS.md) via build.gradle.kts, with Google's
+             sample app id as the fallback. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
