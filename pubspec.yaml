@@ -81,6 +81,7 @@ flutter:
     - assets/tile-faces.json
     - assets/layouts/
     - assets/icons/
+    - assets/brand/
   fonts:
     - family: Outfit
       fonts:
