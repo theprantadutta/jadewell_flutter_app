@@ -360,13 +360,12 @@ class _TopBar extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 26, height: 1.05)),
-                  const SizedBox(height: 2),
+                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 25, height: 1.04)),
                   Text(
                     daily ? l.gameDailyChapter : chapter,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w400, color: jw.textMuted),
+                    style: jw.text.callout.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w400, color: jw.textMuted),
                   ),
                 ],
               ),
@@ -458,10 +457,15 @@ class _ComboChipState extends State<_ComboChip> with TickerProviderStateMixin {
   Timer? _idle;
   int _shown = 0;
 
+  bool _initialised = false;
+
   @override
-  void initState() {
-    super.initState();
-    if (widget.combo >= 3) _show();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialised) {
+      _initialised = true;
+      if (widget.combo >= 3) _show();
+    }
   }
 
   @override

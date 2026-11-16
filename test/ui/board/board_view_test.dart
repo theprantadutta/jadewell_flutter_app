@@ -19,12 +19,11 @@ final turtle = Layout.parse(File('assets/layouts/turtle.json').readAsStringSync(
 /// Plays the engine against a [BoardView] like the controller does: state
 /// first, then the events, synchronously.
 class _Harness extends StatefulWidget {
-  const _Harness({required this.initial, required this.faces, this.animateEntry = false, this.reduceMotion = false});
+  const _Harness({required this.initial, required this.faces, this.animateEntry = false});
 
   final GameState initial;
   final List<TileFaceSpec> faces;
   final bool animateEntry;
-  final bool reduceMotion;
 
   @override
   State<_Harness> createState() => _HarnessState();
@@ -55,7 +54,6 @@ class _HarnessState extends State<_Harness> {
     events: events.stream,
     onTileTap: tap,
     animateEntry: widget.animateEntry,
-    reduceMotion: widget.reduceMotion,
   );
 }
 

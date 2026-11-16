@@ -331,7 +331,13 @@ class _GameModalRoute<T> extends PopupRoute<T> {
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
-    final content = Theme(data: theme, child: Builder(builder: builder));
+    final content = Theme(
+      data: theme,
+      child: Material(
+        type: MaterialType.transparency,
+        child: DefaultTextStyle(style: jw.text.body, child: Builder(builder: builder)),
+      ),
+    );
     return SafeArea(
       child: bottom
           ? Align(alignment: Alignment.bottomCenter, child: content)

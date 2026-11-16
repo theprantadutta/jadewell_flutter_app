@@ -307,12 +307,11 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(r.layoutName, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 26, height: 1.05)),
-                const SizedBox(height: 2),
+                Text(r.layoutName, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 25, height: 1.04)),
                 Text(
                   chapterName,
                   maxLines: 1,
-                  style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w400, color: jw.textMuted),
+                  style: jw.text.callout.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w400, color: jw.textMuted),
                 ),
               ],
             ),

@@ -15,7 +15,13 @@ typedef GameDealer = Future<GameState> Function(Layout layout, int seed, int par
 /// Deals on a background isolate so the solver never janks the board entry.
 Future<GameState> dealInBackground(Layout layout, int seed, int parMs) async {
   if (kIsWeb) return GameState.newGame(layout, seed, parMs: parMs);
-  return Isolate.run(() => GameState.newGame(layout, seed, parMs: parMs));
+  try {
+    return await Isolate.run(() => GameState.newGame(layout, seed, parMs: parMs));
+  } on Object catch (e) {
+    if (e is DealException) rethrow;
+    debugPrint('game: background deal failed ($e), dealing on the UI isolate');
+    return GameState.newGame(layout, seed, parMs: parMs);
+  }
 }
 
 final gameDealerProvider = Provider<GameDealer>((ref) => dealInBackground);
