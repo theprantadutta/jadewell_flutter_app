@@ -10,8 +10,10 @@ Last updated: 2026-11-16.
 
 ## This app in AdMob
 
-- Android app: ca-app-pub-9242904787767394~9332089670 (Requires review: not in Play yet)
-- iOS app: ca-app-pub-9242904787767394~4079762997 (Requires review: not in the App Store yet)
+The real AdMob app and ad unit IDs are kept out of this public repo: see `jadewell-dotnet-api/docs/ADMOB-IDS.txt` and `docs/AD_MEDIATION.md` in the private backend repo (and `ADMOB-NOTE.txt` locally, gitignored).
+
+- Android app: (app id: see private backend repo) (Requires review: not in Play yet)
+- iOS app: (app id: see private backend repo) (Requires review: not in the App Store yet)
 - Ad units in the shared mediation groups (added 2026-11-16): Android: interstitial, rewarded, app open. iOS: interstitial, rewarded, app open.
   Any new ad unit must be added to the matching group (`banner_ad`, `interestitial`,
   `rewarded_ad`, `app_open_ad`, or their `_ios` versions), or only AdMob bids on it.
