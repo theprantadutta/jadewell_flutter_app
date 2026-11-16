@@ -136,7 +136,7 @@ class _TopBar extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Semantics(header: true, child: Text(title, style: jw.text.h1.copyWith(fontSize: 27, height: 1.1))),
+              Semantics(header: true, child: Text(title, style: jw.text.h1.copyWith(fontSize: 30, height: 1.1))),
               if (subtitle.isNotEmpty)
                 Text(subtitle, style: jw.text.body.copyWith(fontSize: 16, color: jw.textMuted, height: 1.3)),
             ],

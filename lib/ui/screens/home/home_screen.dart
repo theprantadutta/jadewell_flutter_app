@@ -454,21 +454,19 @@ class _LayoutCard extends ConsumerWidget {
       stateLabel = '${l.homeBest} $best, ${l.homeStarsSemantics(p.bestStars)}';
       state = Row(
         children: [
-          const CheckDisc(size: 22),
-          const SizedBox(width: 8),
-          Text(l.homeBest, style: caption.copyWith(fontWeight: FontWeight.w600)),
+          const CheckDisc(size: 20),
           const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              best,
-              maxLines: 1,
-              overflow: TextOverflow.fade,
-              softWrap: false,
-              style: jw.text.numM.copyWith(fontSize: 15, fontWeight: FontWeight.w500),
+          Text(l.homeBest, style: caption.copyWith(fontWeight: FontWeight.w600, fontSize: 14)),
+          const SizedBox(width: 5),
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(best, maxLines: 1, style: jw.text.numM.copyWith(fontSize: 14.5, fontWeight: FontWeight.w500)),
             ),
           ),
-          const Spacer(),
-          StarRow(earned: p.bestStars, size: 11, gap: 1.5),
+          const SizedBox(width: 4),
+          StarRow(earned: p.bestStars, size: 10, gap: 1),
         ],
       );
     } else if (access.isNew) {

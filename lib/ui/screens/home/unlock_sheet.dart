@@ -40,7 +40,12 @@ Future<void> showUnlockLayoutSheet(BuildContext context, WidgetRef ref, LayoutIn
     ?..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Center(child: JwToast(message: message, beadColor: rewarded ? null : context.jw.warning)),
+        content: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: JwToast(message: message, beadColor: rewarded ? null : context.jw.warning),
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,

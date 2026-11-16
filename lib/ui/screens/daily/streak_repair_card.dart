@@ -43,9 +43,9 @@ class _StreakRepairCardState extends ConsumerState<StreakRepairCard> {
         final repo = await ref.read(dailyRepositoryProvider.future);
         repaired = await repo.repairStreak();
         if (repaired) {
-          unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.streakRepaired, {
-            'restored_streak': offer.restoredStreak,
-          }));
+          unawaited(
+            ref.read(analyticsProvider).log(AnalyticsEvents.streakRepaired, {'restored_streak': offer.restoredStreak}),
+          );
           ref.read(hapticsProvider).success();
         }
       }
@@ -57,9 +57,12 @@ class _StreakRepairCardState extends ConsumerState<StreakRepairCard> {
       ..showSnackBar(
         SnackBar(
           content: Center(
-            child: JwToast(
-              message: repaired ? l.dailyRepairDone(offer.restoredStreak) : l.dailyRepairFailed,
-              beadColor: repaired ? null : warning,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: JwToast(
+                message: repaired ? l.dailyRepairDone(offer.restoredStreak) : l.dailyRepairFailed,
+                beadColor: repaired ? null : warning,
+              ),
             ),
           ),
           backgroundColor: Colors.transparent,
@@ -94,7 +97,10 @@ class _StreakRepairCardState extends ConsumerState<StreakRepairCard> {
                       l.dailyRepairTitle(offer.restoredStreak),
                       style: jw.text.body.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
-                    Text(l.dailyRepairBody, style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400)),
+                    Text(
+                      l.dailyRepairBody,
+                      style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400),
+                    ),
                   ],
                 ),
               ),

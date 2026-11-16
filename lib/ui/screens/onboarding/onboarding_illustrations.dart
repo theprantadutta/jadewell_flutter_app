@@ -172,9 +172,9 @@ class FreeRuleIllustration extends StatelessWidget {
         _Placed(s: s, left: 77, top: 70, child: TileWidget(face: faces[13], state: blocked, scale: t)),
         _Placed(s: s, left: 128, top: 70, child: TileWidget(face: faces[14], scale: t)),
         _Verdict(s: s, cx: 52, cy: 163, ok: true),
-        _Label(s: s, cx: 52, top: 180, text: labels.leftClear),
+        _Label(s: s, cx: 52, top: 180, text: labels.leftClear, width: 74),
         _Verdict(s: s, cx: 128, cy: 163, ok: false),
-        _Label(s: s, cx: 128, top: 180, text: labels.bothBlocked),
+        _Label(s: s, cx: 129, top: 180, text: labels.bothBlocked, width: 76),
         // Covered from above: a blocked tile under a free one.
         _Placed(s: s, left: 200, top: 82, child: TileWidget(face: faces[20], state: blocked, scale: t)),
         _Placed(s: s, left: 225, top: 72, child: TileWidget(face: faces[21], scale: t)),
@@ -245,7 +245,7 @@ class SolvableIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = 0.62 * s;
+    final t = 0.7 * s;
     final size = TileWidget.footprintFor(t, TileFaceSize.medium);
     const cols = 7, rows = 8;
     final boardW = cols * size.width, boardH = rows * size.height;

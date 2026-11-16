@@ -113,7 +113,7 @@ class StatsScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Semantics(header: true, child: Text(l.statsTitle, style: jw.text.h1.copyWith(fontSize: 27, height: 1.1))),
+                              Semantics(header: true, child: Text(l.statsTitle, style: jw.text.h1.copyWith(fontSize: 30, height: 1.1))),
                               Text(l.statsAllTime, style: jw.text.body.copyWith(fontSize: 16, color: jw.textMuted, height: 1.3)),
                             ],
                           ),

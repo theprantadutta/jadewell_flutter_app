@@ -288,7 +288,7 @@ class JwSkeletonHome extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -297,7 +297,7 @@ class JwSkeletonHome extends StatelessWidget {
                   const SizedBox(height: 14),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: JwSkeletonBox(width: 180, height: 14, radius: 7),
+                    child: Align(alignment: Alignment.centerLeft, child: JwSkeletonBox(width: 180, height: 14, radius: 7)),
                   ),
                   const SizedBox(height: 14),
                   const Padding(
@@ -309,7 +309,7 @@ class JwSkeletonHome extends StatelessWidget {
                   const SizedBox(height: 34),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: JwSkeletonBox(width: 120, height: 16, radius: 8),
+                    child: Align(alignment: Alignment.centerLeft, child: JwSkeletonBox(width: 120, height: 16, radius: 8)),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
