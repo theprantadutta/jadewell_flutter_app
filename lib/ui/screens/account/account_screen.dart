@@ -35,6 +35,15 @@ abstract final class DisplayNames {
   }
 }
 
+/// Client-side mirror of the backend's username rule (ProfileRules).
+abstract final class Usernames {
+  static const minLength = 3;
+  static const maxLength = 20;
+  static final _pattern = RegExp(r'^[A-Za-z][A-Za-z0-9_]{2,19}$');
+
+  static bool isValid(String name) => _pattern.hasMatch(name.trim());
+}
+
 /// Friendly copy for an [AuthErrorKind]; null when nothing should be shown
 /// (the player cancelled).
 String? authErrorMessage(AppLocalizations l, AuthErrorKind kind) => switch (kind) {
@@ -285,13 +294,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _editName(BackendUser user) async {
-    final saved = await showJwSheet<String>(
+    final saved = await showJwSheet<BackendUser>(
       context,
-      semanticLabel: AppLocalizations.of(context).accountEditName,
-      builder: (_) => _EditNameSheet(initial: _nameOverride ?? user.displayName),
+      semanticLabel: AppLocalizations.of(context).accountEditProfile,
+      builder: (_) => _EditProfileSheet(user: user, initialName: _nameOverride ?? user.displayName),
     );
     if (saved == null || !mounted) return;
-    setState(() => _nameOverride = saved);
+    setState(() => _nameOverride = saved.displayName);
     showJwToast(context, AppLocalizations.of(context).accountNameSaved);
     // Re-read the profile so the session (and everything showing the name)
     // picks the new name up.
@@ -362,7 +371,7 @@ class _ProfileCard extends StatelessWidget {
                 if (onEdit != null)
                   JwIconButton(
                     icon: JwIcons.text,
-                    semanticLabel: l.accountEditName,
+                    semanticLabel: l.accountEditProfile,
                     size: 42,
                     iconSize: 19,
                     onHaptic: onHaptic,
@@ -466,56 +475,135 @@ class ProfileAvatar extends StatelessWidget {
   }
 }
 
-// ---- edit name ----
+// ---- edit profile (display name + username) ----
 
-class _EditNameSheet extends ConsumerStatefulWidget {
-  const _EditNameSheet({required this.initial});
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  const _EditProfileSheet({required this.user, required this.initialName});
 
-  final String initial;
+  final BackendUser user;
+  final String initialName;
 
   @override
-  ConsumerState<_EditNameSheet> createState() => _EditNameSheetState();
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
 }
 
-class _EditNameSheetState extends ConsumerState<_EditNameSheet> {
-  late final _controller = TextEditingController(text: widget.initial);
-  String? _error;
+enum _UsernameState { unchanged, checking, available, taken, reserved, invalid, unknown }
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  late final _name = TextEditingController(text: widget.initialName);
+  late final _username = TextEditingController(text: widget.user.username);
+  String? _nameError;
+  String? _usernameError;
+  _UsernameState _uState = _UsernameState.unchanged;
+  Timer? _debounce;
+  int _checkSeq = 0;
   bool _saving = false;
+
+  /// Null when the username may be changed now.
+  DateTime? get _lockedUntil {
+    final at = widget.user.usernameChangeAvailableAt;
+    return (at != null && at.isAfter(DateTime.now())) ? at : null;
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _debounce?.cancel();
+    _name.dispose();
+    _username.dispose();
     super.dispose();
   }
 
-  Future<void> _save() async {
-    final l = AppLocalizations.of(context);
-    final name = _controller.text.trim();
-    if (!DisplayNames.isValid(name)) {
-      setState(() => _error = l.accountNameRule);
+  void _onUsernameChanged(String value) {
+    _debounce?.cancel();
+    final v = value.trim();
+    setState(() => _usernameError = null);
+    if (v == widget.user.username) {
+      setState(() => _uState = _UsernameState.unchanged);
       return;
     }
-    if (name == widget.initial) {
+    if (!Usernames.isValid(v)) {
+      setState(() => _uState = _UsernameState.invalid);
+      return;
+    }
+    setState(() => _uState = _UsernameState.checking);
+    _debounce = Timer(const Duration(milliseconds: 400), () => _check(v));
+  }
+
+  Future<void> _check(String v) async {
+    final seq = ++_checkSeq;
+    final r = await ref.read(authApiProvider).checkUsername(v);
+    if (!mounted || seq != _checkSeq) return;
+    setState(() {
+      _uState = !r.isSuccess
+          ? _UsernameState.unknown
+          : r.value!.available
+              ? _UsernameState.available
+              : switch (r.value!.reason) {
+                  'taken' => _UsernameState.taken,
+                  'reserved' => _UsernameState.reserved,
+                  _ => _UsernameState.invalid,
+                };
+    });
+  }
+
+  String? _statusText(AppLocalizations l) => switch (_uState) {
+        _UsernameState.unchanged || _UsernameState.unknown => null,
+        _UsernameState.checking => l.accountUsernameChecking,
+        _UsernameState.available => l.accountUsernameAvailable,
+        _UsernameState.taken => l.accountUsernameTaken,
+        _UsernameState.reserved => l.accountUsernameReserved,
+        _UsernameState.invalid => l.accountUsernameRule,
+      };
+
+  Future<void> _save() async {
+    final l = AppLocalizations.of(context);
+    final name = _name.text.trim();
+    final username = _username.text.trim();
+    final nameChanged = name != widget.initialName;
+    final usernameChanged = username != widget.user.username;
+    if (!DisplayNames.isValid(name)) {
+      setState(() => _nameError = l.accountNameRule);
+      return;
+    }
+    if (usernameChanged && !Usernames.isValid(username)) {
+      setState(() => _usernameError = l.accountUsernameRule);
+      return;
+    }
+    if (usernameChanged && (_uState == _UsernameState.taken || _uState == _UsernameState.reserved)) {
+      setState(() => _usernameError = _statusText(l));
+      return;
+    }
+    if (!nameChanged && !usernameChanged) {
       Navigator.of(context).pop();
       return;
     }
     setState(() {
       _saving = true;
-      _error = null;
+      _nameError = null;
+      _usernameError = null;
     });
-    final r = await ref.read(authApiProvider).updateProfile(displayName: name);
+    final r = await ref.read(authApiProvider).updateProfile(
+          displayName: nameChanged ? name : null,
+          username: usernameChanged ? username : null,
+        );
     if (!mounted) return;
     if (r.isSuccess) {
-      Navigator.of(context).pop(r.value!.displayName);
+      Navigator.of(context).pop(r.value);
       return;
     }
     setState(() {
       _saving = false;
-      _error = switch (r.failure!) {
+      final message = switch (r.failure!) {
+        ApiFailure.validation when r.statusCode == 409 => l.accountUsernameTaken,
         ApiFailure.validation => r.message ?? l.accountNameRule,
         ApiFailure.offlineOrTransport || ApiFailure.timeout => l.commonOffline,
         _ => l.authErrorUnknown,
       };
+      if (usernameChanged) {
+        _usernameError = message;
+      } else {
+        _nameError = message;
+      }
     });
   }
 
@@ -523,29 +611,64 @@ class _EditNameSheetState extends ConsumerState<_EditNameSheet> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final jw = context.jw;
+    final locked = _lockedUntil;
+    final status = _statusText(l);
+    final good = _uState == _UsernameState.available;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(l.accountEditName, style: jw.text.h3, textAlign: TextAlign.center),
-        const SizedBox(height: 6),
-        Text(l.accountNameHint, style: jw.text.body.copyWith(color: jw.textMuted), textAlign: TextAlign.center),
+        Text(l.accountEditProfile, style: jw.text.h3, textAlign: TextAlign.center),
         const SizedBox(height: 18),
+        JwEyebrow(l.accountNamePlaceholder),
+        const SizedBox(height: 8),
         JwTextField(
-          controller: _controller,
+          controller: _name,
           hint: l.accountNamePlaceholder,
-          autofocus: true,
           maxLength: DisplayNames.maxLength,
           textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.done,
-          errorText: _error,
+          textInputAction: TextInputAction.next,
+          errorText: _nameError,
           onChanged: (_) {
-            if (_error != null) setState(() => _error = null);
+            if (_nameError != null) setState(() => _nameError = null);
           },
-          onSubmitted: (_) => _save(),
         ),
+        const SizedBox(height: 4),
+        Text(l.accountNameHint, style: jw.text.caption.copyWith(color: jw.textMuted)),
+        const SizedBox(height: 16),
+        JwEyebrow(l.accountUsernameLabel),
+        const SizedBox(height: 8),
+        if (locked != null) ...[
+          JwTextField(controller: _username, hint: l.accountUsernameLabel, mono: true, enabled: false),
+          const SizedBox(height: 4),
+          Text(
+            l.accountUsernameLocked(MaterialLocalizations.of(context).formatMediumDate(locked.toLocal())),
+            style: jw.text.caption.copyWith(color: jw.textMuted),
+          ),
+        ] else ...[
+          JwTextField(
+            controller: _username,
+            hint: l.accountUsernameLabel,
+            mono: true,
+            maxLength: Usernames.maxLength,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9_]'))],
+            errorText: _usernameError,
+            onChanged: _onUsernameChanged,
+            onSubmitted: (_) => _save(),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            status ?? l.accountUsernameHint,
+            style: jw.text.caption.copyWith(color: good ? jw.success : jw.textMuted),
+          ),
+        ],
         const SizedBox(height: 18),
-        JwBusyButton(label: l.commonSave, busy: _saving, onPressed: _save),
+        JwBusyButton(
+          label: l.commonSave,
+          busy: _saving,
+          onPressed: _uState == _UsernameState.checking ? null : _save,
+        ),
       ],
     );
   }

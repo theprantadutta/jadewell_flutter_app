@@ -12,6 +12,7 @@ class BackendUser {
     required this.authProvider,
     required this.isAnonymous,
     this.email,
+    this.usernameChangeAvailableAt,
   });
 
   factory BackendUser.fromJson(Map<String, dynamic> j) => BackendUser(
@@ -23,6 +24,9 @@ class BackendUser {
         authProvider: j['auth_provider'] as String,
         isAnonymous: j['is_anonymous'] as bool,
         email: j['email'] as String?,
+        usernameChangeAvailableAt: j['username_change_available_at'] == null
+            ? null
+            : DateTime.tryParse(j['username_change_available_at'] as String),
       );
 
   final String id;
@@ -33,7 +37,13 @@ class BackendUser {
   final String authProvider;
   final bool isAnonymous;
   final String? email;
+
+  /// When the username may be changed again (7-day cooldown); null = now.
+  final DateTime? usernameChangeAvailableAt;
 }
+
+/// Result of `GET /auth/username-available/{name}`; reason: invalid | reserved | taken.
+typedef UsernameAvailability = ({bool available, String? reason});
 
 class AuthResult {
   const AuthResult({required this.accessToken, required this.isNewUser, required this.user});
@@ -70,12 +80,19 @@ class AuthApi {
 
   Future<ApiResult<BackendUser>> me() async => _parse(await _client.get('/auth/me'), BackendUser.fromJson);
 
-  Future<ApiResult<BackendUser>> updateProfile({String? displayName, String? avatarColor}) async => _parse(
+  Future<ApiResult<BackendUser>> updateProfile({String? displayName, String? avatarColor, String? username}) async =>
+      _parse(
         await _client.patch('/auth/me', body: {
           'display_name': ?displayName,
           'avatar_color': ?avatarColor,
+          'username': ?username,
         }),
         BackendUser.fromJson,
+      );
+
+  Future<ApiResult<UsernameAvailability>> checkUsername(String username) async => _parse(
+        await _client.get('/auth/username-available/${Uri.encodeComponent(username)}'),
+        (j) => (available: j['available'] as bool, reason: j['reason'] as String?),
       );
 
   static ApiResult<T> _parse<T>(ApiResult<Map<String, dynamic>> r, T Function(Map<String, dynamic>) f) {

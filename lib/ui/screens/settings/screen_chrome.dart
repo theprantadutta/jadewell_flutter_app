@@ -149,6 +149,7 @@ class JwTextField extends StatelessWidget {
     this.errorText,
     this.maxLength,
     this.trailing,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
@@ -167,6 +168,9 @@ class JwTextField extends StatelessWidget {
   final String? errorText;
   final int? maxLength;
   final Widget? trailing;
+
+  /// False shows the value read-only (e.g. a locked username).
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +198,7 @@ class JwTextField extends StatelessWidget {
                   Expanded(
                     child: TextField(
                       controller: controller,
+                      enabled: enabled,
                       obscureText: obscure,
                       keyboardType: keyboardType,
                       textCapitalization: textCapitalization,
