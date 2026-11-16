@@ -103,7 +103,7 @@ class TileFacePainter extends CustomPainter {
             face.index!,
             6.6 * k,
             c,
-            Offset(size.width + 1.2 * k, size.height + 0.6 * k),
+            Offset(size.width + 0.6 * k, size.height + 0.4 * k),
             family: JwFonts.ui,
             anchor: Alignment.bottomRight,
           );

@@ -201,7 +201,7 @@ class _GalleryComponentsSheetState extends State<GalleryComponentsSheet> {
             const SizedBox(width: 10),
             const JwAvatar(name: 'Pranta'),
             const SizedBox(width: 10),
-            JwAvatar(name: 'Ola', color: jw.accentSoft),
+            const JwAvatar(name: 'Ola'),
           ],
         ),
         const GalleryEyebrow('Elevation levels'),
