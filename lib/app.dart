@@ -56,7 +56,13 @@ class _JadewellAppState extends ConsumerState<JadewellApp> {
         final mq = MediaQuery.of(context);
         return MediaQuery(
           data: mq.copyWith(textScaler: mq.textScaler.clamp(maxScaleFactor: 1.3)),
-          child: JwReduceMotion(enabled: settings.reduceMotion, child: child!),
+          // A transparent Material above every route gives all text (splash,
+          // custom-painted screens, overlays) a DefaultTextStyle, so nothing
+          // falls back to the yellow-underlined "no Material" debug style.
+          child: Material(
+            type: MaterialType.transparency,
+            child: JwReduceMotion(enabled: settings.reduceMotion, child: child!),
+          ),
         );
       },
     );
