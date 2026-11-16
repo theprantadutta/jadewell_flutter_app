@@ -19,8 +19,12 @@ import 'platform/audio/soloud_engine_impl.dart';
 import 'platform/auth/auth_service_impl.dart';
 import 'platform/crash/crashlytics_impl.dart';
 import 'platform/haptics/haptic_service_impl.dart';
+import 'platform/iap/openiap_store_adapter_impl.dart';
+import 'platform/iap/pending_verifications.dart';
+import 'platform/iap/purchase_service_impl.dart';
 import 'state/app_providers.dart';
 import 'state/data_providers.dart';
+import 'state/entitlement_providers.dart';
 import 'state/platform_bridge.dart';
 import 'state/platform_providers.dart';
 import 'state/session_controller.dart';
@@ -70,6 +74,21 @@ Future<void> main() async {
       progressRepositoryProvider.overrideWith((ref) => ref.watch(driftProgressRepositoryProvider)),
       statsRepositoryProvider.overrideWith((ref) => ref.watch(driftStatsRepositoryProvider)),
       dailyRepositoryProvider.overrideWith((ref) => ref.watch(driftDailyRepositoryProvider.future)),
+      entitlementRepositoryProvider.overrideWith((ref) => ref.watch(driftEntitlementRepositoryProvider)),
+      purchaseServiceProvider.overrideWith((ref) {
+        final store = ref.watch(sessionStoreProvider);
+        final service = PurchaseServiceImpl(
+          store: OpenIapStoreAdapter(),
+          entitlements: ref.watch(entitlementRepositoryProvider),
+          api: ref.watch(purchasesApiProvider),
+          pending: PrefsPendingVerificationStore(prefs),
+          analytics: ref.watch(analyticsProvider),
+          hasSession: () => store.token != null,
+          accountId: () => store.userId,
+        );
+        ref.onDispose(service.dispose);
+        return service;
+      }),
     ],
   );
   startBackgroundSync(container); // outbox → backend; never blocks
@@ -78,6 +97,8 @@ Future<void> main() async {
   unawaited(container.read(sessionProvider.future).then((_) {}, onError: (Object e) {
     debugPrint('session: start-up sign-in failed: $e');
   }));
+
+  startPurchases(container); // store connect + reconcile in the background; entitlement → ad service
 
   PlatformBridge.start(container); // settings + lifecycle → audio/haptics; audio starts after first frame
 

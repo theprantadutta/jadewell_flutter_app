@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/settings.dart';
 import '../../../platform/analytics/analytics_service.dart';
 import '../../../state/data_providers.dart';
+import '../../../state/entitlement_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../../state/social_providers.dart';
@@ -22,9 +23,6 @@ import 'screen_chrome.dart';
 /// Privacy policy (opened in the browser once url_launcher is added).
 const kPrivacyPolicyUrl = 'https://jadewell.pranta.dev/privacy';
 
-/// Remove ads price until the store returns the localised one (Phase 8).
-const kRemoveAdsPrice = r'$1.99';
-
 /// Settings (screen 15): feedback, display and account groups. Every change
 /// persists through [SettingsController.change] and logs `settings_changed`
 /// with the setting's name only.
@@ -36,7 +34,9 @@ class SettingsScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final s = ref.watch(settingsProvider).value ?? const AppSettings();
     final session = ref.watch(sessionProvider).value;
-    final adsRemoved = ref.watch(adServiceProvider).adsRemoved;
+    // The entitlement is the truth; the ad service's flag mirrors it.
+    final adsRemoved = ref.watch(entitlementProvider).removeAds || ref.watch(adServiceProvider).adsRemoved;
+    final removeAdsPrice = ref.watch(removeAdsPriceProvider); // null while the store has nothing to sell
     final ads = ref.watch(adServiceProvider);
     final version = ref.watch(appVersionProvider).value;
     final haptic = ref.watch(hapticsProvider).selection;
@@ -165,7 +165,7 @@ class SettingsScreen extends ConsumerWidget {
               JwListRow(
                 icon: JwIcons.bag,
                 title: l.settingsRemoveAds,
-                value: adsRemoved ? l.storePurchased : kRemoveAdsPrice,
+                value: adsRemoved ? l.storePurchased : removeAdsPrice,
                 monoValue: !adsRemoved,
                 chevron: true,
                 onHaptic: haptic,

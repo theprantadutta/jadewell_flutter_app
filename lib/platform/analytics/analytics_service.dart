@@ -27,6 +27,15 @@ abstract final class AnalyticsEvents {
   static const settingsChanged = 'settings_changed';
   static const accountLinked = 'account_linked';
 
+  // Remove ads (IAP). iap_error carries a short `code` only.
+  static const iapView = 'iap_view';
+  static const iapStart = 'iap_start';
+  static const iapSuccess = 'iap_success';
+  static const iapCancel = 'iap_cancel';
+  static const iapPending = 'iap_pending';
+  static const iapRestore = 'iap_restore';
+  static const iapError = 'iap_error';
+
   // Ads (docs/ADS.md). `ad_reward` is reserved by Firebase, hence the prefix.
   static const adGate = 'ad_gate'; // trigger, reason: every gate decision
   static const adShown = 'ad_shown'; // format, placement, reason

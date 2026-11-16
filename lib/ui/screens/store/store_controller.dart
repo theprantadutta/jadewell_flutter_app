@@ -1,42 +1,85 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/platform_providers.dart';
+import '../../../platform/iap/purchase_service.dart';
+import '../../../state/entitlement_providers.dart';
 
-/// Product id of the one non-consumable (both stores).
-const kRemoveAdsProductId = 'com.pranta.jadewell.remove_ads';
+export '../../../platform/iap/purchase_service.dart' show RestoreOutcome;
 
-enum StoreOutcome { purchased, restored, nothingToRestore, cancelled, failed, comingSoon }
+/// What the Store screen shows.
+enum StoreView {
+  /// Connecting to the store / fetching the price.
+  loading,
+
+  /// No billing here, or the product doesn't exist in the store yet.
+  notAvailable,
+  ready,
+  purchasing,
+  verifying,
+
+  /// Paid with a method that hasn't cleared (cash, carrier, approval).
+  pending,
+  purchased,
+
+  /// The last purchase failed; Buy becomes "Try again".
+  error,
+}
 
 class StoreState {
-  const StoreState({this.busy = false, required this.adsRemoved});
+  const StoreState({required this.view, this.price, this.restoredOnly = false});
 
-  /// A purchase or restore is in flight.
-  final bool busy;
-  final bool adsRemoved;
+  final StoreView view;
 
-  StoreState copyWith({bool? busy, bool? adsRemoved}) =>
-      StoreState(busy: busy ?? this.busy, adsRemoved: adsRemoved ?? this.adsRemoved);
+  /// Localized price from the store (null when there is nothing to sell).
+  final String? price;
+
+  /// Purchased via Restore (no celebration).
+  final bool restoredOnly;
+
+  bool get adsRemoved => view == StoreView.purchased;
+  bool get busy => view == StoreView.purchasing || view == StoreView.verifying || view == StoreView.loading;
 }
 
 final storeControllerProvider = NotifierProvider.autoDispose<StoreController, StoreState>(StoreController.new);
 
-/// Remove-ads purchase flow. IAP arrives in Phase 8 (`PurchaseService`,
-/// verify-then-finish, server verification); until then both actions
-/// report [StoreOutcome.comingSoon].
+/// The Remove ads screen's view model: store status + local entitlement.
 class StoreController extends Notifier<StoreState> {
   @override
-  StoreState build() => StoreState(adsRemoved: ref.watch(adServiceProvider).adsRemoved);
-
-  // TODO(Phase 8): buy kRemoveAdsProductId via PurchaseService, verify with
-  // POST purchases/verify, then finish the transaction and set adsRemoved.
-  Future<StoreOutcome> purchaseRemoveAds() async {
-    if (state.adsRemoved) return StoreOutcome.purchased;
-    return StoreOutcome.comingSoon;
+  StoreState build() {
+    final owned = ref.watch(entitlementProvider).removeAds;
+    final status = ref.watch(storeStatusProvider).value ?? const StoreLoading();
+    return derive(status, owned: owned);
   }
 
-  // TODO(Phase 8): restorePurchases() on the store, then POST purchases/restore.
-  Future<StoreOutcome> restore() async {
-    if (state.adsRemoved) return StoreOutcome.restored;
-    return StoreOutcome.comingSoon;
+  /// Pure mapping (unit-tested): an in-flight purchase wins over the
+  /// entitlement, the entitlement wins over everything else.
+  static StoreState derive(StoreStatus status, {required bool owned}) {
+    final price = status.price;
+    switch (status) {
+      case StorePurchasing():
+        return StoreState(view: StoreView.purchasing, price: price);
+      case StoreVerifying():
+        return StoreState(view: StoreView.verifying, price: price);
+      case StorePending() when !owned:
+        return StoreState(view: StoreView.pending, price: price);
+      default:
+        break;
+    }
+    if (owned) {
+      final restored = status is! StorePurchased || status.restored;
+      return StoreState(view: StoreView.purchased, price: price, restoredOnly: restored);
+    }
+    return switch (status) {
+      StoreLoading() => const StoreState(view: StoreView.loading),
+      StoreUnavailable() || StoreProductMissing() => const StoreState(view: StoreView.notAvailable),
+      StoreReady(:final price) => StoreState(view: StoreView.ready, price: price),
+      StoreError(:final price) =>
+        price == null ? const StoreState(view: StoreView.notAvailable) : StoreState(view: StoreView.error, price: price),
+      // Purchased but no longer owned (revoked): back to selling if we can.
+      _ => price == null ? const StoreState(view: StoreView.notAvailable) : StoreState(view: StoreView.ready, price: price),
+    };
   }
+
+  Future<void> purchaseRemoveAds() => ref.read(purchaseServiceProvider).buyRemoveAds();
+
+  Future<RestoreOutcome> restore() => ref.read(purchaseServiceProvider).restore();
 }

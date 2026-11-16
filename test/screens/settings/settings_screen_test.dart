@@ -4,6 +4,7 @@ import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart'
 import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
+import 'package:jadewell_flutter_app/state/entitlement_providers.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
 import 'package:jadewell_flutter_app/state/session_controller.dart';
 import 'package:jadewell_flutter_app/state/social_providers.dart';
@@ -11,6 +12,7 @@ import 'package:jadewell_flutter_app/ui/screens/settings/settings_screen.dart';
 import 'package:jadewell_flutter_app/ui/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../iap/fakes.dart' show FakePurchaseService;
 import 'harness.dart';
 
 void main() {
@@ -43,6 +45,7 @@ void main() {
           audioProvider.overrideWithValue(audio),
           hapticsProvider.overrideWithValue(haptics),
           adServiceProvider.overrideWithValue(FakeAdService(adsRemoved: adsRemoved)),
+          purchaseServiceProvider.overrideWithValue(FakePurchaseService()), // store price $1.99
           sessionProvider.overrideWith(() => FakeSession(const BackendSession(identity: guestIdentity, user: testUser))),
           appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
         ],
