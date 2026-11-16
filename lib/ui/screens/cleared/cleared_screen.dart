@@ -23,6 +23,7 @@ import '../../theme/jw_background.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
+import '../game/game_modals.dart';
 import '../game/game_widgets.dart';
 
 /// Beat-sheet time (MOTION_SPEC §3, t0 = last pair gone) at which the game
@@ -138,7 +139,10 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     final granted = await showGameModal<bool>(
       context,
       bottom: true,
-      builder: (_) => _HeadStartSheet(
+      builder: (ctx) => RewardedIntroSheet(
+        title: AppLocalizations.of(ctx).clearedHeadStartTitle,
+        body: AppLocalizations.of(ctx).clearedHeadStartBody,
+        icon: JwIcons.hint,
         watch: () async {
           final ok = await ads.showRewardedInterstitial(RewardedInterstitialPlacement.headStart);
           if (ok) ref.read(headStartBonusProvider.notifier).grant(kHeadStartHints);
@@ -732,110 +736,3 @@ class _NextButton extends StatelessWidget {
 
 /// "Head start" rewarded-interstitial intro: the reward is stated, a 5 s
 /// countdown starts the video, Skip opts out (docs/ARCHITECTURE.md §7).
-class _HeadStartSheet extends StatefulWidget {
-  const _HeadStartSheet({required this.watch});
-
-  final Future<bool> Function() watch;
-
-  @override
-  State<_HeadStartSheet> createState() => _HeadStartSheetState();
-}
-
-class _HeadStartSheetState extends State<_HeadStartSheet> {
-  static const _countdown = 5;
-  int _left = _countdown;
-  Timer? _timer;
-  bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) return;
-      if (_left <= 1) {
-        t.cancel();
-        unawaited(_watch());
-      } else {
-        setState(() => _left--);
-      }
-    });
-  }
-
-  Future<void> _watch() async {
-    if (_loading) return;
-    _timer?.cancel();
-    setState(() => _loading = true);
-    final ok = await widget.watch();
-    if (mounted) Navigator.of(context).pop(ok);
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    final l = AppLocalizations.of(context);
-    return JwSheet(
-      semanticLabel: l.clearedHeadStartTitle,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const GameIconWell(icon: JwIcons.hint, size: 56),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l.clearedHeadStartTitle, style: jw.text.h3.copyWith(fontSize: 20)),
-                    const SizedBox(height: 4),
-                    Text(l.clearedHeadStartBody, style: jw.text.callout.copyWith(fontWeight: FontWeight.w400, color: jw.textMuted)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: JwButton.secondary(
-                  label: l.clearedHeadStartSkip,
-                  expand: true,
-                  onPressed: _loading ? null : () => Navigator.of(context).pop(false),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _loading
-                    ? SizedBox(
-                        height: 56,
-                        child: Center(
-                          child: SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.4, color: jw.accent),
-                          ),
-                        ),
-                      )
-                    : JwButton.primary(
-                        label: '${l.clearedHeadStartWatch} · $_left',
-                        icon: JwIcons.video,
-                        expand: true,
-                        semanticLabel: '${l.clearedHeadStartWatch}, ${l.clearedHeadStartCountdown(_left)}',
-                        onPressed: _watch,
-                      ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

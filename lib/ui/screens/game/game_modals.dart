@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/generated/app_localizations.dart';
@@ -309,6 +311,119 @@ class QuitDialog extends StatelessWidget {
         JwButton.secondary(label: l.gameQuitStay, expand: true, onPressed: () => Navigator.of(context).pop(false)),
         JwButton.primary(label: l.gameQuitLeave, expand: true, onPressed: () => Navigator.of(context).pop(true)),
       ],
+    );
+  }
+}
+
+/// Intro for a rewarded interstitial (Google policy): states the reward, a
+/// 5 s countdown, and Skip. Pops true only if the ad paid out.
+class RewardedIntroSheet extends StatefulWidget {
+  const RewardedIntroSheet({super.key, required this.title, required this.body, required this.icon, required this.watch});
+
+  final String title;
+  final String body;
+  final String icon;
+  final Future<bool> Function() watch;
+
+  @override
+  State<RewardedIntroSheet> createState() => _RewardedIntroSheetState();
+}
+
+class _RewardedIntroSheetState extends State<RewardedIntroSheet> {
+  static const _countdown = 5;
+  int _left = _countdown;
+  Timer? _timer;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      if (_left <= 1) {
+        t.cancel();
+        unawaited(_watch());
+      } else {
+        setState(() => _left--);
+      }
+    });
+  }
+
+  Future<void> _watch() async {
+    if (_loading) return;
+    _timer?.cancel();
+    setState(() => _loading = true);
+    final ok = await widget.watch();
+    if (mounted) Navigator.of(context).pop(ok);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
+    final l = AppLocalizations.of(context);
+    return JwSheet(
+      semanticLabel: widget.title,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              GameIconWell(icon: widget.icon, size: 56),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.title, style: jw.text.h3.copyWith(fontSize: 20)),
+                    const SizedBox(height: 4),
+                    Text(widget.body, style: jw.text.callout.copyWith(fontWeight: FontWeight.w400, color: jw.textMuted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: JwButton.secondary(
+                  label: l.clearedHeadStartSkip,
+                  expand: true,
+                  onPressed: _loading ? null : () => Navigator.of(context).pop(false),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: _loading
+                    ? SizedBox(
+                        height: 56,
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.4, color: jw.accent),
+                          ),
+                        ),
+                      )
+                    : JwButton.primary(
+                        label: '${l.clearedHeadStartWatch} · $_left',
+                        icon: JwIcons.video,
+                        expand: true,
+                        semanticLabel: '${l.clearedHeadStartWatch}, ${l.clearedHeadStartCountdown(_left)}',
+                        onPressed: _watch,
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

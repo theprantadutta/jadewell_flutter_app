@@ -1,5 +1,8 @@
 {
   "@@locale": "en",
+  "gameSecondChanceTitle": "Second chance",
+  "gameSecondChanceBody": "Watch a short video for +1 hint and +1 shuffle on this board",
+  "gameSecondChanceGranted": "+1 hint and +1 shuffle added",
   "storeNotAvailableTitle": "Not available yet",
   "storeNotAvailableBody": "Remove ads isn't on sale in the store yet. Check back soon.",
   "storeLoadingPrice": "Checking the store",

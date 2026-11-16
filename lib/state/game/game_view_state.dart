@@ -29,7 +29,7 @@ enum PauseReason {
 }
 
 /// A rewarded ad is playing for this.
-enum RewardBusy { hint, shuffle }
+enum RewardBusy { hint, shuffle, secondChance }
 
 /// What the cleared screen shows, produced when the board is cleared.
 @immutable

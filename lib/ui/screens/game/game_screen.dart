@@ -139,6 +139,29 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
   }
 
+  bool _secondChanceChecked = false;
+
+  /// Offers "Second chance" once, after the board-entry animation settles.
+  void _maybeOfferSecondChance() {
+    if (_secondChanceChecked) return;
+    _secondChanceChecked = true;
+    Future<void>.delayed(const Duration(milliseconds: 2200), () async {
+      if (!mounted || _modalOpen || _leaving || !_controller.canOfferSecondChance) return;
+      _controller.markSecondChanceOffered();
+      final l = AppLocalizations.of(context);
+      final granted = await _modal<bool>(
+        (ctx) => RewardedIntroSheet(
+          title: l.gameSecondChanceTitle,
+          body: l.gameSecondChanceBody,
+          icon: JwIcons.sparkle,
+          watch: _controller.watchSecondChance,
+        ),
+        bottom: true,
+      );
+      if ((granted ?? false) && mounted) _showToast(l.gameSecondChanceGranted);
+    });
+  }
+
   Future<void> _showPause() async {
     final s = _state;
     if (s.phase != GamePhase.playing || _modalOpen || _leaving) return;
@@ -263,6 +286,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.listen(_provider.select((s) => s.result), (prev, next) {
       if (next != null) _maybeShowCleared();
     });
+    // Once per screen (guarded); schedules the offer after entry settles.
+    if (ref.watch(_provider.select((s) => s.phase == GamePhase.playing && s.resumed))) _maybeOfferSecondChance();
     final jw = context.jw;
     final phase = ref.watch(_provider.select((s) => s.phase));
     return PopScope(

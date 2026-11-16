@@ -26,6 +26,7 @@ abstract final class AnalyticsEvents {
   static const streakRepaired = 'streak_repaired';
   static const settingsChanged = 'settings_changed';
   static const accountLinked = 'account_linked';
+  static const secondChance = 'second_chance';
 
   // Remove ads (IAP). iap_error carries a short `code` only.
   static const iapView = 'iap_view';

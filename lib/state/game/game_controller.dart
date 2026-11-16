@@ -14,6 +14,7 @@ import '../../platform/ads/ad_service.dart';
 import '../../platform/analytics/analytics_service.dart';
 import '../../platform/audio/audio_service.dart';
 import '../../platform/haptics/haptic_service.dart';
+import '../app_providers.dart';
 import '../data_providers.dart';
 import '../platform_providers.dart';
 import 'game_clock.dart';
@@ -40,6 +41,9 @@ const kSaveDebounce = Duration(milliseconds: 400);
 
 /// Head-start reward size (docs/ARCHITECTURE.md §7).
 const kHeadStartHints = 2;
+
+/// Minimum time between "Second chance" offers for the same layout.
+const kSecondChanceCooldown = Duration(hours: 12);
 
 class GameController extends Notifier<GameViewState> {
   GameController(this.launch);
@@ -248,6 +252,48 @@ class GameController extends Notifier<GameViewState> {
     _apply(next, events, source: _Source.system, clearHint: true);
     final kind = free ? 'deadlock' : (rewarded ? 'rewarded' : 'free');
     _log(AnalyticsEvents.shuffleUsed, {'layout_id': state.info!.id, 'kind': kind});
+    return true;
+  }
+
+  // ------------------------------------------------------ second chance
+
+  /// "Second chance" (docs/ARCHITECTURE.md §7): offered when the player comes
+  /// back to a saved board and has already spent free hints or shuffles. At
+  /// most once per layout per [kSecondChanceCooldown]; never with Remove ads.
+  bool get canOfferSecondChance {
+    final s = state;
+    final g = s.game;
+    if (!_canPlay || g == null || !s.resumed || _ads.adsRemoved) return false;
+    if (g.freeHintsLeft > 0 && g.freeShufflesLeft > 0) return false;
+    final last = ref.read(sharedPreferencesProvider).getInt(_secondChanceKey);
+    return last == null || DateTime.now().millisecondsSinceEpoch - last >= kSecondChanceCooldown.inMilliseconds;
+  }
+
+  String get _secondChanceKey => 'second_chance_at_${state.info?.id}';
+
+  /// Records that the offer was shown (whether or not the player watched).
+  void markSecondChanceOffered() =>
+      unawaited(ref.read(sharedPreferencesProvider).setInt(_secondChanceKey, DateTime.now().millisecondsSinceEpoch));
+
+  /// Plays the rewarded interstitial; grants +1 hint and +1 shuffle only if
+  /// the ad paid out.
+  Future<bool> watchSecondChance() async {
+    if (!_canPlay) return false;
+    state = state.copyWith(busy: () => RewardBusy.secondChance);
+    _syncClock();
+    var rewarded = false;
+    try {
+      rewarded = await _ads.showRewardedInterstitial(RewardedInterstitialPlacement.secondChance);
+    } catch (e) {
+      debugPrint('game: second chance ad failed: $e');
+    }
+    if (!ref.mounted) return false;
+    state = state.copyWith(busy: () => null);
+    _syncClock();
+    if (!rewarded || state.game == null) return false;
+    final withHint = cmd.grantHint(state.game!).$1;
+    state = state.copyWith(game: cmd.grantShuffle(withHint).$1);
+    _log(AnalyticsEvents.secondChance, {'layout_id': state.info!.id});
     return true;
   }
 

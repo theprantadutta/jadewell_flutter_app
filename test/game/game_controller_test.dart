@@ -10,6 +10,7 @@ import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart'
 import 'package:jadewell_flutter_app/engine/engine.dart';
 import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
+import 'package:jadewell_flutter_app/state/app_providers.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_clock.dart';
 import 'package:jadewell_flutter_app/state/game/game_controller.dart';
@@ -17,6 +18,7 @@ import 'package:jadewell_flutter_app/state/game/game_launch.dart';
 import 'package:jadewell_flutter_app/state/game/game_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_view_state.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RecordingAnalytics implements AnalyticsService {
   final List<(String, Map<String, Object>)> events = [];
@@ -122,7 +124,7 @@ GameState stateWithFaces(Layout layout, Int8List faces, {int seed = 1}) => GameS
 );
 
 class Harness {
-  Harness({this.daily}) {
+  Harness({this.daily, this.prefs}) {
     container = ProviderContainer(
       retry: (_, _) => null,
       overrides: [
@@ -146,6 +148,7 @@ class Harness {
           ),
         ),
         if (daily != null) dailyProvider.overrideWith((ref) => Stream.value(daily!)),
+        if (prefs != null) sharedPreferencesProvider.overrideWithValue(prefs!),
         progressRepositoryProvider.overrideWithValue(repo),
         analyticsProvider.overrideWithValue(analytics),
         adServiceProvider.overrideWithValue(ads),
@@ -157,6 +160,7 @@ class Harness {
   }
 
   final DailyStatus? daily;
+  final SharedPreferences? prefs;
   late final ProviderContainer container;
   final repo = MemoryProgressRepository();
   final analytics = RecordingAnalytics();
@@ -489,6 +493,67 @@ void main() {
       h.clock.advance(5000);
       playMove(c, h.state(launch));
       expect(h.state(launch).combo, 1);
+    });
+  });
+
+  group('second chance', () {
+    Future<(Harness, GameController)> resumedWithSpentHints({bool removed = false, bool reward = true}) async {
+      SharedPreferences.setMockInitialValues({});
+      final h = Harness(prefs: await SharedPreferences.getInstance());
+      h.ads
+        ..adsRemoved = removed
+        ..reward = reward;
+      var saved = GameState.newGame(turtleLayout, 7, parMs: 360000);
+      final (a, b) = saved.availableMoves.first;
+      saved = match(saved, a, b, elapsedMs: 9000).$1.copyWith(freeHintsLeft: 0);
+      await h.repo.saveGame('turtle', stateJson: saved.toJson(), elapsedMs: 12345, fractionCleared: 2 / 144);
+      final c = await h.open(const GameLaunch.layout('turtle'));
+      return (h, c);
+    }
+
+    const launch = GameLaunch.layout('turtle');
+
+    test('offered on a resumed board with spent help; reward grants +1 hint and +1 shuffle', () async {
+      final (h, c) = await resumedWithSpentHints();
+      addTearDown(h.dispose);
+      expect(c.canOfferSecondChance, isTrue);
+      final before = h.state(launch).game!;
+      expect(await c.watchSecondChance(), isTrue);
+      final after = h.state(launch).game!;
+      expect(after.freeHintsLeft, before.freeHintsLeft + 1);
+      expect(after.freeShufflesLeft, before.freeShufflesLeft + 1);
+      expect(h.analytics.named(AnalyticsEvents.secondChance), hasLength(1));
+      expect(h.state(launch).busy, isNull);
+    });
+
+    test('no reward → nothing granted', () async {
+      final (h, c) = await resumedWithSpentHints(reward: false);
+      addTearDown(h.dispose);
+      final before = h.state(launch).game!;
+      expect(await c.watchSecondChance(), isFalse);
+      expect(h.state(launch).game!.freeHintsLeft, before.freeHintsLeft);
+    });
+
+    test('once per layout per cooldown', () async {
+      final (h, c) = await resumedWithSpentHints();
+      addTearDown(h.dispose);
+      c.markSecondChanceOffered();
+      await Future<void>.delayed(Duration.zero);
+      expect(c.canOfferSecondChance, isFalse);
+    });
+
+    test('never with Remove ads', () async {
+      final (h, c) = await resumedWithSpentHints(removed: true);
+      addTearDown(h.dispose);
+      expect(c.canOfferSecondChance, isFalse);
+    });
+
+    test('not offered on a fresh board', () async {
+      SharedPreferences.setMockInitialValues({});
+      final h = Harness(prefs: await SharedPreferences.getInstance());
+      addTearDown(h.dispose);
+      final c = await h.open(launch);
+      expect(c.canOfferSecondChance, isFalse);
     });
   });
 }
