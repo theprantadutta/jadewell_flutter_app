@@ -233,13 +233,19 @@ class _DailyHeroCard extends ConsumerWidget {
                   builder: (context, left) => Semantics(
                     label: l.homeDailyEndsIn(formatCountdown(left)),
                     excludeSemantics: true,
-                    child: RollingText(
-                      formatCountdown(left),
-                      style: jw.text.numM.copyWith(fontSize: 17, fontWeight: FontWeight.w500),
+                    // Shrinks on narrow cards instead of overflowing into Play.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: RollingText(
+                        formatCountdown(left),
+                        style: jw.text.numM.copyWith(fontSize: 17, fontWeight: FontWeight.w500),
+                      ),
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
               JwButton.primary(
                 label: l.homePlay,
                 icon: JwIcons.play,

@@ -95,8 +95,13 @@ class JwButton extends StatelessWidget {
           JwIcon(icon!, size: iconSize, color: fg),
           const SizedBox(width: 8),
         ],
+        // Shrink a label that doesn't fit (narrow dialogs, long translations)
+        // rather than cutting it off with an ellipsis.
         Flexible(
-          child: Text(label, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, style: style, maxLines: 1),
+          ),
         ),
       ],
     );
@@ -125,7 +130,7 @@ class JwButton extends StatelessWidget {
       reduceMotion: reduceMotion,
       height: height,
       width: expand ? double.infinity : null,
-      padding: EdgeInsets.symmetric(horizontal: small ? 22 : 28),
+      padding: EdgeInsets.symmetric(horizontal: small ? 22 : (expand ? 16 : 28)),
       child: Center(widthFactor: 1, child: content),
     );
   }
