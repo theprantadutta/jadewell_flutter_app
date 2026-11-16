@@ -1,4 +1,4 @@
-package com.example.jadewell_flutter_app
+package com.pranta.jadewell
 
 import io.flutter.embedding.android.FlutterActivity
 
