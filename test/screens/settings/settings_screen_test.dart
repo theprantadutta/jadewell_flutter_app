@@ -1,0 +1,138 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:jadewell_flutter_app/data/models/settings.dart';
+import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart';
+import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
+import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
+import 'package:jadewell_flutter_app/state/data_providers.dart';
+import 'package:jadewell_flutter_app/state/platform_providers.dart';
+import 'package:jadewell_flutter_app/state/session_controller.dart';
+import 'package:jadewell_flutter_app/state/social_providers.dart';
+import 'package:jadewell_flutter_app/ui/screens/settings/settings_screen.dart';
+import 'package:jadewell_flutter_app/ui/widgets/widgets.dart';
+import 'package:material_ui/material_ui.dart';
+
+import 'harness.dart';
+
+void main() {
+  late MemorySettingsRepository repo;
+  late RecordingAnalytics analytics;
+  late RecordingAudio audio;
+  late RecordingHaptics haptics;
+
+  setUp(() {
+    repo = MemorySettingsRepository();
+    analytics = RecordingAnalytics();
+    audio = RecordingAudio();
+    haptics = RecordingHaptics();
+  });
+
+  Future<void> pump(
+    WidgetTester tester, {
+    bool adsRemoved = false,
+    Brightness brightness = Brightness.light,
+    Size size = const Size(390, 844),
+  }) =>
+      pumpScreen(
+        tester,
+        const SettingsScreen(),
+        brightness: brightness,
+        size: size,
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(repo),
+          analyticsProvider.overrideWithValue(analytics),
+          audioProvider.overrideWithValue(audio),
+          hapticsProvider.overrideWithValue(haptics),
+          adServiceProvider.overrideWithValue(FakeAdService(adsRemoved: adsRemoved)),
+          sessionProvider.overrideWith(() => FakeSession(const BackendSession(identity: guestIdentity, user: testUser))),
+          appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
+        ],
+      );
+
+  Finder toggleFor(String label) => find.byWidgetPredicate((w) => w is JwToggle && w.semanticLabel == label);
+
+  testWidgets('shows every row of the design plus Music and Sound effects', (tester) async {
+    await pump(tester);
+    for (final text in ['Settings', 'FEEDBACK', 'Music', 'Sound effects', 'Haptics', 'DISPLAY', 'Theme', 'Show timer']) {
+      expect(find.text(text), findsOneWidget, reason: text);
+    }
+    await tester.scrollUntilVisible(find.text('Reset progress'), 200);
+    expect(find.text('Account'), findsWidgets);
+    expect(find.text('Guest'), findsOneWidget);
+    expect(find.text(r'$1.99'), findsOneWidget);
+    expect(find.text('Ad privacy choices'), findsOneWidget);
+  });
+
+  testWidgets('toggles persist, reach the services and log the setting name', (tester) async {
+    await pump(tester);
+
+    await tester.tap(toggleFor('Music'));
+    await tester.pump();
+    expect((await repo.read()).music, isFalse);
+    expect(audio.music, isFalse);
+
+    await tester.tap(toggleFor('Sound effects'));
+    await tester.pump();
+    expect((await repo.read()).soundEffects, isFalse);
+    expect(audio.sfx, isFalse);
+
+    await tester.tap(toggleFor('Haptics'));
+    await tester.pump();
+    expect((await repo.read()).haptics, isFalse);
+    expect(haptics.enabled, isFalse);
+
+    await tester.tap(toggleFor('Show timer'));
+    await tester.pump();
+    expect((await repo.read()).showTimer, isFalse);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pump();
+    expect((await repo.read()).theme, ThemePreference.dark);
+
+    expect(
+      analytics.events.where((e) => e.$1 == AnalyticsEvents.settingsChanged).map((e) => e.$2['setting']),
+      ['music', 'sound_effects', 'haptics', 'show_timer', 'theme'],
+    );
+    // Only the name: no values or anything else.
+    expect(analytics.events.every((e) => e.$2.keys.toSet().containsAll({'setting'}) && e.$2.length == 1), isTrue);
+  });
+
+  testWidgets('tile face size opens a picker and persists the choice', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Tile face size'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Large').last);
+    await tester.pumpAndSettle();
+    expect((await repo.read()).tileSize, TileSizePreference.large);
+    expect(find.text('Large'), findsOneWidget);
+  });
+
+  testWidgets('reduce motion persists', (tester) async {
+    await pump(tester);
+    await tester.tap(toggleFor('Reduce motion'));
+    await tester.pump();
+    expect((await repo.read()).reduceMotion, isTrue);
+  });
+
+  testWidgets('remove ads shows Purchased once ads are removed', (tester) async {
+    await pump(tester, adsRemoved: true);
+    await tester.scrollUntilVisible(find.text('Reset progress'), 200);
+    expect(find.text('Purchased'), findsOneWidget);
+    expect(find.text(r'$1.99'), findsNothing);
+  });
+
+  testWidgets('reset progress asks first', (tester) async {
+    await pump(tester, size: const Size(390, 1500));
+    await tester.tap(find.text('Reset progress'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reset all progress?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reset all progress?'), findsNothing);
+  });
+
+  testWidgets('footer shows the version', (tester) async {
+    await pump(tester, brightness: Brightness.dark);
+    await tester.scrollUntilVisible(find.textContaining('pranta.dev', findRichText: true), 200);
+    expect(find.textContaining('1.0.0 (1)', findRichText: true), findsOneWidget);
+  });
+}
