@@ -20,3 +20,7 @@ All iOS code and config is written on Windows; building, signing and testing hap
 - [ ] ATT usage string, SKAdNetwork IDs, `GADApplicationIdentifier`
 - [ ] Run the app on the simulator and a device; run goldens on macOS
 - [ ] TestFlight upload
+- [ ] Crashlytics: add the "Upload Crashlytics symbols" Run Script build phase to Runner (`"${PODS_ROOT}/FirebaseCrashlytics/run"`, or `${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run` with SPM) with input files `${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}`, `.../Contents/Resources/DWARF/${PRODUCT_NAME}`, `.../Contents/Info.plist`, `$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist`, `$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)`; set Debug Information Format = "DWARF with dSYM File" for Release. Then force a test crash in a release build and check the Crashlytics dashboard (collection is off in debug/profile by design)
+- [ ] Analytics: confirm events reach DebugView with `-FIRDebugEnabled` on a release-configured run (debug builds log to the console only via `DebugPrintAnalytics`)
+- [ ] Audio: verify on a device that Jadewell's music **mixes** with Apple Music/Spotify (session = Ambient + mixWithOthers, set by `SoLoudAudioEngine`), respects the silent switch, resumes after a phone call / Siri, and pauses when backgrounded. No `UIBackgroundModes` audio entry is needed (we never play in the background)
+- [ ] Haptics: check select (light), match (medium), blocked (two light ticks 60 ms apart), board cleared (success notification) on a real iPhone

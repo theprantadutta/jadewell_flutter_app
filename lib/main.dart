@@ -10,9 +10,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'data/api/install_identity.dart';
 import 'firebase_options.dart';
+import 'platform/analytics/debug_print_analytics_impl.dart';
+import 'platform/analytics/firebase_analytics_impl.dart';
+import 'platform/audio/audio_service_impl.dart';
+import 'platform/audio/soloud_engine_impl.dart';
 import 'platform/auth/auth_service_impl.dart';
+import 'platform/crash/crashlytics_impl.dart';
+import 'platform/haptics/haptic_service_impl.dart';
 import 'state/app_providers.dart';
 import 'state/data_providers.dart';
+import 'state/platform_bridge.dart';
+import 'state/platform_providers.dart';
 import 'state/session_controller.dart';
 import 'ui/theme/jw_fonts.dart';
 
@@ -27,6 +35,9 @@ Future<void> main() async {
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
+  // Crashlytics + Analytics collect in release builds only (ARCHITECTURE §0).
+  await installCrashReporting();
+  unawaited(FirebaseAnalyticsImpl.configureCollection());
   final prefs = await SharedPreferences.getInstance();
   final identity = await InstallIdentity.load();
 
@@ -45,6 +56,9 @@ Future<void> main() async {
       sharedPreferencesProvider.overrideWithValue(prefs),
       installIdentityProvider.overrideWithValue(identity),
       authServiceProvider.overrideWithValue(FirebaseAuthServiceImpl(googleWebClientId: config.googleWebClientId)),
+      analyticsProvider.overrideWithValue(kReleaseMode ? FirebaseAnalyticsImpl() : DebugPrintAnalytics()),
+      audioProvider.overrideWithValue(AudioServiceImpl(SoLoudAudioEngine())),
+      hapticsProvider.overrideWithValue(HapticServiceImpl()),
       settingsRepositoryProvider.overrideWith((ref) => ref.watch(driftSettingsRepositoryProvider)),
       progressRepositoryProvider.overrideWith((ref) => ref.watch(driftProgressRepositoryProvider)),
       statsRepositoryProvider.overrideWith((ref) => ref.watch(driftStatsRepositoryProvider)),
@@ -57,6 +71,8 @@ Future<void> main() async {
   unawaited(container.read(sessionProvider.future).then((_) {}, onError: (Object e) {
     debugPrint('session: start-up sign-in failed: $e');
   }));
+
+  PlatformBridge.start(container); // settings + lifecycle → audio/haptics; audio starts after first frame
 
   runApp(UncontrolledProviderScope(container: container, child: const JadewellApp()));
 }
