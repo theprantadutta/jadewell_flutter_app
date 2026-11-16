@@ -83,9 +83,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
       child: LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 32 + bottom),
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: box.maxHeight - 16 - bottom),
+            constraints: BoxConstraints(minHeight: box.maxHeight - 32 - bottom),
             child: IntrinsicHeight(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
