@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart' as material_ui show GlobalMaterial
 
 import 'data/models/settings.dart';
 import 'state/data_providers.dart';
+import 'state/platform_bridge.dart';
 import 'ui/l10n/generated/app_localizations.dart';
 import 'ui/router.dart';
 import 'ui/theme/jw_theme.dart';
@@ -21,7 +22,7 @@ class JadewellApp extends ConsumerStatefulWidget {
 }
 
 class _JadewellAppState extends ConsumerState<JadewellApp> {
-  late final GoRouter _router = createAppRouter();
+  late final GoRouter _router = createAppRouter(observers: [ref.read(analyticsRouteObserverProvider)]);
 
   @override
   void dispose() {
