@@ -1,15 +1,57 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'data/api/install_identity.dart';
+import 'firebase_options.dart';
+import 'platform/auth/auth_service_impl.dart';
+import 'state/app_providers.dart';
+import 'state/session_controller.dart';
+import 'ui/theme/jw_fonts.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    ProviderScope(
-      // Docs/ARCHITECTURE.md §4 rule 2: no automatic retries by default.
-      retry: (_, _) => null,
-      child: const JadewellApp(),
-    ),
+  registerFontLicenses();
+
+  // Everything here is local (asset, disk, Firebase config); nothing waits on
+  // the network. The backend session starts in the background below.
+  await dotenv.load();
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
+  final prefs = await SharedPreferences.getInstance();
+  final identity = await InstallIdentity.load();
+
+  final config = AppConfig(
+    apiBaseUrl: kReleaseMode
+        ? dotenv.env['PROD_API_BACKEND_URL'] ?? 'https://jadewell.pranta.dev/api/v1'
+        : dotenv.env['DEV_API_BACKEND_URL'] ?? 'http://127.0.0.1:8393/api/v1',
+    googleWebClientId: _nonEmpty(dotenv.env['GOOGLE_WEB_CLIENT_ID']),
   );
+
+  final container = ProviderContainer(
+    // docs/ARCHITECTURE.md §4 rule 2: no automatic retries by default.
+    retry: (_, _) => null,
+    overrides: [
+      appConfigProvider.overrideWithValue(config),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      installIdentityProvider.overrideWithValue(identity),
+      authServiceProvider.overrideWithValue(FirebaseAuthServiceImpl(googleWebClientId: config.googleWebClientId)),
+    ],
+  );
+
+  // Guest sign-in + backend exchange, fire-and-forget.
+  unawaited(container.read(sessionProvider.future).then((_) {}, onError: (Object e) {
+    debugPrint('session: start-up sign-in failed: $e');
+  }));
+
+  runApp(UncontrolledProviderScope(container: container, child: const JadewellApp()));
 }
+
+String? _nonEmpty(String? s) => (s == null || s.trim().isEmpty) ? null : s.trim();

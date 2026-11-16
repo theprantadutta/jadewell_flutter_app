@@ -7,7 +7,6 @@ import '../../board/tile/tile_face_painter.dart';
 import '../../board/tile/tile_face_spec.dart';
 import '../../board/tile/tile_widget.dart';
 import '../../theme/jw_background.dart';
-import '../../theme/jw_fonts.dart';
 import '../../theme/jw_theme.dart';
 import '../../widgets/widgets.dart';
 import 'gallery_sheets.dart';
@@ -32,7 +31,6 @@ class _DevGalleryScreenState extends State<DevGalleryScreen> {
   @override
   void initState() {
     super.initState();
-    registerFontLicenses();
     _load();
   }
 
