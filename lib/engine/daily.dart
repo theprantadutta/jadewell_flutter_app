@@ -17,3 +17,23 @@ String dailySeedKey(DateTime utcDate, String layoutId, int generatorVersion) {
   final day = d.day.toString().padLeft(2, '0');
   return '$y-$m-$day|$layoutId|$generatorVersion';
 }
+
+/// Days since 1970-01-01 (UTC) for [utcDate]'s calendar day.
+int utcDayNumber(DateTime utcDate) {
+  final d = utcDate.isUtc ? utcDate : utcDate.toUtc();
+  return DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/ Duration.millisecondsPerDay;
+}
+
+/// Today's daily layout id. The pool is walked in cycles of `pool.length`
+/// days; each cycle uses its own deterministic shuffle (xoshiro128** seeded
+/// with `fnv1a32("daily-cycle|<cycle>")`), so no layout repeats within a
+/// cycle and every player (and the server) picks the same one offline.
+/// [pool] order matters: it is `index.json`'s `dailyPool` as written.
+String dailyLayoutId(DateTime utcDate, List<String> pool) {
+  if (pool.isEmpty) throw ArgumentError('empty daily pool');
+  final day = utcDayNumber(utcDate);
+  final cycle = day ~/ pool.length;
+  final order = List<String>.of(pool);
+  Xoshiro128(fnv1a32('daily-cycle|$cycle')).shuffle(order);
+  return order[day % pool.length];
+}

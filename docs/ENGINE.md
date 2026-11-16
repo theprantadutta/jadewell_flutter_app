@@ -311,3 +311,14 @@ dart run coverage:test_with_coverage --out coverage/engine -- test_engine
 
 The dealer↔solver agreement test (`agreement_<k>_test.dart`) covers every `assets/layouts/*.json` except
 `index.json`, 5,000 seeds each in both dealer modes; any unsolvable or budget-exceeded verdict fails the suite.
+
+## Daily layout choice
+
+`dailyLayoutId(utcDate, pool)` (`lib/engine/daily.dart`), where `pool` is `index.json`'s `dailyPool` in file order:
+
+1. `day = floor(utcMidnight(utcDate).millisecondsSinceEpoch / 86_400_000)` (days since 1970-01-01 UTC).
+2. `cycle = day ~/ pool.length`.
+3. `order = copy of pool`, shuffled with `Xoshiro128(fnv1a32("daily-cycle|<cycle>")).shuffle(order)` (same top-down Fisher–Yates as §2).
+4. Result: `order[day % pool.length]`.
+
+The seed is then `dailySeed(utcDate, layoutId, generatorVersion)`. Golden values for the pool `lotus, lantern, fan, bonsai, koi, gate, moon, bell`, 2026-11-16 onward: `koi, moon, lotus, bell, bonsai, moon, gate, lantern, lotus, fan` (test `test_engine/daily_layout_test.dart`).
