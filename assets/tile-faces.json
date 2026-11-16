@@ -1,0 +1,848 @@
+[
+ {
+  "id": 0,
+  "matchKey": "f0",
+  "name": "1 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "c3"
+   }
+  ]
+ },
+ {
+  "id": 1,
+  "matchKey": "f1",
+  "name": "2 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 50,
+    "y": 27,
+    "colour": "c2"
+   },
+   {
+    "x": 50,
+    "y": 73,
+    "colour": "c1"
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "matchKey": "f2",
+  "name": "3 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 24,
+    "y": 20,
+    "colour": "c1"
+   },
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 76,
+    "y": 80,
+    "colour": "c2"
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "matchKey": "f3",
+  "name": "4 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 28,
+    "y": 26,
+    "colour": "c1"
+   },
+   {
+    "x": 72,
+    "y": 26,
+    "colour": "c2"
+   },
+   {
+    "x": 28,
+    "y": 74,
+    "colour": "c2"
+   },
+   {
+    "x": 72,
+    "y": 74,
+    "colour": "c1"
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "matchKey": "f4",
+  "name": "5 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 26,
+    "y": 22,
+    "colour": "c1"
+   },
+   {
+    "x": 74,
+    "y": 22,
+    "colour": "c2"
+   },
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 26,
+    "y": 78,
+    "colour": "c2"
+   },
+   {
+    "x": 74,
+    "y": 78,
+    "colour": "c1"
+   }
+  ]
+ },
+ {
+  "id": 5,
+  "matchKey": "f5",
+  "name": "6 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 30,
+    "y": 18,
+    "colour": "c2"
+   },
+   {
+    "x": 70,
+    "y": 18,
+    "colour": "c2"
+   },
+   {
+    "x": 30,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 70,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 30,
+    "y": 82,
+    "colour": "c3"
+   },
+   {
+    "x": 70,
+    "y": 82,
+    "colour": "c3"
+   }
+  ]
+ },
+ {
+  "id": 6,
+  "matchKey": "f6",
+  "name": "7 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 22,
+    "y": 14,
+    "colour": "c2"
+   },
+   {
+    "x": 50,
+    "y": 27,
+    "colour": "c2"
+   },
+   {
+    "x": 78,
+    "y": 40,
+    "colour": "c2"
+   },
+   {
+    "x": 30,
+    "y": 63,
+    "colour": "c3"
+   },
+   {
+    "x": 70,
+    "y": 63,
+    "colour": "c3"
+   },
+   {
+    "x": 30,
+    "y": 87,
+    "colour": "c3"
+   },
+   {
+    "x": 70,
+    "y": 87,
+    "colour": "c3"
+   }
+  ]
+ },
+ {
+  "id": 7,
+  "matchKey": "f7",
+  "name": "8 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 30,
+    "y": 13,
+    "colour": "c1"
+   },
+   {
+    "x": 70,
+    "y": 13,
+    "colour": "c1"
+   },
+   {
+    "x": 30,
+    "y": 38,
+    "colour": "c1"
+   },
+   {
+    "x": 70,
+    "y": 38,
+    "colour": "c1"
+   },
+   {
+    "x": 30,
+    "y": 62,
+    "colour": "c1"
+   },
+   {
+    "x": 70,
+    "y": 62,
+    "colour": "c1"
+   },
+   {
+    "x": 30,
+    "y": 87,
+    "colour": "c1"
+   },
+   {
+    "x": 70,
+    "y": 87,
+    "colour": "c1"
+   }
+  ]
+ },
+ {
+  "id": 8,
+  "matchKey": "f8",
+  "name": "9 of Circles",
+  "kind": "circles",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 22,
+    "y": 17,
+    "colour": "c1"
+   },
+   {
+    "x": 50,
+    "y": 17,
+    "colour": "c1"
+   },
+   {
+    "x": 78,
+    "y": 17,
+    "colour": "c1"
+   },
+   {
+    "x": 22,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 78,
+    "y": 50,
+    "colour": "c3"
+   },
+   {
+    "x": 22,
+    "y": 83,
+    "colour": "c2"
+   },
+   {
+    "x": 50,
+    "y": 83,
+    "colour": "c2"
+   },
+   {
+    "x": 78,
+    "y": 83,
+    "colour": "c2"
+   }
+  ]
+ },
+ {
+  "id": 9,
+  "matchKey": "f9",
+  "name": "1 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "r"
+   }
+  ]
+ },
+ {
+  "id": 10,
+  "matchKey": "f10",
+  "name": "2 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 50,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 72,
+    "colour": "b"
+   }
+  ]
+ },
+ {
+  "id": 11,
+  "matchKey": "f11",
+  "name": "3 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 50,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 30,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 70,
+    "y": 72,
+    "colour": "b"
+   }
+  ]
+ },
+ {
+  "id": 12,
+  "matchKey": "f12",
+  "name": "4 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 30,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 70,
+    "y": 28,
+    "colour": "b"
+   },
+   {
+    "x": 30,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 70,
+    "y": 72,
+    "colour": "g"
+   }
+  ]
+ },
+ {
+  "id": 13,
+  "matchKey": "f13",
+  "name": "5 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 24,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 76,
+    "y": 28,
+    "colour": "b"
+   },
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "r"
+   },
+   {
+    "x": 24,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 76,
+    "y": 72,
+    "colour": "g"
+   }
+  ]
+ },
+ {
+  "id": 14,
+  "matchKey": "f14",
+  "name": "6 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 22,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 78,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 22,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 50,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 78,
+    "y": 72,
+    "colour": "b"
+   }
+  ]
+ },
+ {
+  "id": 15,
+  "matchKey": "f15",
+  "name": "7 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 50,
+    "y": 16,
+    "colour": "r"
+   },
+   {
+    "x": 22,
+    "y": 50,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "b"
+   },
+   {
+    "x": 78,
+    "y": 50,
+    "colour": "g"
+   },
+   {
+    "x": 22,
+    "y": 84,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 84,
+    "colour": "b"
+   },
+   {
+    "x": 78,
+    "y": 84,
+    "colour": "g"
+   }
+  ]
+ },
+ {
+  "id": 16,
+  "matchKey": "f16",
+  "name": "8 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 17,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 39,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 61,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 83,
+    "y": 28,
+    "colour": "g"
+   },
+   {
+    "x": 17,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 39,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 61,
+    "y": 72,
+    "colour": "b"
+   },
+   {
+    "x": 83,
+    "y": 72,
+    "colour": "b"
+   }
+  ]
+ },
+ {
+  "id": 17,
+  "matchKey": "f17",
+  "name": "9 of Bamboo",
+  "kind": "bamboo",
+  "glyph": null,
+  "index": null,
+  "elements": [
+   {
+    "x": 22,
+    "y": 16,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 16,
+    "colour": "r"
+   },
+   {
+    "x": 78,
+    "y": 16,
+    "colour": "b"
+   },
+   {
+    "x": 22,
+    "y": 50,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 50,
+    "colour": "r"
+   },
+   {
+    "x": 78,
+    "y": 50,
+    "colour": "b"
+   },
+   {
+    "x": 22,
+    "y": 84,
+    "colour": "g"
+   },
+   {
+    "x": 50,
+    "y": 84,
+    "colour": "r"
+   },
+   {
+    "x": 78,
+    "y": 84,
+    "colour": "b"
+   }
+  ]
+ },
+ {
+  "id": 18,
+  "matchKey": "f18",
+  "name": "1 of Characters",
+  "kind": "characters",
+  "glyph": "一",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 19,
+  "matchKey": "f19",
+  "name": "2 of Characters",
+  "kind": "characters",
+  "glyph": "二",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 20,
+  "matchKey": "f20",
+  "name": "3 of Characters",
+  "kind": "characters",
+  "glyph": "三",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 21,
+  "matchKey": "f21",
+  "name": "4 of Characters",
+  "kind": "characters",
+  "glyph": "四",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 22,
+  "matchKey": "f22",
+  "name": "5 of Characters",
+  "kind": "characters",
+  "glyph": "五",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 23,
+  "matchKey": "f23",
+  "name": "6 of Characters",
+  "kind": "characters",
+  "glyph": "六",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 24,
+  "matchKey": "f24",
+  "name": "7 of Characters",
+  "kind": "characters",
+  "glyph": "七",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 25,
+  "matchKey": "f25",
+  "name": "8 of Characters",
+  "kind": "characters",
+  "glyph": "八",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 26,
+  "matchKey": "f26",
+  "name": "9 of Characters",
+  "kind": "characters",
+  "glyph": "九",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 27,
+  "matchKey": "f27",
+  "name": "East Wind",
+  "kind": "wind",
+  "glyph": "東",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 28,
+  "matchKey": "f28",
+  "name": "South Wind",
+  "kind": "wind",
+  "glyph": "南",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 29,
+  "matchKey": "f29",
+  "name": "West Wind",
+  "kind": "wind",
+  "glyph": "西",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 30,
+  "matchKey": "f30",
+  "name": "North Wind",
+  "kind": "wind",
+  "glyph": "北",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 31,
+  "matchKey": "f31",
+  "name": "Red Dragon",
+  "kind": "dragon",
+  "glyph": "中",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 32,
+  "matchKey": "f32",
+  "name": "Green Dragon",
+  "kind": "dragon",
+  "glyph": "發",
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 33,
+  "matchKey": "f33",
+  "name": "White Dragon",
+  "kind": "dragon",
+  "glyph": null,
+  "index": null,
+  "elements": []
+ },
+ {
+  "id": 34,
+  "matchKey": "FL",
+  "name": "Plum Flower",
+  "kind": "flower",
+  "glyph": "梅",
+  "index": "1",
+  "elements": []
+ },
+ {
+  "id": 35,
+  "matchKey": "FL",
+  "name": "Orchid Flower",
+  "kind": "flower",
+  "glyph": "蘭",
+  "index": "2",
+  "elements": []
+ },
+ {
+  "id": 36,
+  "matchKey": "FL",
+  "name": "Chrysanthemum Flower",
+  "kind": "flower",
+  "glyph": "菊",
+  "index": "3",
+  "elements": []
+ },
+ {
+  "id": 37,
+  "matchKey": "FL",
+  "name": "Bamboo Flower",
+  "kind": "flower",
+  "glyph": "竹",
+  "index": "4",
+  "elements": []
+ },
+ {
+  "id": 38,
+  "matchKey": "SE",
+  "name": "Spring Season",
+  "kind": "season",
+  "glyph": "春",
+  "index": "1",
+  "elements": []
+ },
+ {
+  "id": 39,
+  "matchKey": "SE",
+  "name": "Summer Season",
+  "kind": "season",
+  "glyph": "夏",
+  "index": "2",
+  "elements": []
+ },
+ {
+  "id": 40,
+  "matchKey": "SE",
+  "name": "Autumn Season",
+  "kind": "season",
+  "glyph": "秋",
+  "index": "3",
+  "elements": []
+ },
+ {
+  "id": 41,
+  "matchKey": "SE",
+  "name": "Winter Season",
+  "kind": "season",
+  "glyph": "冬",
+  "index": "4",
+  "elements": []
+ }
+]

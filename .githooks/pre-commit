@@ -1,0 +1,9 @@
+#!/bin/sh
+# Jadewell pre-commit: layering check + engine tests. Enable once per clone:
+#   git config core.hooksPath .githooks
+set -e
+cd "$(git rev-parse --show-toplevel)"
+dart run tool/check_layers.dart
+if git diff --cached --name-only | grep -qE '^(lib/engine|test_engine)/'; then
+  dart test test_engine --reporter=failures-only
+fi
