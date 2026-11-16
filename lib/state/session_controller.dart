@@ -50,7 +50,7 @@ class SessionController extends AsyncNotifier<BackendSession> {
     // profile in the background, without blocking start-up.
     if (store.hasUsableToken) {
       _exchangedUid = identity.uid;
-      unawaited(Future(_refreshProfile));
+      unawaited(Future(refreshProfile));
       return BackendSession(identity: identity);
     }
     unawaited(Future(() => ensureBackendSession(force: true)));
@@ -93,7 +93,8 @@ class SessionController extends AsyncNotifier<BackendSession> {
     state = AsyncData(BackendSession(identity: identity, user: auth.user, isNewUser: auth.isNewUser));
   }
 
-  Future<void> _refreshProfile() async {
+  /// Re-reads `/auth/me` (e.g. after a profile edit); cheaper than a re-exchange.
+  Future<void> refreshProfile() async {
     final result = await ref.read(authApiProvider).me();
     final identity = _auth.current!;
     if (result.isSuccess) {

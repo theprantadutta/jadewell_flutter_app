@@ -141,7 +141,14 @@ class JwToast extends StatelessWidget {
               children: [
                 JwBead(color: beadColor ?? jw.jade, size: 16),
                 const SizedBox(width: 10),
-                Text(message, style: jw.text.callout.copyWith(fontSize: 14.5)),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: jw.text.callout.copyWith(fontSize: 14.5),
+                  ),
+                ),
               ],
             ),
           ),

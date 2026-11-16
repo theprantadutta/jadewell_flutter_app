@@ -42,9 +42,13 @@ GoRouter createAppRouter({List<NavigatorObserver> observers = const []}) => GoRo
       initialLocation: AppRoutes.splash,
       observers: observers,
       routes: [
-        GoRoute(path: AppRoutes.splash, name: 'splash', builder: (_, _) => const SplashScreen()),
-        GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (_, _) => const OnboardingScreen()),
-        GoRoute(path: AppRoutes.home, name: 'home', builder: (_, _) => const HomeScreen()),
+        GoRoute(path: AppRoutes.splash, name: 'splash', pageBuilder: (_, s) => _fade(s, const SplashScreen())),
+        GoRoute(
+          path: AppRoutes.onboarding,
+          name: 'onboarding',
+          pageBuilder: (_, s) => _fade(s, const OnboardingScreen()),
+        ),
+        GoRoute(path: AppRoutes.home, name: 'home', pageBuilder: (_, s) => _fade(s, const HomeScreen())),
         GoRoute(
           path: '/game/:layoutId',
           name: 'game',
@@ -70,4 +74,14 @@ GoRouter createAppRouter({List<NavigatorObserver> observers = const []}) => GoRo
         if (kDebugMode)
           GoRoute(path: AppRoutes.devGallery, name: 'devGallery', builder: (_, _) => const DevGalleryScreen()),
       ],
+    );
+
+/// 200 ms cross-fade (SPLASH.md handoff: splash → onboarding/home).
+CustomTransitionPage<void> _fade(GoRouterState state, Widget child) => CustomTransitionPage<void>(
+      key: state.pageKey,
+      name: state.name,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 200),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
+      transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
     );

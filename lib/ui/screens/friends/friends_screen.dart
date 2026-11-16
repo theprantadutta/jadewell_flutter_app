@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../data/api/api_result.dart';
 import '../../../data/repositories/social_repository.dart';
@@ -327,10 +328,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   // ---- actions ----
 
   Future<void> _copyInvite(String code) async {
-    // TODO(share_plus): open the share sheet with this text instead.
     final l = AppLocalizations.of(context);
-    await Clipboard.setData(ClipboardData(text: l.friendsInviteText(FriendCodes.inviteLink(code))));
-    if (mounted) showJwToast(context, l.friendsInviteCopied);
+    final text = l.friendsInviteText(FriendCodes.inviteLink(code));
+    try {
+      await SharePlus.instance.share(ShareParams(text: text));
+    } on Object {
+      // No share sheet available: fall back to the clipboard.
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) showJwToast(context, l.friendsInviteCopied);
+    }
   }
 
   Future<void> _send() async {

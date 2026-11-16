@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../data/models/settings.dart';
 import '../../../platform/analytics/analytics_service.dart';
@@ -174,7 +175,7 @@ class SettingsScreen extends ConsumerWidget {
                 title: l.settingsPrivacy,
                 chevron: true,
                 onHaptic: haptic,
-                onTap: () => _showPrivacy(context),
+                onTap: () => _openPrivacy(context),
               ),
               JwListRow(
                 icon: JwIcons.eye,
@@ -240,9 +241,19 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  /// Opens the policy in the browser; falls back to a sheet with the URL.
+  Future<void> _openPrivacy(BuildContext context) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(Uri.parse(kPrivacyPolicyUrl), mode: LaunchMode.externalApplication);
+    } on Object {
+      opened = false;
+    }
+    if (!opened && context.mounted) await _showPrivacy(context);
+  }
+
   Future<void> _showPrivacy(BuildContext context) {
     final l = AppLocalizations.of(context);
-    // TODO(url_launcher): open kPrivacyPolicyUrl in the browser instead.
     return showJwSheet<void>(
       context,
       semanticLabel: l.privacyTitle,

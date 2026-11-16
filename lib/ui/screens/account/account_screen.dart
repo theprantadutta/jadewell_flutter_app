@@ -295,7 +295,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     showJwToast(context, AppLocalizations.of(context).accountNameSaved);
     // Re-read the profile so the session (and everything showing the name)
     // picks the new name up.
-    unawaited(ref.read(sessionProvider.notifier).ensureBackendSession(force: true));
+    unawaited(ref.read(sessionProvider.notifier).refreshProfile());
   }
 }
 
