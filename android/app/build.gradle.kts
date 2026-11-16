@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -12,7 +14,7 @@ plugins {
 // AdMob app id from the gitignored android/ads.properties (written by
 // `dart run tool/gen_ad_ids.dart`, docs/ADS.md). Without it the build uses
 // Google's sample app id, which serves test ads only.
-val adsProperties = java.util.Properties().apply {
+val adsProperties = Properties().apply {
     val file = rootProject.file("ads.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
@@ -21,7 +23,9 @@ val admobAppId: String = adsProperties.getProperty("admobAppId")?.takeIf { it.is
 
 android {
     namespace = "com.pranta.jadewell"
-    compileSdk = flutter.compileSdkVersion
+    // 37, not flutter.compileSdkVersion (36): the Google Mobile Ads 25.5 / OpenIAP dependency
+    // tree pulls androidx.lifecycle 2.11, whose AAR metadata requires compiling against 37.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

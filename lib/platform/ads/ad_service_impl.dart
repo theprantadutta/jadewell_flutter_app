@@ -162,7 +162,7 @@ class AdServiceImpl implements AdService {
       debugPrint('ads: init failed: $e\n$st');
     } finally {
       if (!_initDone.isCompleted) _initDone.complete();
-      _changed.add(null);
+      _notify();
     }
   }
 
@@ -385,7 +385,7 @@ class AdServiceImpl implements AdService {
         _drop(f);
       }
     }
-    _changed.add(null);
+    _notify();
   }
 
   Future<void> _startSdk() => _sdkStarting ??= () async {
@@ -494,7 +494,7 @@ class AdServiceImpl implements AdService {
       _loadedAtMs[f] = _clock();
       _attempts[f] = 0;
       _retryTimers.remove(f)?.cancel();
-      _changed.add(null);
+      _notify();
     }
 
     void failed(LoadAdError e) {
@@ -502,7 +502,7 @@ class AdServiceImpl implements AdService {
       debugPrint('ads: ${f.key} failed to load (${e.code}): ${e.message}');
       _log(AnalyticsEvents.adLoadFailed, {'format': f.key, 'code': e.code});
       _scheduleRetry(f);
-      _changed.add(null);
+      _notify();
     }
 
     try {
@@ -770,6 +770,10 @@ class AdServiceImpl implements AdService {
   void _save() {
     final c = _counters;
     unawaited(_store.write(c).catchError((Object e) => debugPrint('ads: saving gate counters failed: $e')));
+  }
+
+  void _notify() {
+    if (!_changed.isClosed) _changed.add(null);
   }
 
   void _cancelPendingInterstitial() {
