@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:material_ui/material_ui.dart' as material_ui show GlobalMaterialLocalizations;
 
 import 'ui/l10n/generated/app_localizations.dart';
+import 'ui/screens/dev_gallery/dev_gallery_screen.dart';
+import 'ui/theme/jw_theme.dart';
 
 /// Composition root widget. Theme, router and providers are wired here in Phase 6.
 class JadewellApp extends StatelessWidget {
@@ -21,7 +23,10 @@ class JadewellApp extends StatelessWidget {
         ...material_ui.GlobalMaterialLocalizations.delegates,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: Center(child: Text('Jadewell'))),
+      theme: buildJwThemeData(Brightness.light),
+      darkTheme: buildJwThemeData(Brightness.dark),
+      // Temporary: the dev gallery is home until the router lands.
+      home: const DevGalleryScreen(),
     );
   }
 }
