@@ -11,7 +11,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../lib/engine/engine.dart';
+import 'package:jadewell_flutter_app/engine/engine.dart';
 
 class LayoutReport {
   LayoutReport(this.id);
