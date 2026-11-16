@@ -67,7 +67,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       }
     });
 
-    final bottom = MediaQuery.paddingOf(context).bottom;
+    // viewPadding: the page frame may already have consumed padding, which
+    // would leave the footnote sitting on the gesture bar.
+    final bottom = MediaQuery.viewPaddingOf(context).bottom;
     return JwPage(
       title: null,
       close: true,

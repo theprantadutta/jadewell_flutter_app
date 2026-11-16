@@ -34,3 +34,8 @@ All iOS code and config is written on Windows; building, signing and testing hap
 - [ ] App Store Connect: In-App Purchase key (`.p8`, Key ID, Issuer ID) → backend secrets for `POST /purchases/verify` (App Store Server API); optional App Store Server Notifications V2 URL → backend
 - [ ] Optional: a StoreKit configuration file (`Products.storekit`) with `com.pranta.jadewell.remove_ads` selected in the Run scheme to test purchases on the simulator without App Store Connect
 - [ ] Device test with a Sandbox account: Store shows the localized price; Buy → "Verifying…" → celebration; delete + reinstall → Restore (top right of the Remove ads screen) brings it back; with the product missing or StoreKit unavailable the screen shows "Not available yet" and nothing crashes
+
+## Orientation (portrait only)
+
+- `Info.plist`: iPhone portrait only; iPad portrait + upside-down with `UIRequiresFullScreen = true` (required so iPad may restrict orientation; it also opts out of Split View/Slide Over, which suits a full-screen game). Verify on an iPad that rotation stays portrait and that App Store validation accepts it.
+- Dart also calls `SystemChrome.setPreferredOrientations([portraitUp, portraitDown])` in `main.dart`.
