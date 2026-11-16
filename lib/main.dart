@@ -21,7 +21,8 @@ Future<void> main() async {
 
   // Everything here is local (asset, disk, Firebase config); nothing waits on
   // the network. The backend session starts in the background below.
-  await dotenv.load();
+  // TEMP: config.env, not .env, until flutter/flutter#196444 ships (Android drops dotfile assets).
+  await dotenv.load(fileName: 'config.env');
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }

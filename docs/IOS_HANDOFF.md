@@ -8,7 +8,7 @@ All iOS code and config is written on Windows; building, signing and testing hap
 |---|---|---|
 | AdMob app IDs + ad unit IDs (Android and iOS) | Private backend repo: `jadewell-dotnet-api/docs/ADMOB-IDS.txt` (also `ADMOB-NOTE.txt` at this repo's root on the Windows machine, gitignored) | iOS app ID → the gitignored ads xcconfig read by `Info.plist` (`GADApplicationIdentifier`); unit IDs → `lib/platform/ads/ad_ids.dart` (gitignored, template `ad_ids.example.dart`) |
 | `GoogleService-Info.plist` / `firebase_options.dart` | `flutterfire configure --project=jadewell-c6647` | `ios/Runner/`, `lib/` (both gitignored) |
-| `.env` (Google web client id, API URLs) | Copy `.env.example`, fill from the Windows machine's `.env` | repo root (gitignored, shipped as an asset) |
+| `config.env` (Google web client id, API URLs) | Copy `config.env.example` to `config.env`, fill from the Windows machine | repo root (gitignored, shipped as an asset) |
 
 ## Checklist (filled in as phases land)
 

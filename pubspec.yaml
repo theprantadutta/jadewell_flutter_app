@@ -76,7 +76,8 @@ flutter:
   uses-material-design: true
   generate: true
   assets:
-    - .env
+    # TEMP: config.env, not .env: Flutter 3.50 drops dotfile assets on Android (flutter/flutter#196444). Rename back once fixed.
+    - config.env
     - assets/tile-faces.json
     - assets/layouts/
     - assets/icons/
