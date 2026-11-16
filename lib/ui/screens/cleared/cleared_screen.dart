@@ -133,9 +133,8 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     if (_headStartChecked || !mounted) return;
     _headStartChecked = true;
     final ads = ref.read(adServiceProvider);
-    // TODO(contract): skip when this board showed an interstitial once
-    // AdService.onBoardCleared reports it (see report).
-    if (ads.adsRemoved || ref.read(headStartBonusProvider) > 0) return;
+    // Never stack a rewarded interstitial on top of an interstitial.
+    if (ads.adsRemoved || ref.read(headStartBonusProvider) > 0 || ref.read(clearInterstitialShownProvider)) return;
     final granted = await showGameModal<bool>(
       context,
       bottom: true,

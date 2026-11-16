@@ -59,7 +59,10 @@ class TestAds implements AdService {
   Future<bool> showRewardedInterstitial(RewardedInterstitialPlacement placement) async => reward;
 
   @override
-  Future<void> onBoardCleared({required bool isDaily}) async => clearedCalls++;
+  Future<bool> onBoardCleared({required bool isDaily}) async {
+    clearedCalls++;
+    return false;
+  }
 }
 
 LayoutInfo info(Layout layout, {String chapter = 'classics', int parMs = 60000}) => LayoutInfo(

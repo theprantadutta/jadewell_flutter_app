@@ -63,3 +63,18 @@ class LastClearedController extends Notifier<ClearedResult?> {
 
   void set(ClearedResult result) => state = result;
 }
+
+
+/// Whether the most recent clear showed an interstitial (set when
+/// `AdService.onBoardCleared` completes; reset on every new clear).
+final clearInterstitialShownProvider =
+    NotifierProvider<ClearInterstitialShown, bool>(ClearInterstitialShown.new);
+
+class ClearInterstitialShown extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  // A setter would read oddly at call sites; keep an explicit method.
+  // ignore: use_setters_to_change_properties
+  void set(bool shown) => state = shown;
+}

@@ -89,7 +89,7 @@ class InstantAdService implements AdService {
   @override
   Future<bool> showRewardedInterstitial(RewardedInterstitialPlacement placement) async => reward;
   @override
-  Future<void> onBoardCleared({required bool isDaily}) async {}
+  Future<bool> onBoardCleared({required bool isDaily}) async => false;
 }
 
 /// Pumps [initial] inside a themed router app with stub routes for every

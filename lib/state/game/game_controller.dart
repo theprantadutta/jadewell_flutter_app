@@ -512,7 +512,10 @@ class GameController extends Notifier<GameViewState> {
     });
     _log(AnalyticsEvents.starsEarned, {'layout_id': info.id, 'stars': stars});
     if (launch.daily) _log(AnalyticsEvents.dailyComplete, {'layout_id': info.id, 'time_ms': stats.elapsedMs, 'stars': stars});
-    unawaited(_guard(_ads.onBoardCleared(isDaily: launch.daily)));
+    ref.read(clearInterstitialShownProvider.notifier).set(false);
+    unawaited(_guard(_ads.onBoardCleared(isDaily: launch.daily).then((shown) {
+      if (ref.mounted) ref.read(clearInterstitialShownProvider.notifier).set(shown);
+    })));
   }
 
   // ---------------------------------------------------------- persistence

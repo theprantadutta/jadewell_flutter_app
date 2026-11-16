@@ -22,8 +22,10 @@ abstract interface class AdService {
   Future<bool> showRewardedInterstitial(RewardedInterstitialPlacement placement);
 
   /// Called when a board is cleared; the implementation's pure gate decides
-  /// (frequency cap, first-2-boards rule, ads removed) and may show one.
-  Future<void> onBoardCleared({required bool isDaily});
+  /// (frequency cap, first-2-boards rule, ads removed) and may show an
+  /// interstitial. Completes true if one was shown (the cleared screen then
+  /// skips the "Head start" offer for this board).
+  Future<bool> onBoardCleared({required bool isDaily});
 }
 
 /// Debug stand-in: rewarded ads "play" for 600 ms and always reward.
@@ -52,5 +54,5 @@ class FakeAdService implements AdService {
   }
 
   @override
-  Future<void> onBoardCleared({required bool isDaily}) async {}
+  Future<bool> onBoardCleared({required bool isDaily}) async => false;
 }
