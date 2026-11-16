@@ -12,6 +12,7 @@ import 'data/api/install_identity.dart';
 import 'firebase_options.dart';
 import 'platform/auth/auth_service_impl.dart';
 import 'state/app_providers.dart';
+import 'state/data_providers.dart';
 import 'state/session_controller.dart';
 import 'ui/theme/jw_fonts.dart';
 
@@ -44,8 +45,13 @@ Future<void> main() async {
       sharedPreferencesProvider.overrideWithValue(prefs),
       installIdentityProvider.overrideWithValue(identity),
       authServiceProvider.overrideWithValue(FirebaseAuthServiceImpl(googleWebClientId: config.googleWebClientId)),
+      settingsRepositoryProvider.overrideWith((ref) => ref.watch(driftSettingsRepositoryProvider)),
+      progressRepositoryProvider.overrideWith((ref) => ref.watch(driftProgressRepositoryProvider)),
+      statsRepositoryProvider.overrideWith((ref) => ref.watch(driftStatsRepositoryProvider)),
+      dailyRepositoryProvider.overrideWith((ref) => ref.watch(driftDailyRepositoryProvider.future)),
     ],
   );
+  startBackgroundSync(container); // outbox → backend; never blocks
 
   // Guest sign-in + backend exchange, fire-and-forget.
   unawaited(container.read(sessionProvider.future).then((_) {}, onError: (Object e) {

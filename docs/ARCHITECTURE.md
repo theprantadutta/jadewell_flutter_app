@@ -130,6 +130,8 @@ SharedPreferences only for device-only flags (onboarding done, JWT, install id, 
 
 **SyncEngine** is the only thing that talks to the backend for writes: drains `sync_outbox` with debounce (3 s), periodic (2 min), exponential backoff, and on resume/pause. Reads (leaderboards, friends) are fetched on screen open, cached, and fall back to the cache. **No network call ever blocks start-up or gameplay.**
 
+Drift's generated `*.g.dart` files are gitignored: after a fresh clone (or any table/DAO change) run `dart run build_runner build` before building or testing.
+
 **Layouts as data**: `assets/layouts/index.json` defines chapters (Classics, Creatures, Wonders, …), order, unlock thresholds, par times, daily pool. Layout JSON per §5.2 of the brief. `tool/validate_layouts.dart` runs validation + 500 seeds each.
 
 ## 4. State (Riverpod)
