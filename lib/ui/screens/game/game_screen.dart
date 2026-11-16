@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -396,11 +397,16 @@ class _TopBar extends ConsumerWidget {
               ),
             ),
             if (showTimer)
-              GameTimerPill(
-                elapsedMs: () => controller.elapsedMs,
-                running: running,
-                onTap: playing ? onPause : null,
-                semanticLabel: l.gamePauseSemantics,
+              GestureDetector(
+                // Debug builds only: long-press the timer to autoplay the
+                // solution (QA for full boards and daily verification).
+                onLongPress: kDebugMode && playing ? () => unawaited(controller.debugAutoplay()) : null,
+                child: GameTimerPill(
+                  elapsedMs: () => controller.elapsedMs,
+                  running: running,
+                  onTap: playing ? onPause : null,
+                  semanticLabel: l.gamePauseSemantics,
+                ),
               )
             else
               JwIconButton(icon: JwIcons.pause, semanticLabel: l.gameTimerHidden, color: jw.accent, onPressed: playing ? onPause : null),

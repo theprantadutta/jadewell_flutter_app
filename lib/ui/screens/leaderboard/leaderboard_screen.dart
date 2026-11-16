@@ -33,6 +33,17 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   late LeaderboardKind _tab = widget.initialTab;
 
   @override
+  void initState() {
+    super.initState();
+    // The tab providers are kept alive; refresh on every visit so a result
+    // you just posted (or anyone else's) shows up. The cached page stays
+    // visible meanwhile.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(leaderboardProvider(_tab));
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final haptic = ref.watch(hapticsProvider).selection;

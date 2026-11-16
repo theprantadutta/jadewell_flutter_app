@@ -6,6 +6,7 @@ import '../data/api/social_api.dart';
 import '../data/repositories/social_repository.dart';
 import '../platform/analytics/analytics_service.dart';
 import 'app_providers.dart';
+import 'data_providers.dart';
 import 'platform_providers.dart';
 import 'session_controller.dart';
 
@@ -58,6 +59,15 @@ class LeaderboardController extends AsyncNotifier<LeaderboardView> {
     ref.keepAlive();
     ref.watch(_backendUserIdProvider);
     final previous = state.value?.page;
+    // Just cleared today's daily? Push it to the server first so the board
+    // includes it (the outbox otherwise waits for its debounce).
+    if (kind != LeaderboardKind.weekly && (ref.read(dailyProvider).value?.clearedToday ?? false)) {
+      try {
+        await ref.read(syncEngineProvider).drainNow().timeout(const Duration(seconds: 12));
+      } on Object {
+        // offline or slow: show what the server has
+      }
+    }
     final now = ref.read(socialClockProvider)().toUtc();
     final r = await ref.read(socialRepositoryProvider).leaderboard(kind, now);
     if (r.isSuccess) return LeaderboardView(page: r.value);

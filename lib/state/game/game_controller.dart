@@ -255,6 +255,38 @@ class GameController extends Notifier<GameViewState> {
     return true;
   }
 
+  // ------------------------------------------------- debug autoplay (QA)
+
+  bool _autoplaying = false;
+
+  /// DEBUG BUILDS ONLY: plays the solver's solution from the current board
+  /// through the normal [tap] path (real move log, real timing), so a full
+  /// board — including the daily and its server verification — can be
+  /// checked on a device. Compiled out of release builds.
+  Future<void> debugAutoplay({Duration perTap = const Duration(milliseconds: 220)}) async {
+    if (!kDebugMode || _autoplaying) return;
+    _autoplaying = true;
+    try {
+      while (ref.mounted && _canPlay && state.game!.remaining.length > 0) {
+        final g = state.game!;
+        final r = solve(g.layout, g.faces, remaining: g.remaining);
+        if (r is! SolveSolvable || r.solution.isEmpty) {
+          debugPrint('game: autoplay stopped ($r)');
+          return;
+        }
+        final (a, b) = r.solution.first;
+        if (g.selected != null) tap(g.selected!); // clear any selection
+        tap(a);
+        await Future<void>.delayed(perTap);
+        if (!ref.mounted || !_canPlay) return;
+        tap(b);
+        await Future<void>.delayed(perTap * 2);
+      }
+    } finally {
+      _autoplaying = false;
+    }
+  }
+
   // ------------------------------------------------------ second chance
 
   /// "Second chance" (docs/ARCHITECTURE.md §7): offered when the player comes
