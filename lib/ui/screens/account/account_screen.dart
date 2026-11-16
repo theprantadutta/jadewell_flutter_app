@@ -341,7 +341,12 @@ class _ProfileCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name, style: jw.text.h2.copyWith(fontSize: 24), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      // Generated names are up to ~20 chars; shrink rather than cut.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(name, style: jw.text.h2.copyWith(fontSize: 24), maxLines: 1),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         user == null
