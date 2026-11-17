@@ -73,7 +73,7 @@ class TileVisual extends StatelessWidget {
           radius: JwTile.radius,
           extraShadows: [
             ...ClayLevel.tileRing(jw.tileHinted),
-            ClayLevel.tileGlow(jw.tileHinted, jw.isDark ? 0.5 : 0.7),
+            ClayLevel.tileGlow(jw.tileHinted, jw.isDark ? 0.6 : 0.9),
           ],
         );
       case TileVisualState.blocker:

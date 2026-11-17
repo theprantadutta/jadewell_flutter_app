@@ -320,7 +320,7 @@ class GalleryFillsSheet extends StatelessWidget {
       children: [
         for (var i = 0; i < JwFill.all.length; i++)
           SizedBox(
-            width: 180,
+            width: 160,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

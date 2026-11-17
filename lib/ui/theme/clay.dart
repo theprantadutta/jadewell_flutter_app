@@ -159,7 +159,7 @@ enum ClayLevel {
       ClayShadow(0, JwTile.edge, 0, 0, c.tileEdge),
       ...tileRing(c.tileSelected),
       ClayShadow(0, 18, 18, -5, c.shadow),
-      tileGlow(c.tileSelected, identical(c, JwColors.dark) ? 0.5 : 0.4),
+      tileGlow(c.tileSelected, identical(c, JwColors.dark) ? 0.55 : 0.5),
     ],
   };
 
@@ -171,7 +171,7 @@ enum ClayLevel {
   ];
 
   /// A soft same-hue glow under a ringed tile.
-  static ClayShadow tileGlow(Color color, double alpha) => ClayShadow(0, 4, 18, 1, color.withValues(alpha: alpha));
+  static ClayShadow tileGlow(Color color, double alpha) => ClayShadow(0, 4, 18, 3, color.withValues(alpha: alpha));
 
   static JwFills _strengths(JwColors c) => identical(c, JwColors.dark) ? JwFills.dark : JwFills.light;
 
