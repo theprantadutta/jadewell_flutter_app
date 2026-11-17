@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
@@ -12,8 +13,8 @@ import 'game_widgets.dart';
 /// What the player chose on the pause card (screen 08).
 enum PauseAction { resume, restart, settings, quit }
 
-/// Paused card: eyebrow, the frozen time, layout meta, Resume, Restart,
-/// Settings and Quit to collection.
+/// Paused card (screen 08): a 64 pt yellow pause badge, eyebrow, the frozen
+/// time, layout meta, Resume, Restart, Settings and Quit to collection.
 class PausedCard extends StatelessWidget {
   const PausedCard({super.key, required this.time, required this.meta});
 
@@ -30,17 +31,19 @@ class PausedCard extends StatelessWidget {
       child: DecoratedBox(
         decoration: jw.clay(ClayLevel.floating, radius: 32),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 28, 22, 14),
+          padding: const EdgeInsets.fromLTRB(22, 30, 22, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Center(child: GameIconWell(icon: JwIcons.pause, fill: JwFill.yellow)),
+              const SizedBox(height: 14),
               Text(l.gamePausedEyebrow.toUpperCase(), textAlign: TextAlign.center, style: jw.text.eyebrow),
-              const SizedBox(height: 10),
-              Text(time, textAlign: TextAlign.center, style: jw.text.numXl.copyWith(fontSize: 60, height: 1.1)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
+              Text(time, textAlign: TextAlign.center, style: jw.text.numXl.copyWith(fontSize: 52, height: 1.2)),
+              const SizedBox(height: 4),
               Text(meta, textAlign: TextAlign.center, style: jw.text.callout.copyWith(fontWeight: FontWeight.w400)),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
               JwButton.primary(
                 label: l.gamePausedResume,
                 icon: JwIcons.play,
@@ -104,7 +107,7 @@ class NoMovesSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const GameIconWell(icon: JwIcons.shuffle),
+              const GameIconWell(icon: JwIcons.shuffle, fill: JwFill.pink),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -155,8 +158,8 @@ class NoMovesSheet extends StatelessWidget {
   }
 }
 
-/// Shuffle confirmation (screen 09): icon well, title, body, the free
-/// shuffles chip, Cancel / Shuffle. Pops `true` to shuffle.
+/// Shuffle confirmation (screen 09): a 68 pt pink badge, title, body, the
+/// free shuffles chip (pink badge), Cancel / Shuffle. Pops `true` to shuffle.
 class ShuffleConfirmDialog extends StatelessWidget {
   const ShuffleConfirmDialog({super.key, required this.tilesLeft, required this.freeLeft});
 
@@ -183,13 +186,15 @@ class ShuffleConfirmDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: GameIconWell(icon: JwIcons.shuffle, size: 66)),
-                const SizedBox(height: 22),
+                const Center(child: GameIconWell(icon: JwIcons.shuffle, fill: JwFill.pink, size: 68)),
+                const SizedBox(height: 16),
                 Text(l.gameShuffleTitle, textAlign: TextAlign.center, style: jw.text.h3.copyWith(fontSize: 21)),
                 const SizedBox(height: 10),
                 Text(l.gameShuffleBody(tilesLeft), textAlign: TextAlign.center, style: jw.text.body.copyWith(color: jw.textMuted)),
                 const SizedBox(height: 18),
-                Center(child: JwChip(value: '$freeLeft', label: l.gameShuffleFreeLeft)),
+                Center(
+                  child: CounterChip(icon: JwIcons.shuffle, fill: JwFill.pink, value: '$freeLeft', label: l.gameShuffleFreeLeft),
+                ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
@@ -215,10 +220,21 @@ class ShuffleConfirmDialog extends StatelessWidget {
 /// loading state while the ad plays; pops `true` when the reward was granted,
 /// `false` when the video did not reward, and null for "Not now".
 class RewardOfferSheet extends StatefulWidget {
-  const RewardOfferSheet({super.key, required this.title, required this.body, required this.watch});
+  const RewardOfferSheet({
+    super.key,
+    required this.title,
+    required this.body,
+    required this.watch,
+    this.icon = JwIcons.video,
+    this.fill = JwFill.yellow,
+  });
 
   final String title;
   final String body;
+
+  /// The leading badge: yellow hint for hints, pink shuffle for shuffles.
+  final String icon;
+  final JwFill fill;
 
   /// Plays the ad and applies the reward; resolves to whether it was granted.
   final Future<bool> Function() watch;
@@ -251,7 +267,7 @@ class _RewardOfferSheetState extends State<RewardOfferSheet> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const GameIconWell(icon: JwIcons.video),
+                GameIconWell(icon: widget.icon, fill: widget.fill),
                 const SizedBox(width: 16),
                 Expanded(child: Text(widget.title, style: jw.text.h3.copyWith(fontSize: 21))),
               ],
@@ -305,6 +321,7 @@ class QuitDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return JwDialog(
+      leading: const GameIconWell(icon: JwIcons.door, fill: JwFill.purple),
       title: l.gameQuitTitle,
       body: l.gameQuitBody,
       actions: [
@@ -318,11 +335,21 @@ class QuitDialog extends StatelessWidget {
 /// Intro for a rewarded interstitial (Google policy): states the reward, a
 /// 5 s countdown, and Skip. Pops true only if the ad paid out.
 class RewardedIntroSheet extends StatefulWidget {
-  const RewardedIntroSheet({super.key, required this.title, required this.body, required this.icon, required this.watch});
+  const RewardedIntroSheet({
+    super.key,
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.watch,
+    this.fill = JwFill.yellow,
+  });
 
   final String title;
   final String body;
   final String icon;
+
+  /// Badge fill (yellow = rewards, the colour-role map).
+  final JwFill fill;
   final Future<bool> Function() watch;
 
   @override
@@ -376,7 +403,7 @@ class _RewardedIntroSheetState extends State<RewardedIntroSheet> {
           const SizedBox(height: 8),
           Row(
             children: [
-              GameIconWell(icon: widget.icon, size: 56),
+              GameIconWell(icon: widget.icon, fill: widget.fill, size: 56),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
