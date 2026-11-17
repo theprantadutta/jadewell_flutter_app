@@ -228,13 +228,16 @@ class JwBeadPainter extends CustomPainter {
 /// initial in its `on` colour; a [color] (a profile colour) is drawn flat
 /// with dark ink.
 class JwAvatar extends StatelessWidget {
-  const JwAvatar({super.key, required this.name, this.size = 36, this.color});
+  const JwAvatar({super.key, required this.name, this.size = 36, this.color, this.fill});
 
   final String name;
   final double size;
 
   /// Fill colour; a Clay Pop fill derived from [name] when null.
   final Color? color;
+
+  /// A specific Clay Pop fill (e.g. the rank colour); wins over [color].
+  final JwFill? fill;
 
   /// The fill an avatar for [name] uses.
   static JwFill fillFor(String name) => JwFill.all[name.codeUnits.fold<int>(0, (a, b) => a + b) % JwFill.all.length];
@@ -243,8 +246,8 @@ class JwAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final jw = context.jw;
     final initial = name.isEmpty ? '?' : name.characters.first.toUpperCase();
-    final custom = color;
-    final fill = fillFor(name);
+    final custom = this.fill == null ? color : null;
+    final fill = this.fill ?? fillFor(name);
     final decoration = custom == null
         ? jw.fillFlat(fill, extraShadows: jw.clay(ClayLevel.chip).resolvedShadows.where((s) => !s.inset).toList())
         : jw.clay(ClayLevel.chip, color: custom);
