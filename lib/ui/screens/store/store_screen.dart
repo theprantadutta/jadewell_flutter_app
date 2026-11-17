@@ -348,7 +348,7 @@ class _RemoveAdsHero extends StatelessWidget {
     final fill = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color.lerp(jw.accent, const Color(0xFFFFFFFF), 0.3)!, jw.accent, Color.lerp(jw.accent, const Color(0xFF000000), 0.12)!],
+      colors: [JwFaceInks.lighten(jw.accent, 0.3), jw.accent, JwFaceInks.darken(jw.accent, 0.12)],
       stops: const [0, 0.55, 1],
     );
     Widget tile(double angle, Offset offset) => Transform.translate(
@@ -356,11 +356,7 @@ class _RemoveAdsHero extends StatelessWidget {
           child: Transform.rotate(
             angle: angle,
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: jw.tileEdge,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: jw.shadow, blurRadius: 10, offset: const Offset(0, 5))],
-              ),
+              decoration: jw.clay(ClayLevel.flat, color: jw.tileEdge, radius: 12, extraShadows: [ClayShadow(0, 5, 10, 0, jw.shadow)]),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 5),
                 child: DecoratedBox(

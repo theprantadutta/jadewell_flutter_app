@@ -466,7 +466,7 @@ class ProfileAvatar extends StatelessWidget {
           child: Center(
             child: Text(
               initial,
-              style: jw.text.h1.copyWith(fontSize: size * 0.42, color: const Color(0xFF4A3934)),
+              style: jw.text.h1.copyWith(fontSize: size * 0.42, color: JwTheme.light.textPrimary),
             ),
           ),
         ),

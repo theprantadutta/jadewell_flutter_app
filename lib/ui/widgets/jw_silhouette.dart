@@ -77,7 +77,7 @@ class _SilhouetteRasterPainter extends CustomPainter {
       raster.paint(canvas, Offset.zero, opacity: opacity);
       return;
     }
-    if (opacity < 1) canvas.saveLayer(Offset.zero & size, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
+    if (opacity < 1) canvas.saveLayer(Offset.zero & size, JwBase.alphaPaint(opacity));
     JwSilhouettePainter(tiles: tiles, colors: colors).paint(canvas, size);
     if (opacity < 1) canvas.restore();
   }

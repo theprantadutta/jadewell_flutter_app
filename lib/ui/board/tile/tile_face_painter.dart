@@ -4,28 +4,24 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 
 import '../../theme/jw_fonts.dart';
+import '../../theme/jw_palette.dart';
 import 'tile_face_spec.dart';
 
-/// Tile face palette (DESIGN_SYSTEM §2): the same in both themes.
+/// Tile face palette (DESIGN_SYSTEM §3 face inks, from [JwFaceInks]): the
+/// same in both themes.
 abstract final class TilePalette {
-  static const blue = Color(0xFF5260B0);
-  static const green = Color(0xFF4E9474);
-  static const red = Color(0xFFE2664F);
-  static const teal = Color(0xFF3B7A6C);
-  static const plum = Color(0xFF4A3F5C);
-  static const rose = Color(0xFFC95E80);
-  static const amber = Color(0xFFB97E2A);
-  static const jade = Color(0xFF4FA585);
+  static const blue = JwFaceInks.circleBlue;
+  static const green = JwFaceInks.circleGreen;
+  static const red = JwFaceInks.circleRed;
+  static const teal = JwFaceInks.bamboo;
+  static const plum = JwFaceInks.characterNumeral;
+  static const wind = JwFaceInks.winds;
+  static const wan = JwFaceInks.characterWan;
+  static const rose = JwFaceInks.flowers;
+  static const amber = JwFaceInks.seasons;
+  static const jade = JwFaceInks.jade;
 
-  static Color element(TileKind kind, String key) => switch ((kind, key)) {
-    (TileKind.circles, 'c1') => blue,
-    (TileKind.circles, 'c2') => green,
-    (TileKind.circles, 'c3') => red,
-    (_, 'g') => green,
-    (_, 'b') => teal,
-    (_, 'r') => red,
-    _ => plum,
-  };
+  static Color element(TileKind kind, String key) => JwFaceInks.element(key);
 }
 
 /// Colour matrix for glyphs on blocked tiles: [saturation] (0…1) and
@@ -83,9 +79,9 @@ class TileFacePainter extends CustomPainter {
         _bamboo(canvas, size);
       case TileKind.characters:
         _text(canvas, face.glyph!, 11 * k, TilePalette.plum, Offset(size.width / 2, size.height * 0.27));
-        _text(canvas, '萬', 12 * k, TilePalette.red, Offset(size.width / 2, size.height * 0.72));
+        _text(canvas, '萬', 12 * k, TilePalette.wan, Offset(size.width / 2, size.height * 0.72));
       case TileKind.wind:
-        _text(canvas, face.glyph!, 17 * k, TilePalette.plum, size.center(Offset.zero), weight: FontWeight.w900);
+        _text(canvas, face.glyph!, 17 * k, TilePalette.wind, size.center(Offset.zero), weight: FontWeight.w900);
       case TileKind.dragon:
         if (face.isWhiteDragon) {
           _whiteDragon(canvas, size, k);
@@ -125,7 +121,7 @@ class TileFacePainter extends CustomPainter {
     final d = size.width * pct;
     if (n == 1) {
       final c = size.center(Offset.zero);
-      final pale = Color.lerp(const Color(0xFFFFFFFF), TilePalette.jade, 0.26)!;
+      final pale = JwFaceInks.lighten(TilePalette.jade, 0.74);
       canvas
         ..drawCircle(c, d / 2, Paint()..color = pale)
         ..drawCircle(c, d * 0.335, Paint()..color = TilePalette.jade);
@@ -145,8 +141,8 @@ class TileFacePainter extends CustomPainter {
   /// A clay bead: radial highlight at 34% / 30%, inner shade bottom-right.
   static void paintBead(Canvas canvas, Offset c, double d, Color color) {
     final r = d / 2;
-    final hi = Color.lerp(color, const Color(0xFFFFFFFF), 0.55)!;
-    final lo = Color.lerp(color, const Color(0xFF000000), 0.25)!;
+    final hi = JwFaceInks.lighten(color, 0.55);
+    final lo = JwFaceInks.darken(color, 0.25);
     final rect = Rect.fromCircle(center: c, radius: r);
     canvas.drawCircle(
       c,
@@ -193,8 +189,8 @@ class TileFacePainter extends CustomPainter {
 
   /// Capsule body with a vertical sheen (light band left, shade right).
   static void _capsuleFill(Canvas canvas, Rect r, Color c) {
-    final hi = Color.lerp(c, const Color(0xFFFFFFFF), 0.32)!;
-    final lo = Color.lerp(c, const Color(0xFF000000), 0.14)!;
+    final hi = JwFaceInks.lighten(c, 0.32);
+    final lo = JwFaceInks.darken(c, 0.14);
     canvas.drawRect(
       r,
       Paint()

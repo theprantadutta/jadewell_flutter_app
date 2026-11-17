@@ -172,7 +172,7 @@ class LeaderboardRow extends StatelessWidget {
       label: _entryLabel(l, e),
       excludeSemantics: true,
       child: ColoredBox(
-        color: e.isMe ? jw.accentSoft.withValues(alpha: 0.45) : const Color(0x00000000),
+        color: e.isMe ? jw.accentSoft.withValues(alpha: 0.45) : JwBase.transparent,
         child: SizedBox(
           height: 52,
           child: Padding(

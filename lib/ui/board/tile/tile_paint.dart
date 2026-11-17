@@ -51,7 +51,7 @@ abstract final class TileRaster {
     TileFacePainter(
       face,
       glyphOpacity: blocked ? jw.blockedFaceOpacity : 1,
-      saturation: blocked ? 0.35 : 1,
+      saturation: blocked ? jw.blockedFaceSaturation : 1,
     ).paint(canvas, inner.size);
     canvas.restore();
   }
@@ -303,7 +303,7 @@ class RenderTilePaint extends RenderBox {
     // also fading), so the common fade stays a single translucent quad.
     final group = extras && xf.opacity < 1;
     if (group) {
-      canvas.saveLayer((Offset.zero & size).inflate(48), Paint()..color = Color.fromRGBO(0, 0, 0, xf.opacity));
+      canvas.saveLayer((Offset.zero & size).inflate(48), JwBase.alphaPaint(xf.opacity));
     }
     final alpha = group ? 1.0 : xf.opacity;
     if (from != null && t < 1) _draw(canvas, from.$1, from.$2, scale, alpha);
@@ -339,7 +339,7 @@ class RenderTilePaint extends RenderBox {
     }
     // Too large to cache (extreme zoom): paint directly.
     if (opacity < 1) {
-      canvas.saveLayer((Offset.zero & size).inflate(48), Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
+      canvas.saveLayer((Offset.zero & size).inflate(48), JwBase.alphaPaint(opacity));
     }
     TileRaster.paintVisual(canvas, face, state, _jw);
     if (opacity < 1) canvas.restore();

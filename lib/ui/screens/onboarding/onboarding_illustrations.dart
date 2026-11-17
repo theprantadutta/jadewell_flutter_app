@@ -69,7 +69,7 @@ class _Verdict extends StatelessWidget {
         decoration: jw.clay(ClayLevel.chip, color: ok ? jw.success : jw.danger),
         child: SizedBox.square(
           dimension: d,
-          child: Center(child: JwIcon(ok ? JwIcons.check : JwIcons.x, size: 15 * s, color: const Color(0xFFFFFFFF))),
+          child: Center(child: JwIcon(ok ? JwIcons.check : JwIcons.x, size: 15 * s, color: jw.onAccent)),
         ),
       ),
     );

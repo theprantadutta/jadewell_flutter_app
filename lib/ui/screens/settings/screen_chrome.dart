@@ -365,7 +365,7 @@ Future<T?> showJwSheet<T>(BuildContext context, {required WidgetBuilder builder,
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: const Color(0x00000000),
+    backgroundColor: JwBase.transparent,
     elevation: 0,
     barrierColor: jw.scrim,
     showDragHandle: false,
@@ -571,17 +571,12 @@ String formatClock(int ms) {
 }
 
 /// Parses `#RRGGBB`; null when absent or malformed.
-Color? parseHexColor(String? hex) {
-  if (hex == null) return null;
-  final m = RegExp(r'^#?([0-9a-fA-F]{6})$').firstMatch(hex.trim());
-  if (m == null) return null;
-  return Color(0xFF000000 | int.parse(m.group(1)!, radix: 16));
-}
+Color? parseHexColor(String? hex) => JwBase.fromHex(hex);
 
 /// The pastel avatar fill for a profile colour (the backend stores
 /// saturated colours; avatars show them softened, as in the design).
 Color? avatarPastel(String? hex, JwTheme jw) {
   final c = parseHexColor(hex);
   if (c == null) return null;
-  return Color.lerp(c, const Color(0xFFFFFFFF), jw.isDark ? 0.42 : 0.58);
+  return JwFaceInks.lighten(c, jw.isDark ? 0.42 : 0.58);
 }

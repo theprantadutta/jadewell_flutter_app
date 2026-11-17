@@ -5,6 +5,7 @@ import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
+import '../theme/jw_palette.dart';
 import '../theme/jw_tokens.dart';
 
 /// Six clay beads puffing 30 pt out of a match midpoint (MOTION_SPEC §2):
@@ -37,7 +38,7 @@ class BeadPuffPainter extends CustomPainter {
           canvas,
           center,
           bead * scale,
-          odd ? [const Color(0xFFFFFFFF), colors.accentSoft, colors.accent] : [const Color(0xFFFFFFFF), colors.tileFace, colors.tileEdge],
+          odd ? [JwBase.white, colors.accentSoft, colors.accent] : [JwBase.white, colors.tileFace, colors.tileEdge],
           opacity,
         );
       }
@@ -112,7 +113,7 @@ class GhostWavePainter extends CustomPainter {
             center + Offset(-0.3 * r, -0.4 * r),
             r * 1.4,
             [
-              const Color(0xFFFFFFFF).withValues(alpha: opacity),
+              JwBase.white.withValues(alpha: opacity),
               colors.tileFace.withValues(alpha: opacity),
               colors.tileEdge.withValues(alpha: opacity),
             ],

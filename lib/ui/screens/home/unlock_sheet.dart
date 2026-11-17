@@ -20,7 +20,7 @@ Future<void> showUnlockLayoutSheet(BuildContext context, WidgetRef ref, LayoutIn
   final l = AppLocalizations.of(context);
   final watch = await showModalBottomSheet<bool>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: JwBase.transparent,
     elevation: 0,
     useSafeArea: true,
     isScrollControlled: true,
@@ -46,7 +46,7 @@ Future<void> showUnlockLayoutSheet(BuildContext context, WidgetRef ref, LayoutIn
             child: JwToast(message: message, beadColor: rewarded ? null : context.jw.warning),
           ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: JwBase.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(milliseconds: 2400),

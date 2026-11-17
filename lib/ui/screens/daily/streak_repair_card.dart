@@ -65,7 +65,7 @@ class _StreakRepairCardState extends ConsumerState<StreakRepairCard> {
               ),
             ),
           ),
-          backgroundColor: Colors.transparent,
+          backgroundColor: JwBase.transparent,
           elevation: 0,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(milliseconds: 2400),

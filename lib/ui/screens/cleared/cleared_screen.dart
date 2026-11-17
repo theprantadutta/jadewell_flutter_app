@@ -459,10 +459,7 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
             alignment: Alignment.center,
             children: [
               DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: jw.shadow, blurRadius: 8, offset: const Offset(0, 4), spreadRadius: -2)],
-                ),
+                decoration: jw.clay(ClayLevel.flat, color: JwBase.transparent, extraShadows: [ClayShadow(0, 4, 8, -2, jw.shadow)]),
                 child: JwBead(color: jw.accent, size: size),
               ),
               JwIcon(JwIcons.star, size: size * 0.5, color: jw.onAccent),
