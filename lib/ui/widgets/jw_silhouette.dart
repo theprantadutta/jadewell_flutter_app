@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../theme/clay.dart';
+import '../theme/jw_raster_cache.dart';
 import '../theme/jw_theme.dart';
 import '../theme/jw_tokens.dart';
 import 'clay_pressable.dart';
@@ -34,16 +35,79 @@ class JwSilhouette extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
+    // Drawn from a cached texture (one per layout, size and theme): a full
+    // silhouette is hundreds of blurred mini tiles. Locked is that texture at
+    // 35 % alpha, the same as an opacity layer over a single image.
     final paint = CustomPaint(
-      painter: JwSilhouettePainter(tiles: tiles, colors: jw.colors),
+      painter: _SilhouetteRasterPainter(
+        tiles: tiles,
+        colors: jw.colors,
+        devicePixelRatio: MediaQuery.maybeDevicePixelRatioOf(context) ?? 1,
+        opacity: locked ? 0.35 : 1,
+      ),
       size: Size.infinite,
     );
     return Semantics(
       image: true,
       label: semanticLabel,
-      child: RepaintBoundary(child: locked ? Opacity(opacity: 0.35, child: paint) : paint),
+      child: RepaintBoundary(child: paint),
     );
   }
+}
+
+class _SilhouetteRasterPainter extends CustomPainter {
+  _SilhouetteRasterPainter({required this.tiles, required this.colors, required this.devicePixelRatio, required this.opacity});
+
+  final List<SilhouetteTile> tiles;
+  final JwColors colors;
+  final double devicePixelRatio;
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (tiles.isEmpty || size.isEmpty) return;
+    final scale = JwRasterCache.bucket(devicePixelRatio * math.max(1.0, canvasScale(canvas)));
+    final raster = JwRasterCache.instance.obtain(
+      _SilhouetteKey(tiles, size, colors, scale),
+      (Offset.zero & size).inflate(3),
+      scale,
+      (c) => JwSilhouettePainter(tiles: tiles, colors: colors).paint(c, size),
+    );
+    if (raster != null) {
+      raster.paint(canvas, Offset.zero, opacity: opacity);
+      return;
+    }
+    if (opacity < 1) canvas.saveLayer(Offset.zero & size, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
+    JwSilhouettePainter(tiles: tiles, colors: colors).paint(canvas, size);
+    if (opacity < 1) canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_SilhouetteRasterPainter old) =>
+      !identical(old.tiles, tiles) ||
+      old.colors != colors ||
+      old.devicePixelRatio != devicePixelRatio ||
+      old.opacity != opacity;
+}
+
+@immutable
+class _SilhouetteKey {
+  const _SilhouetteKey(this.tiles, this.size, this.colors, this.scale);
+  final List<SilhouetteTile> tiles;
+  final Size size;
+  final JwColors colors;
+  final double scale;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SilhouetteKey &&
+      identical(other.tiles, tiles) &&
+      other.size == size &&
+      identical(other.colors, colors) &&
+      other.scale == scale;
+
+  @override
+  int get hashCode => Object.hash(identityHashCode(tiles), size, identityHashCode(colors), scale);
 }
 
 class JwSilhouettePainter extends CustomPainter {

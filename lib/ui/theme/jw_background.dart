@@ -1,7 +1,9 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import 'jw_raster_cache.dart';
 import 'jw_theme.dart';
 import 'jw_tokens.dart';
 
@@ -20,7 +22,11 @@ class JwBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final jw = context.jw;
     return CustomPaint(
-      painter: JwBackgroundPainter(jw.colors, orbs: orbs),
+      painter: JwBackgroundPainter(
+        jw.colors,
+        orbs: orbs,
+        devicePixelRatio: MediaQuery.maybeDevicePixelRatioOf(context),
+      ),
       child: child,
     );
   }
@@ -28,10 +34,14 @@ class JwBackground extends StatelessWidget {
 
 /// Painter behind [JwBackground]; usable directly in other painters.
 class JwBackgroundPainter extends CustomPainter {
-  JwBackgroundPainter(this.colors, {this.orbs = true});
+  JwBackgroundPainter(this.colors, {this.orbs = true, this.devicePixelRatio});
 
   final JwColors colors;
   final bool orbs;
+
+  /// When set, each orb (blurred shadow + gradient disc) is drawn from a
+  /// cached texture at this ratio instead of re-blurring every frame.
+  final double? devicePixelRatio;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -63,6 +73,25 @@ class JwBackgroundPainter extends CustomPainter {
   }
 
   void _orb(Canvas canvas, Offset c, double r, double opacity) {
+    final dpr = devicePixelRatio;
+    if (dpr != null) {
+      final scale = JwRasterCache.bucket(dpr * math.max(1.0, canvasScale(canvas)));
+      final bounds = Rect.fromCircle(center: Offset.zero, radius: r * 1.8);
+      final raster = JwRasterCache.instance.obtain(
+        _OrbKey(r, opacity, colors, scale),
+        bounds,
+        scale,
+        (canvas) => _paintOrb(canvas, Offset.zero, r, opacity),
+      );
+      if (raster != null) {
+        raster.paint(canvas, c);
+        return;
+      }
+    }
+    _paintOrb(canvas, c, r, opacity);
+  }
+
+  void _paintOrb(Canvas canvas, Offset c, double r, double opacity) {
     final shadow = Paint()
       ..color = colors.shadow.withValues(alpha: colors.shadow.a * 0.55 * opacity)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.18);
@@ -83,5 +112,20 @@ class JwBackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(JwBackgroundPainter old) => old.colors != colors || old.orbs != orbs;
+  bool shouldRepaint(JwBackgroundPainter old) =>
+      old.colors != colors || old.orbs != orbs || old.devicePixelRatio != devicePixelRatio;
+}
+
+@immutable
+class _OrbKey {
+  const _OrbKey(this.r, this.opacity, this.colors, this.scale);
+  final double r, opacity, scale;
+  final JwColors colors;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _OrbKey && other.r == r && other.opacity == opacity && identical(other.colors, colors) && other.scale == scale;
+
+  @override
+  int get hashCode => Object.hash(r, opacity, identityHashCode(colors), scale);
 }
