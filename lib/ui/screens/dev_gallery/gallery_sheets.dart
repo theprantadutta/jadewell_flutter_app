@@ -184,11 +184,12 @@ class _GalleryComponentsSheetState extends State<GalleryComponentsSheet> {
                 meta: '128 tiles · Hard',
                 tiles: tiles,
                 plateFill: JwFill.pink,
+                height: 196,
                 onTap: () {},
                 onHaptic: h,
                 stateRow: Row(
                   children: [
-                    const IconBadge(icon: JwIcons.check, fill: JwFill.mint, size: 24),
+                    const IconBadge(icon: JwIcons.check, fill: JwFill.mint, size: 22),
                     const SizedBox(width: 6),
                     Text('Best 6:24', style: jw.text.numM.copyWith(fontSize: 13)),
                   ],
@@ -202,6 +203,7 @@ class _GalleryComponentsSheetState extends State<GalleryComponentsSheet> {
                 meta: '144 tiles · Expert',
                 tiles: tiles,
                 locked: true,
+                height: 196,
                 stateRow: Row(children: [JwIcon(JwIcons.lock, size: 16, color: jw.textMuted), const SizedBox(width: 4), Text('Clear 3 more', style: jw.text.caption)]),
               ),
             ),
@@ -229,10 +231,7 @@ class _GalleryComponentsSheetState extends State<GalleryComponentsSheet> {
             JwButton.secondary(label: 'Cancel', small: true, expand: true, onPressed: () {}, onHaptic: h),
             JwButton.primary(label: 'Shuffle', small: true, expand: true, onPressed: () {}, onHaptic: h),
           ],
-          child: const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: Center(child: IconBadge(icon: JwIcons.shuffle, fill: JwFill.pink, size: 68)),
-          ),
+          leading: const IconBadge(icon: JwIcons.shuffle, fill: JwFill.pink, size: 68),
         ),
         const GalleryEyebrow('Sheet · toast · avatars'),
         JwSheet(

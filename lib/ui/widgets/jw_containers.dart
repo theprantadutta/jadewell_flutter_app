@@ -54,10 +54,15 @@ class JwSheet extends StatelessWidget {
   }
 }
 
-/// Dialog container: inset 28, radius 32, e3, centred, padding 26/22/20.
-/// Optional [title], [body] and [actions] (laid out in a row, gap 14).
+/// Dialog container: inset 28, radius 32, floating, centred, padding
+/// 26/22/20. Optional [leading] (a 64–68 pt `IconBadge`, centred above the
+/// title), [title], [body] and [actions] (laid out in a row, gap 14).
 class JwDialog extends StatelessWidget {
-  const JwDialog({super.key, this.title, this.body, this.actions = const [], this.child});
+  const JwDialog({super.key, this.title, this.body, this.actions = const [], this.child, this.leading});
+
+  /// Shown centred above the title (DESIGN_SYSTEM §11: dialogs lead with a
+  /// fill badge).
+  final Widget? leading;
 
   final String? title;
   final String? body;
@@ -85,6 +90,7 @@ class JwDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (leading != null) ...[Center(child: leading), const SizedBox(height: 16)],
                 if (title != null)
                   Text(title!, textAlign: TextAlign.center, style: jw.text.h3.copyWith(fontSize: 21)),
                 if (body != null) ...[
