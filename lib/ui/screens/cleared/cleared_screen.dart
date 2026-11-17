@@ -571,8 +571,11 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     const h = 34.0;
     final String text;
     var accent = true;
-    if (improvement != null) {
+    if (improvement != null && improvement >= 1000) {
       text = '${l.clearedNewBest} · ${l.clearedFaster(formatClock(improvement))}';
+    } else if (improvement != null) {
+      // Beat the old best by under a second: "0:00 faster" reads as a tie.
+      text = l.clearedNewBest;
     } else if (r.firstClear || r.isNewBest) {
       text = l.clearedFirstClear;
     } else if (r.previousBestMs != null) {
