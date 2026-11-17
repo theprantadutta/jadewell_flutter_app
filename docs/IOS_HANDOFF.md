@@ -39,3 +39,11 @@ All iOS code and config is written on Windows; building, signing and testing hap
 
 - `Info.plist`: iPhone portrait only; iPad portrait + upside-down with `UIRequiresFullScreen = true` (required so iPad may restrict orientation; it also opts out of Split View/Slide Over, which suits a full-screen game). Verify on an iPad that rotation stays portrait and that App Store validation accepts it.
 - Dart also calls `SystemChrome.setPreferredOrientations([portraitUp, portraitDown])` in `main.dart`.
+
+## App icon (Clay Pop reskin)
+
+`ios/Runner/Assets.xcassets/AppIcon.appiconset` was replaced with the Clay Pop
+full legacy size set (20-1024, iPhone + iPad + marketing, opaque RGB). Verify it on
+a simulator in light, dark and tinted home-screen modes on the Mac. If you prefer
+the Xcode 15+ single-size format with dedicated dark and tinted variants, it lives
+in the design package at `design/icons/ios/AppIcon-single-size.appiconset`.
