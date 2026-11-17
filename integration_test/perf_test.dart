@@ -57,6 +57,9 @@ void main() {
 
     // 2. Board entry: 128 tiles drop in layer by layer.
     await waitFor(label(r'^Fortress'));
+    // The card can sit below the fold on short phones: bring it into view.
+    await tester.ensureVisible(label(r'^Fortress').first);
+    await run(const Duration(milliseconds: 600));
     await binding.traceAction(() async {
       await tester.tap(label(r'^Fortress').first);
       await run(const Duration(seconds: 4));
