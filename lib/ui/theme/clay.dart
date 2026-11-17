@@ -157,10 +157,21 @@ enum ClayLevel {
       ClayShadow.inset(1.5, 1.5, 2, 0, c.highlight),
       ClayShadow.inset(-2, -2.5, 3, 0, c.inner),
       ClayShadow(0, JwTile.edge, 0, 0, c.tileEdge),
+      ...tileRing(c.tileSelected),
       ClayShadow(0, 18, 18, -5, c.shadow),
-      ClayShadow(0, 0, 0, JwTile.selectedRing, c.tileSelected),
+      tileGlow(c.tileSelected, identical(c, JwColors.dark) ? 0.5 : 0.4),
     ],
   };
+
+  /// A 2.5 pt ring around a tile's face and its 4 pt edge (selected,
+  /// hinted).
+  static List<ClayShadow> tileRing(Color color, {double width = JwTile.selectedRing, double edge = JwTile.edge}) => [
+    ClayShadow(0, 0, 0, width, color),
+    ClayShadow(0, edge, 0, width, color),
+  ];
+
+  /// A soft same-hue glow under a ringed tile.
+  static ClayShadow tileGlow(Color color, double alpha) => ClayShadow(0, 4, 18, 1, color.withValues(alpha: alpha));
 
   static JwFills _strengths(JwColors c) => identical(c, JwColors.dark) ? JwFills.dark : JwFills.light;
 
