@@ -46,14 +46,16 @@ final bool shotsEnabled = Platform.environment.containsKey('JW_SHOTS');
 
 /// Writes the app to `build/phone_shots/<name>.png` (outside tracked files)
 /// when [shotsEnabled], after loading every image for real. [depth] is how
-/// many folders the calling test file sits below the package root.
-Future<void> maybeShot(WidgetTester tester, String name, {int depth = 3}) async {
+/// many folders the calling test file sits below the package root; pass
+/// [settle] false while something loops.
+Future<void> maybeShot(WidgetTester tester, String name, {int depth = 3, bool settle = true}) async {
   if (!shotsEnabled) return;
   await tester.runAsync(() async {
     for (final e in find.byType(Image).evaluate()) {
       await precacheImage((e.widget as Image).image, e);
     }
   });
-  await tester.pumpAndSettle();
+  // A looping animation (the skeleton sweep) never settles.
+  settle ? await tester.pumpAndSettle() : await tester.pump(const Duration(milliseconds: 100));
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('${'../' * depth}build/phone_shots/$name.png'));
 }

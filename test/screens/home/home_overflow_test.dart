@@ -1,14 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jadewell_flutter_app/data/models/catalogue.dart';
 import 'package:jadewell_flutter_app/data/models/progress.dart';
 import 'package:jadewell_flutter_app/data/repositories/asset_catalogue_repository.dart';
 import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart';
+import 'package:jadewell_flutter_app/data/repositories/repositories.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
 import 'package:jadewell_flutter_app/ui/screens/home/home_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../ui/golden_helpers.dart' show loadJwFonts;
+import '../meta_checks.dart' show maybeShot;
 import 'screen_harness.dart';
 
 /// Every layout card state with the real catalogue (real names), at phone
@@ -89,4 +93,38 @@ void main() {
       }
     }
   }
+
+  // Screen 18: the skeleton while the catalogue loads.
+  for (final size in sizes.entries) {
+    for (final b in Brightness.values) {
+      testWidgets('home skeleton · ${size.key} · ${b.name}: no overflow', (tester) async {
+        await pumpScreen(
+          tester,
+          initial: '/home',
+          size: size.value,
+          brightness: b,
+          screens: {'/home': (_) => const HomeScreen()},
+          overrides: [
+            catalogueRepositoryProvider.overrideWithValue(_NeverCatalogue()),
+            progressRepositoryProvider.overrideWithValue(MemoryProgressRepository()),
+            analyticsProvider.overrideWithValue(RecordingAnalytics()),
+            adServiceProvider.overrideWithValue(InstantAdService()),
+          ],
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 700));
+        expect(tester.takeException(), isNull);
+        if (size.key == 'phone') {
+          await maybeShot(tester, 'loading_${b.name}', settle: false);
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+  }
+}
+
+
+class _NeverCatalogue implements CatalogueRepository {
+  @override
+  Future<Catalogue> load() => Completer<Catalogue>().future;
 }
