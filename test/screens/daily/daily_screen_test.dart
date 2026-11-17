@@ -169,6 +169,7 @@ void main() {
         await pumpDaily(tester, week, top: top3, size: size.value, catalogue: _real,
             repo: _FakeDailyRepository(const StreakRepairOffer(restoredStreak: 12, missedDate: '2026-11-14')));
         await expectNoOverflow(tester);
+        await resetApp(tester);
         await pumpDaily(tester, const DailyStatus(date: '2026-11-15', layoutId: 'lotus', seed: 1, firstClearMs: 3725000, firstClearStars: 3, streak: 1),
             size: size.value, catalogue: _real);
         await expectNoOverflow(tester);

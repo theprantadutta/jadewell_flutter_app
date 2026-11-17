@@ -149,6 +149,7 @@ void main() {
         setTextScale(tester, scale);
         await pump(tester, FakeSocialRepository(pages: {LeaderboardKind.daily: full}), size: size.value);
         await expectNoOverflow(tester);
+        await resetApp(tester);
         await pump(tester, FakeSocialRepository(), size: size.value);
         await expectNoOverflow(tester);
       });
@@ -158,6 +159,7 @@ void main() {
     testWidgets('leaderboard shots ${b.name}', skip: !shotsEnabled, (tester) async {
       await pump(tester, FakeSocialRepository(pages: {LeaderboardKind.daily: full}), brightness: b);
       await maybeShot(tester, 'leaderboard_${b.name}');
+      await resetApp(tester);
       await pump(tester, FakeSocialRepository(), brightness: b);
       await maybeShot(tester, 'empty_leaderboard_${b.name}');
     });

@@ -13,6 +13,8 @@ import 'package:jadewell_flutter_app/ui/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../iap/fakes.dart' show FakePurchaseService;
+import '../../ui/golden_helpers.dart' show loadJwFonts;
+import '../meta_checks.dart';
 import 'harness.dart';
 
 void main() {
@@ -20,6 +22,8 @@ void main() {
   late RecordingAnalytics analytics;
   late RecordingAudio audio;
   late RecordingHaptics haptics;
+
+  setUpAll(loadJwFonts);
 
   setUp(() {
     repo = MemorySettingsRepository();
@@ -138,4 +142,29 @@ void main() {
     await tester.scrollUntilVisible(find.textContaining('pranta.dev', findRichText: true), 200);
     expect(find.textContaining('1.0.0 (1)', findRichText: true), findsOneWidget);
   });
+
+  for (final size in layoutSizes.entries) {
+    for (final scale in textScales) {
+      testWidgets('settings layout · ${size.key} · text ${scale}x: no overflow', (tester) async {
+        setTextScale(tester, scale);
+        await pump(tester, size: size.value);
+        await tester.pumpAndSettle();
+        await expectNoOverflow(tester);
+        // The tile face size sheet.
+        await tester.tap(find.text('Tile face size'));
+        await tester.pumpAndSettle();
+        await expectNoOverflow(tester);
+      });
+    }
+  }
+  for (final b in Brightness.values) {
+    testWidgets('settings shots ${b.name}', skip: !shotsEnabled, (tester) async {
+      await pump(tester, brightness: b, size: const Size(390, 1150));
+      await tester.pumpAndSettle();
+      await maybeShot(tester, 'settings_${b.name}');
+      await tester.tap(find.text('Tile face size'));
+      await tester.pumpAndSettle();
+      await maybeShot(tester, 'settings_tile_size_${b.name}');
+    });
+  }
 }

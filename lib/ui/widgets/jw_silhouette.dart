@@ -134,15 +134,20 @@ class JwSilhouettePainter extends CustomPainter {
       maxY = math.max(maxY, t.y + 2);
       maxZ = math.max(maxZ, t.z);
     }
-    // Half-cell size keeps the 32:39 tile aspect.
+    // Half-cell size keeps the 32:39 tile aspect. The edge and the layer
+    // step shrink with the cells so tiny silhouettes (40 pt plates) still
+    // draw: at full size they stay 1.2 pt and 1 pt.
     final cols = (maxX - minX).toDouble();
     final rows = (maxY - minY).toDouble();
-    final extraH = _edge + maxZ * 1.0;
+    final rough = math.min(size.width / cols, size.height / (rows * 39 / 32));
+    final edgeH = math.min(_edge, rough * 0.35);
+    final step = math.min(1.0, rough * 0.3);
+    final extraH = edgeH + maxZ * step;
     final unitW = math.min(size.width / cols, (size.height - extraH) / (rows * 39 / 32));
     final unitH = unitW * 39 / 32;
     final w = cols * unitW, h = rows * unitH + extraH;
-    final origin = Offset((size.width - w) / 2, (size.height - h) / 2 + maxZ * 1.0);
-    final gap = math.max(0.5, unitW * 0.16);
+    final origin = Offset((size.width - w) / 2, (size.height - h) / 2 + maxZ * step);
+    final gap = math.min(math.max(0.5, unitW * 0.16), unitW * 0.4);
 
     final face = Paint();
     final edge = Paint()..color = colors.tileEdge;
@@ -156,14 +161,14 @@ class JwSilhouettePainter extends CustomPainter {
     for (final t in tiles) {
       final r = Rect.fromLTWH(
         origin.dx + (t.x - minX) * unitW + gap / 2,
-        origin.dy + (t.y - minY) * unitH + gap / 2 - t.z * 1.0,
+        origin.dy + (t.y - minY) * unitH + gap / 2 - t.z * step,
         2 * unitW - gap,
-        2 * unitH - gap - _edge,
+        2 * unitH - gap - edgeH,
       );
       final rr = RRect.fromRectAndRadius(r, const Radius.circular(2));
       canvas
-        ..drawRRect(rr.shift(const Offset(0, _edge + 0.8)), shadow)
-        ..drawRRect(rr.shift(const Offset(0, _edge)), edge);
+        ..drawRRect(rr.shift(Offset(0, edgeH + 0.8)), shadow)
+        ..drawRRect(rr.shift(Offset(0, edgeH)), edge);
       face.color = (maxZ > 0 && t.z == maxZ) ? top : colors.tileFace;
       canvas.drawRRect(rr, face);
     }

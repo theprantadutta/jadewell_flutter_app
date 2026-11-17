@@ -430,12 +430,14 @@ Future<bool> showJwConfirm(
   required String confirmLabel,
   required String cancelLabel,
   bool destructive = false,
+  Widget? leading,
 }) async {
   final result = await showJwDialog<bool>(
     context,
     builder: (ctx) {
       final jw = ctx.jw;
       return JwDialog(
+        leading: leading,
         title: title,
         body: body,
         actions: [

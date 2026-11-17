@@ -1,14 +1,18 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../platform/analytics/analytics_service.dart';
 import '../../../platform/audio/audio_service.dart';
 import '../../../state/platform_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/clay.dart';
+import '../../theme/jw_background.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import '../settings/screen_chrome.dart';
 import 'store_controller.dart';
@@ -19,6 +23,13 @@ import 'store_controller.dart';
 /// yet, the purchase area shows a calm "Not available yet" card instead.
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key});
+
+  /// Screen 16 blobs: yellow and pink below the hero (the purple corner
+  /// blob would sit behind the hero).
+  static const blobs = [
+    PopBlob(JwFill.yellow, Offset(0.0, 0.7), 0.11),
+    PopBlob(JwFill.pink, Offset(1.0, 0.76), 0.1),
+  ];
 
   @override
   ConsumerState<StoreScreen> createState() => _StoreScreenState();
@@ -67,65 +78,181 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       }
     });
 
-    // viewPadding: the page frame may already have consumed padding, which
-    // would leave the footnote sitting on the gesture bar.
     final bottom = MediaQuery.viewPaddingOf(context).bottom;
-    return JwPage(
-      title: null,
-      close: true,
-      onHaptic: haptic,
-      trailing: store.adsRemoved
-          ? null
-          : JwButton.tertiary(
-              label: l.storeRestore,
-              onHaptic: haptic,
-              onPressed: store.busy ? null : _restore,
-            ),
-      child: LayoutBuilder(
-        builder: (context, box) => SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 32 + bottom),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: box.maxHeight - 32 - bottom),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 24),
-                  Center(child: _CelebratingHero(key: ValueKey(_celebrations), celebrate: _celebrations > 0)),
-                  const SizedBox(height: 36),
-                  Text(
-                    store.adsRemoved ? l.storePurchasedTitle : l.storeTitle,
-                    textAlign: TextAlign.center,
-                    style: jw.text.h1.copyWith(fontSize: 31),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    store.adsRemoved ? l.storePurchasedSubtitle : l.storeSubtitle,
-                    textAlign: TextAlign.center,
-                    style: jw.text.body.copyWith(fontSize: 17, color: jw.textMuted),
-                  ),
-                  const SizedBox(height: 44),
-                  JwListGroup(
+    final top = MediaQuery.viewPaddingOf(context).top;
+    final on = JwFill.purple.on;
+    final close = MaterialLocalizations.of(context).closeButtonTooltip;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // White status icons over the purple hero.
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: jw.surface,
+        body: JwBackground(
+          blobs: StoreScreen.blobs,
+          child: LayoutBuilder(
+            builder: (context, box) => SingleChildScrollView(
+              padding: EdgeInsets.only(bottom: 24 + bottom),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: box.maxHeight - 24 - bottom),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _Benefit(icon: JwIcons.check, text: l.storeBenefitNoAds),
-                      _Benefit(icon: JwIcons.video, text: l.storeBenefitRewarded),
-                      _Benefit(icon: JwIcons.sparkle, text: l.storeBenefitIndie),
+                      // Full-bleed purple hero (§5 row 16): bottom radius 40;
+                      // the top corners sit above the screen edge.
+                      Transform.translate(
+                        offset: const Offset(0, -40),
+                        child: HeroCard(
+                          radius: 40,
+                          confetti: true,
+                          confettiCount: 5,
+                          confettiSeed: 1,
+                          padding: EdgeInsets.fromLTRB(16, 40 + top + 12, 16, 30),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  _HeroIconButton(
+                                    semanticLabel: close,
+                                    onHaptic: haptic,
+                                    onPressed: () => JwPage.defaultBack(context),
+                                  ),
+                                  const Spacer(),
+                                  if (!store.adsRemoved)
+                                    _HeroTextButton(
+                                      label: l.storeRestore,
+                                      onHaptic: haptic,
+                                      onPressed: store.busy ? null : _restore,
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Center(child: _CelebratingHero(key: ValueKey(_celebrations), celebrate: _celebrations > 0)),
+                              const SizedBox(height: 22),
+                              Text(
+                                store.adsRemoved ? l.storePurchasedTitle : l.storeTitle,
+                                textAlign: TextAlign.center,
+                                style: jw.text.h1.copyWith(fontSize: 27, color: on),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                store.adsRemoved ? l.storePurchasedSubtitle : l.storeSubtitle,
+                                textAlign: TextAlign.center,
+                                style: jw.text.body.copyWith(fontSize: 15.5, fontWeight: FontWeight.w600, color: on),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // The hero's layout slot is 40 pt taller than what shows;
+                      // pull the benefits up to sit ~26 pt below it.
+                      Transform.translate(
+                        offset: const Offset(0, -14),
+                        child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                        child: JwListGroup(
+                          children: [
+                            _Benefit(icon: JwIcons.check, fill: JwFill.mint, text: l.storeBenefitNoAds),
+                            _Benefit(icon: JwIcons.video, fill: JwFill.sky, text: l.storeBenefitRewarded),
+                            _Benefit(icon: JwIcons.sparkle, fill: JwFill.pink, text: l.storeBenefitIndie),
+                          ],
+                        ),
+                      ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(height: 28),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _PurchaseArea(
+                          store: store,
+                          onHaptic: haptic,
+                          onBuy: () => unawaited(ref.read(storeControllerProvider.notifier).purchaseRemoveAds()),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          l.storeFootnote,
+                          textAlign: TextAlign.center,
+                          style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400),
+                        ),
+                      ),
                     ],
                   ),
-                  const Spacer(),
-                  const SizedBox(height: 32),
-                  _PurchaseArea(
-                    store: store,
-                    onHaptic: haptic,
-                    onBuy: () => unawaited(ref.read(storeControllerProvider.notifier).purchaseRemoveAds()),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l.storeFootnote,
-                    textAlign: TextAlign.center,
-                    style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400),
-                  ),
-                ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The hero's close button: a translucent white circle with a white ×.
+class _HeroIconButton extends StatelessWidget {
+  const _HeroIconButton({required this.semanticLabel, required this.onPressed, this.onHaptic});
+
+  final String semanticLabel;
+  final VoidCallback onPressed;
+  final VoidCallback? onHaptic;
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
+    final on = JwFill.purple.on;
+    final deco = jw.clay(ClayLevel.flat, color: on.withValues(alpha: 0.18));
+    return ClayPressable(
+      decoration: deco,
+      pressedDecoration: jw.clay(ClayLevel.flat, color: on.withValues(alpha: 0.28)),
+      onTap: onPressed,
+      onHaptic: onHaptic,
+      semanticLabel: semanticLabel,
+      width: 46,
+      height: 46,
+      child: Center(child: JwIcon(JwIcons.x, size: 22, color: on)),
+    );
+  }
+}
+
+/// "Restore" in white on the hero.
+class _HeroTextButton extends StatelessWidget {
+  const _HeroTextButton({required this.label, required this.onPressed, this.onHaptic});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final VoidCallback? onHaptic;
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
+    final on = JwFill.purple.on;
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      label: label,
+      excludeSemantics: true,
+      onTap: onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onPressed == null
+            ? null
+            : () {
+                onHaptic?.call();
+                onPressed!();
+              },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 46, minWidth: 64),
+          child: Center(
+            widthFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                label,
+                style: jw.text.button.copyWith(fontSize: 16.5, color: on.withValues(alpha: onPressed == null ? 0.6 : 1)),
               ),
             ),
           ),
@@ -149,11 +276,11 @@ class _PurchaseArea extends StatelessWidget {
     final jw = context.jw;
     switch (store.view) {
       case StoreView.purchased:
-        return Center(child: JwChip.accent(value: '✓', label: l.storePurchased));
+        return Center(child: _PurchasedChip(label: l.storePurchased));
       case StoreView.notAvailable:
-        return _NoticeCard(title: l.storeNotAvailableTitle, body: l.storeNotAvailableBody);
+        return _NoticeCard(title: l.storeNotAvailableTitle, body: l.storeNotAvailableBody, icon: JwIcons.info, fill: JwFill.sky);
       case StoreView.pending:
-        return _NoticeCard(title: l.storePendingTitle, body: l.storePendingBody, bead: jw.warning);
+        return _NoticeCard(title: l.storePendingTitle, body: l.storePendingBody, icon: JwIcons.clock, fill: JwFill.yellow);
       case StoreView.loading:
         return _PriceButton(label: l.storeBuy, busyLabel: l.storeLoadingPrice, busy: true, onPressed: onBuy);
       case StoreView.purchasing:
@@ -179,13 +306,48 @@ class _PurchaseArea extends StatelessWidget {
   }
 }
 
+/// Mint "✓ Purchased" chip (mint = success).
+class _PurchasedChip extends StatelessWidget {
+  const _PurchasedChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
+    const fill = JwFill.mint;
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: jw.fillFlat(fill, radius: 22, extraShadows: jw.clay(ClayLevel.chip).resolvedShadows.where((s) => !s.inset).toList()),
+        child: SizedBox(
+          height: 44,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                JwIcon(JwIcons.check, size: 18, color: fill.on, strokeWidth: JwIcon.badgeStroke),
+                const SizedBox(width: 8),
+                Text(label, style: jw.text.button.copyWith(fontSize: 16, color: fill.on)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A quiet sunken card: "Not available yet", "Payment pending".
 class _NoticeCard extends StatelessWidget {
-  const _NoticeCard({required this.title, required this.body, this.bead});
+  const _NoticeCard({required this.title, required this.body, required this.icon, required this.fill});
 
   final String title;
   final String body;
-  final Color? bead;
+  final String icon;
+  final JwFill fill;
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +356,7 @@ class _NoticeCard extends StatelessWidget {
       container: true,
       liveRegion: true,
       child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.sunken, radius: 22),
+        decoration: jw.clay(ClayLevel.sunken, radius: 24),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           child: Column(
@@ -203,14 +365,14 @@ class _NoticeCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  JwBead(color: bead ?? jw.jade, size: 14),
+                  Transform.translate(offset: const Offset(0, -1.5), child: IconBadge(icon: icon, fill: fill, size: 30)),
                   const SizedBox(width: 10),
                   Flexible(
-                    child: Text(title, style: jw.text.h2.copyWith(fontSize: 18), textAlign: TextAlign.center),
+                    child: Text(title, style: jw.text.h3.copyWith(fontSize: 18), textAlign: TextAlign.center),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 body,
                 textAlign: TextAlign.center,
@@ -225,21 +387,22 @@ class _NoticeCard extends StatelessWidget {
 }
 
 class _Benefit extends StatelessWidget {
-  const _Benefit({required this.icon, required this.text});
+  const _Benefit({required this.icon, required this.fill, required this.text});
 
   final String icon;
+  final JwFill fill;
   final String text;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 62),
+      constraints: const BoxConstraints(minHeight: 64),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            JwIconWell(icon: icon),
+            JwIconWell(icon: icon, fill: fill),
             const SizedBox(width: 16),
             Expanded(child: Text(text, style: jw.text.body.copyWith(fontSize: 16))),
           ],
@@ -272,21 +435,22 @@ class _PriceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
-    final deco = jw.clay(ClayLevel.primary);
-    final fg = jw.onAccent;
-    final textStyle = jw.text.button.copyWith(color: fg, fontSize: 17);
+    final fg = JwFill.purple.on;
+    final textStyle = jw.text.button.copyWith(color: fg, fontSize: 17.5);
     final spinner = SizedBox.square(
       dimension: 20,
       child: CircularProgressIndicator(strokeWidth: 2.4, color: fg),
     );
     final price = this.price;
-    return ClayPressable(
-      decoration: deco,
-      pressedDecoration: deco.copyWith(level: ClayLevel.pressed),
+    // 64 pt purple CTA (§5 row 16); stays fully coloured while busy.
+    return FillPressable(
+      fill: JwFill.purple,
+      radius: 32,
       onTap: busy ? null : onPressed,
       onHaptic: onHaptic,
       semanticLabel: busy ? (busyLabel ?? label) : (price == null ? label : '$label, $price'),
-      height: 60,
+      dimWhenDisabled: false,
+      height: 64,
       width: double.infinity,
       child: Center(
         child: Padding(
@@ -306,7 +470,7 @@ class _PriceButton extends StatelessWidget {
                     spinner,
                   ] else if (price != null) ...[
                     Text(' · ', style: textStyle),
-                    Text(price, style: jw.text.numM.copyWith(color: fg, fontSize: 19, fontWeight: FontWeight.w700)),
+                    Text(price, style: jw.text.numM.copyWith(color: fg, fontSize: 20, fontWeight: FontWeight.w700)),
                   ],
                 ],
               ],
@@ -337,54 +501,19 @@ class _CelebratingHero extends StatelessWidget {
   }
 }
 
-/// The app-icon-like hero: an accent clay square holding two tilted tiles,
-/// each with a jade bead.
+/// The hero mark: the tiles-only logo (two white tiles with mint beads)
+/// floating on the purple hero.
 class _RemoveAdsHero extends StatelessWidget {
   const _RemoveAdsHero();
 
   @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    final fill = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [JwFaceInks.lighten(jw.accent, 0.3), jw.accent, JwFaceInks.darken(jw.accent, 0.12)],
-      stops: const [0, 0.55, 1],
-    );
-    Widget tile(double angle, Offset offset) => Transform.translate(
-          offset: offset,
-          child: Transform.rotate(
-            angle: angle,
-            child: DecoratedBox(
-              decoration: jw.clay(ClayLevel.flat, color: jw.tileEdge, radius: 12, extraShadows: [ClayShadow(0, 5, 10, 0, jw.shadow)]),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: jw.tileFace, borderRadius: BorderRadius.circular(11)),
-                  child: SizedBox(
-                    width: 42,
-                    height: 54,
-                    child: Center(child: JwBead(color: jw.jade, size: 20)),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-    return ExcludeSemantics(
-      child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.raised, radius: 34, gradient: fill),
-        child: SizedBox.square(
-          dimension: 132,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              tile(-0.12, const Offset(-18, 2)),
-              tile(0.10, const Offset(18, -1)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Image.asset(
+      'assets/brand/mark_tiles_only_512.png',
+      width: 150,
+      height: 150,
+      filterQuality: FilterQuality.medium,
+      cacheWidth: 450,
+    ),
+  );
 }

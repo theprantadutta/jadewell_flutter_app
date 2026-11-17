@@ -34,12 +34,20 @@ Future<void> expectNoOverflow(WidgetTester tester) async {
   expect(tester.takeException(), isNull);
 }
 
+/// Unmounts the app so the next pump builds a fresh ProviderScope (a
+/// re-pump at the same spot would keep the old overrides and state).
+Future<void> resetApp(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pumpAndSettle();
+}
+
 /// Screenshots are opt-in: `JW_SHOTS=1 flutter test <file> --update-goldens`.
 final bool shotsEnabled = Platform.environment.containsKey('JW_SHOTS');
 
 /// Writes the app to `build/phone_shots/<name>.png` (outside tracked files)
-/// when [shotsEnabled], after loading every image for real.
-Future<void> maybeShot(WidgetTester tester, String name) async {
+/// when [shotsEnabled], after loading every image for real. [depth] is how
+/// many folders the calling test file sits below the package root.
+Future<void> maybeShot(WidgetTester tester, String name, {int depth = 3}) async {
   if (!shotsEnabled) return;
   await tester.runAsync(() async {
     for (final e in find.byType(Image).evaluate()) {
@@ -47,5 +55,5 @@ Future<void> maybeShot(WidgetTester tester, String name) async {
     }
   });
   await tester.pumpAndSettle();
-  await expectLater(find.byType(MaterialApp), matchesGoldenFile('${'../' * 3}build/phone_shots/$name.png'));
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile('${'../' * depth}build/phone_shots/$name.png'));
 }
