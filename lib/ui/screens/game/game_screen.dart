@@ -392,8 +392,9 @@ class _TopBar extends ConsumerWidget {
     final showTimer = ref.watch(settingsProvider.select((s) => s.value?.showTimer ?? true));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        height: 46,
+      child: ConstrainedBox(
+        // 46 tall; grows with large text instead of clipping the subtitle.
+        constraints: const BoxConstraints(minHeight: 46),
         child: Row(
           children: [
             JwIconButton(icon: JwIcons.back, semanticLabel: l.navBack, onPressed: onBack),

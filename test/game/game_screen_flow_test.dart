@@ -89,18 +89,29 @@ Future<void> _wait(WidgetTester tester, int ms) async {
   }
 }
 
-Finder _knob(int i) => find.descendant(of: find.byType(JwToolKnob).at(i), matching: find.byType(FillPressable));
+Finder _knob(int i) => find.descendant(of: find.byType(FillKnob).at(i), matching: find.byType(FillPressable));
 
 void main() {
   setUpAll(loadJwFonts);
   loadFaces();
 
-  for (final brightness in Brightness.values) {
-    testWidgets('play the turtle through to the cleared screen (${brightness.name})', (tester) async {
+  // Both themes on the phone frame, plus large text and the tablet
+  // (Tab A9, ≈ 600 × 1005): any overflow fails the run.
+  final configs = <(Brightness, Size, double)>[
+    for (final b in Brightness.values) (b, const Size(390, 844), 1.0),
+    (Brightness.light, const Size(390, 844), 1.3),
+    (Brightness.dark, const Size(600, 1005), 1.0),
+    (Brightness.light, const Size(600, 1005), 1.3),
+  ];
+  for (final (brightness, size, scale) in configs) {
+    final tag = size.width == 390 && scale == 1.0 ? brightness.name : '${brightness.name} ${size.width.toInt()}x${size.height.toInt()} @$scale';
+    testWidgets('play the turtle through to the cleared screen ($tag)', (tester) async {
       tester.view
-        ..physicalSize = const Size(780, 1688)
+        ..physicalSize = size * 2
         ..devicePixelRatio = 2;
       addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final repo = MemoryProgressRepository();
       final router = _router(AppRoutes.game('turtle'));
       addTearDown(router.dispose);
@@ -182,7 +193,7 @@ void main() {
       await _shot(tester, '10b_cleared_mid_${brightness.name}');
       await _wait(tester, 1900);
       await _shot(tester, '10_cleared_${brightness.name}');
-      expect(find.text('Turtle cleared'), findsOneWidget);
+      expect(find.text('Board cleared!'), findsOneWidget);
       expect(find.textContaining('Next:'), findsOneWidget);
 
       // Head start offer: skip it.
