@@ -259,12 +259,12 @@ class GameController extends Notifier<GameViewState> {
 
   bool _autoplaying = false;
 
-  /// DEBUG BUILDS ONLY: plays the solver's solution from the current board
+  /// DEBUG AND PROFILE BUILDS ONLY (never release): plays the solver's solution from the current board
   /// through the normal [tap] path (real move log, real timing), so a full
   /// board — including the daily and its server verification — can be
   /// checked on a device. Compiled out of release builds.
   Future<void> debugAutoplay({Duration perTap = const Duration(milliseconds: 220)}) async {
-    if (!kDebugMode || _autoplaying) return;
+    if (kReleaseMode || _autoplaying) return; // debug + profile (QA, perf runs); never in release
     _autoplaying = true;
     try {
       while (ref.mounted && _canPlay && state.game!.remaining.length > 0) {

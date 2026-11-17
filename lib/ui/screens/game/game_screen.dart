@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -398,9 +398,9 @@ class _TopBar extends ConsumerWidget {
             ),
             if (showTimer)
               GestureDetector(
-                // Debug builds only: long-press the timer to autoplay the
+                // Debug and profile builds only: long-press the timer to autoplay the
                 // solution (QA for full boards and daily verification).
-                onLongPress: kDebugMode && playing ? () => unawaited(controller.debugAutoplay()) : null,
+                onLongPress: !kReleaseMode && playing ? () => unawaited(controller.debugAutoplay()) : null,
                 child: GameTimerPill(
                   elapsedMs: () => controller.elapsedMs,
                   running: running,
