@@ -134,7 +134,7 @@ void main() {
       await tester.tap(_knob(0));
       await _wait(tester, 900);
       expect(state().hint, isNotNull);
-      expect(find.textContaining('this pair is ready'), findsOneWidget);
+      expect(find.textContaining('This pair is ready'), findsOneWidget);
       await _shot(tester, '06_hint_${brightness.name}');
       await _wait(tester, 1400);
       expect(state().hint, isNull);
