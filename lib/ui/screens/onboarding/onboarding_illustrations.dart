@@ -2,8 +2,10 @@ import 'package:flutter/widgets.dart';
 
 import '../../board/tile/tile_face_spec.dart';
 import '../../board/tile/tile_widget.dart';
+import '../../components/components.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 
 /// Design frame of the illustration card (pt); children are placed in this
@@ -23,7 +25,12 @@ class _Placed extends StatelessWidget {
   Widget build(BuildContext context) => Positioned(left: left * s, top: top * s, child: child);
 }
 
-/// Centred label at frame x [cx] (frame units), y [top].
+/// The white pill used for labels and badges on the onboarding fill cards
+/// (white with dark ink in both themes, like the cards' fills).
+Decoration _pill(double radius) => JwTheme.light.clay(ClayLevel.chip, radius: radius);
+
+/// Centred label pill at frame x [cx] (frame units), y [top], at most
+/// [width] wide.
 class _Label extends StatelessWidget {
   const _Label({required this.s, required this.cx, required this.top, required this.text, this.width = 120});
 
@@ -35,21 +42,29 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jw = context.jw;
+    final ink = JwTheme.light;
     return Positioned(
       left: (cx - width / 2) * s,
       top: top * s,
       width: width * s,
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: jw.text.callout.copyWith(fontSize: 15.5 * s, fontWeight: FontWeight.w400, height: 1.3),
+      child: Center(
+        child: DecoratedBox(
+          decoration: _pill(12 * s),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 4 * s),
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: ink.text.callout.copyWith(fontSize: 13 * s, fontWeight: FontWeight.w600, height: 1.2, color: ink.textPrimary),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Green check / red cross disc.
+/// Mint check / coral cross fill badge (round).
 class _Verdict extends StatelessWidget {
   const _Verdict({required this.s, required this.cx, required this.cy, required this.ok});
 
@@ -60,23 +75,26 @@ class _Verdict extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jw = context.jw;
-    final d = 26 * s;
+    final d = 28 * s;
+    final fill = ok ? JwFill.mint : JwFill.coral;
     return Positioned(
       left: cx * s - d / 2,
       top: cy * s - d / 2,
-      child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.chip, color: ok ? jw.success : jw.danger),
-        child: SizedBox.square(
-          dimension: d,
-          child: Center(child: JwIcon(ok ? JwIcons.check : JwIcons.x, size: 15 * s, color: jw.onAccent)),
-        ),
+      child: FillBox(
+        fill: fill,
+        radius: d / 2,
+        edge: 2.5 * s,
+        glow: false,
+        width: d,
+        height: d,
+        child: Center(child: JwIcon(ok ? JwIcons.check : JwIcons.x, size: 16 * s, color: fill.on, strokeWidth: JwIcon.badgeStroke)),
       ),
     );
   }
 }
 
-/// Accent-soft pill badge centred at the top or bottom of the frame.
+/// White pill badge centred at the top or bottom of the frame, with an
+/// optional leading mint badge.
 class _Badge extends StatelessWidget {
   const _Badge({required this.s, required this.top, required this.text, this.icon});
 
@@ -87,22 +105,29 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jw = context.jw;
+    final ink = JwTheme.light;
+    final h = 40 * s;
     return Positioned(
       left: 0,
       right: 0,
       top: top * s,
       child: Center(
         child: DecoratedBox(
-          decoration: jw.clay(ClayLevel.flat, color: jw.accentSoft, radius: 15 * s),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14 * s, vertical: 6 * s),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[JwIcon(icon!, size: 16 * s, color: jw.textPrimary), SizedBox(width: 10 * s)],
-                Text(text, style: jw.text.callout.copyWith(fontSize: 15.5 * s, fontWeight: FontWeight.w500)),
-              ],
+          decoration: _pill(h / 2),
+          child: SizedBox(
+            height: h,
+            child: Padding(
+              padding: EdgeInsets.only(left: icon != null ? 6 * s : 18 * s, right: 18 * s),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    IconBadge(icon: icon, fill: JwFill.mint, size: 28 * s, edge: 2.5 * s),
+                    SizedBox(width: 10 * s),
+                  ],
+                  Text(text, style: ink.text.callout.copyWith(fontSize: 16 * s, fontWeight: FontWeight.w700, color: ink.textPrimary)),
+                ],
+              ),
             ),
           ),
         ),
@@ -172,14 +197,14 @@ class FreeRuleIllustration extends StatelessWidget {
         _Placed(s: s, left: 77, top: 70, child: TileWidget(face: faces[13], state: blocked, scale: t)),
         _Placed(s: s, left: 128, top: 70, child: TileWidget(face: faces[14], scale: t)),
         _Verdict(s: s, cx: 52, cy: 163, ok: true),
-        _Label(s: s, cx: 52, top: 180, text: labels.leftClear, width: 74),
+        _Label(s: s, cx: 51, top: 176, text: labels.leftClear, width: 74),
         _Verdict(s: s, cx: 128, cy: 163, ok: false),
-        _Label(s: s, cx: 129, top: 180, text: labels.bothBlocked, width: 76),
+        _Label(s: s, cx: 129, top: 176, text: labels.bothBlocked, width: 80),
         // Covered from above: a blocked tile under a free one.
         _Placed(s: s, left: 200, top: 82, child: TileWidget(face: faces[20], state: blocked, scale: t)),
         _Placed(s: s, left: 225, top: 72, child: TileWidget(face: faces[21], scale: t)),
         _Verdict(s: s, cx: 254, cy: 163, ok: false),
-        _Label(s: s, cx: 254, top: 180, text: labels.covered),
+        _Label(s: s, cx: 254, top: 176, text: labels.covered),
         // A blocked middle row and a free edge tile.
         _Placed(s: s, left: 52, top: 220, child: TileWidget(face: faces[24], state: blocked, scale: t)),
         _Placed(s: s, left: 103, top: 220, child: TileWidget(face: faces[25], state: blocked, scale: t)),
