@@ -12,9 +12,11 @@ import '../../../platform/auth/auth_service.dart';
 import '../../../state/app_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../../state/session_controller.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import '../settings/screen_chrome.dart';
 import 'email_sheet.dart';
@@ -124,7 +126,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const JwIconWell(icon: JwIcons.shield),
+                        const JwIconWell(icon: JwIcons.shield, fill: JwFill.sky),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Text(l.accountGuestExplainer, style: jw.text.body.copyWith(fontSize: 15.5)),
@@ -171,9 +173,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 for (final p in identity!.providers)
                   JwListRow(
                     icon: p == 'password' ? JwIcons.text : JwIcons.user,
+                    badgeFill: p == 'password' ? JwFill.mint : JwFill.purple,
                     title: providerLabel(l, p),
                     value: identity.email,
-                    trailing: JwIcon(JwIcons.check, size: 20, color: jw.jade),
+                    trailing: const IconBadge(icon: JwIcons.check, fill: JwFill.mint, size: 24),
                   ),
               ],
             ),
@@ -336,7 +339,7 @@ class _ProfileCard extends StatelessWidget {
     final name = displayName ?? l.accountGuest;
     final code = user?.friendCode;
     return DecoratedBox(
-      decoration: jw.clay(ClayLevel.raised, radius: 28),
+      decoration: jw.clay(ClayLevel.raised, radius: 26),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
         child: Column(
@@ -344,7 +347,7 @@ class _ProfileCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                ProfileAvatar(name: name, color: avatarPastel(user?.avatarColor, jw), size: 68),
+                ProfileAvatar(name: name, fill: avatarFill(user?.avatarColor, name), size: 68),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -446,27 +449,31 @@ class FriendCodeRow extends StatelessWidget {
   }
 }
 
-/// Large avatar: initial on the profile's pastel, e1.
+/// Large avatar: the initial on one of the six fills (the one nearest the
+/// profile colour), with a 3 pt base edge.
 class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key, required this.name, this.color, this.size = 68});
+  const ProfileAvatar({super.key, required this.name, this.fill, this.size = 68});
 
   final String name;
-  final Color? color;
+
+  /// Defaults to the fill for [name].
+  final JwFill? fill;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
+    final f = fill ?? JwAvatar.fillFor(name);
     final initial = name.isEmpty ? '?' : name.characters.first.toUpperCase();
     return ExcludeSemantics(
-      child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.chip, color: color ?? jw.accentSoft),
-        child: SizedBox.square(
-          dimension: size,
-          child: Center(
-            child: Text(
-              initial,
-              style: jw.text.h1.copyWith(fontSize: size * 0.42, color: const Color(0xFF4A3934)),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 3),
+        child: DecoratedBox(
+          decoration: jw.fill(f, radius: size / 2, edge: 3, glow: false),
+          child: SizedBox.square(
+            dimension: size,
+            child: Center(
+              child: Text(initial, style: jw.text.h1.copyWith(fontSize: size * 0.42, color: f.on)),
             ),
           ),
         ),
@@ -618,8 +625,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(l.accountEditProfile, style: jw.text.h3, textAlign: TextAlign.center),
-        const SizedBox(height: 18),
+        const Center(child: IconBadge(icon: JwIcons.user, fill: JwFill.purple, size: 60)),
+        const SizedBox(height: 14),
+        Text(l.accountEditProfile, style: jw.text.h3.copyWith(fontSize: 21), textAlign: TextAlign.center),
+        const SizedBox(height: 14),
         JwEyebrow(l.accountNamePlaceholder),
         const SizedBox(height: 8),
         JwTextField(

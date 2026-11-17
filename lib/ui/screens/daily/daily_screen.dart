@@ -7,15 +7,18 @@ import 'package:material_ui/material_ui.dart';
 import '../../../data/models/progress.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_background.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/skeleton/jw_skeleton.dart';
 import '../../widgets/widgets.dart';
 import '../home/layout_card_parts.dart';
 import '../home/layout_labels.dart';
+import '../settings/screen_chrome.dart' show kMetaBlobs;
 import 'countdown.dart';
 import 'daily_top_three.dart';
 import 'streak_repair_card.dart';
@@ -39,6 +42,7 @@ class DailyScreen extends ConsumerWidget {
       value: jw.isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: JwBackground(
+          blobs: kMetaBlobs,
           child: SafeArea(
             child: JwContentWidth(
               child: Column(
@@ -64,7 +68,7 @@ class DailyScreen extends ConsumerWidget {
                               padding: EdgeInsets.fromLTRB(16, 24, 16, 0),
                               child: Column(
                                 children: [
-                                  JwSkeletonBox(height: 330, radius: 34),
+                                  JwSkeletonBox(height: 400, radius: 34),
                                   SizedBox(height: 24),
                                   JwSkeletonBox(height: 90, radius: 24),
                                 ],
@@ -75,16 +79,16 @@ class DailyScreen extends ConsumerWidget {
                             padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
                             children: [
                               JwFadeUp(child: _BoardCard(daily: daily, name: info.name, meta: l.dailyMeta(info.tileCount, LayoutLabels.difficulty(l, info.difficulty)), tiles: LayoutLabels.tiles(info))),
-                              const SizedBox(height: 26),
+                              const SizedBox(height: 28),
                               JwFadeUp(index: 1, child: _StreakWeek(daily: daily)),
                               const StreakRepairCard(),
-                              const SizedBox(height: 26),
+                              const SizedBox(height: 24),
                               const JwFadeUp(index: 2, child: _TopThree()),
                             ],
                           ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
                     child: daily != null && daily.clearedToday
                         ? JwButton.secondary(
                             label: l.dailyPlayAgain,
@@ -93,9 +97,10 @@ class DailyScreen extends ConsumerWidget {
                             onHaptic: haptics.light,
                             onPressed: () => context.push(AppRoutes.dailyPlay),
                           )
-                        : JwButton.primary(
+                        : PrimaryButton(
                             label: l.dailyPlay,
                             icon: JwIcons.play,
+                            height: 62,
                             expand: true,
                             onHaptic: haptics.light,
                             onPressed: daily == null ? null : () => context.push(AppRoutes.dailyPlay),
@@ -131,12 +136,12 @@ class _TopBar extends ConsumerWidget {
           onHaptic: ref.read(hapticsProvider).selection,
           onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
-        const SizedBox(width: 22),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Semantics(header: true, child: Text(title, style: jw.text.h1.copyWith(fontSize: 30, height: 1.1))),
+              Semantics(header: true, child: Text(title, style: jw.text.h1.copyWith(fontSize: 28, height: 1.15))),
               if (subtitle.isNotEmpty)
                 Text(subtitle, style: jw.text.body.copyWith(fontSize: 16, color: jw.textMuted, height: 1.3)),
             ],
@@ -148,6 +153,8 @@ class _TopBar extends ConsumerWidget {
   }
 }
 
+/// The purple daily hero (screen 12): the silhouette on a translucent
+/// plate with confetti, name, meta and the countdown in white.
 class _BoardCard extends StatelessWidget {
   const _BoardCard({required this.daily, required this.name, required this.meta, required this.tiles});
 
@@ -160,65 +167,73 @@ class _BoardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final jw = context.jw;
     final l = AppLocalizations.of(context);
-    return DecoratedBox(
-      decoration: jw.clay(ClayLevel.raised, radius: 34),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
-        child: Column(
-          children: [
-            DecoratedBox(
-              decoration: jw.clay(ClayLevel.sunken, radius: 28),
+    final on = JwFill.purple.on;
+    final body = jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: on);
+    return HeroCard(
+      radius: 34,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(color: on.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(26)),
+            child: CustomPaint(
+              painter: ConfettiPainter(count: 6, seed: 2, exclude: JwFill.purple),
               child: SizedBox(
                 height: 196,
-                width: double.infinity,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 22),
                   child: JwSilhouette(tiles: tiles, semanticLabel: name),
                 ),
               ),
             ),
-            const SizedBox(height: 22),
-            Text(name, textAlign: TextAlign.center, style: jw.text.h1.copyWith(fontSize: 34)),
-            const SizedBox(height: 4),
-            Text(meta, textAlign: TextAlign.center, style: jw.text.body.copyWith(fontSize: 15, color: jw.textMuted)),
-            if (daily.clearedToday) ...[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CheckDisc(size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    l.dailyClearedIn(formatClock(daily.firstClearMs!)),
-                    style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(width: 10),
-                  StarRow(
-                    earned: daily.firstClearStars ?? 0,
-                    size: 15,
-                    semanticLabel: l.homeStarsSemantics(daily.firstClearStars ?? 0),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: jw.text.h1.copyWith(fontSize: 30, height: 1.1, color: on)),
+                const SizedBox(height: 6),
+                Text(meta, style: body),
+                if (daily.clearedToday) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Transform.translate(offset: const Offset(0, -1.5), child: const CheckDisc(size: 26)),
+                      const SizedBox(width: 10),
+                      Flexible(child: Text(l.dailyClearedIn(formatClock(daily.firstClearMs!)), style: body)),
+                      const SizedBox(width: 10),
+                      StarRow(
+                        earned: daily.firstClearStars ?? 0,
+                        size: 15,
+                        semanticLabel: l.homeStarsSemantics(daily.firstClearStars ?? 0),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
-            const SizedBox(height: 12),
-            DailyCountdown(
-              builder: (context, left) => Semantics(
-                label: '${l.dailyEndsIn} ${formatCountdown(left)}',
-                excludeSemantics: true,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(l.dailyEndsIn, style: jw.text.callout.copyWith(fontSize: 15, color: jw.textMuted, fontWeight: FontWeight.w400)),
-                    const SizedBox(width: 12),
-                    RollingText(formatCountdown(left), style: jw.text.numM.copyWith(fontSize: 21, fontWeight: FontWeight.w600)),
-                  ],
+                const SizedBox(height: 12),
+                DailyCountdown(
+                  builder: (context, left) => Semantics(
+                    label: '${l.dailyEndsIn} ${formatCountdown(left)}',
+                    excludeSemantics: true,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        JwIcon(JwIcons.clock, size: 19, color: on),
+                        const SizedBox(width: 8),
+                        Text(l.dailyEndsIn, style: body.copyWith(fontSize: 15.5)),
+                        const SizedBox(width: 12),
+                        RollingText(formatCountdown(left), style: jw.text.numM.copyWith(fontSize: 21, fontWeight: FontWeight.w700, color: on)),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -241,13 +256,17 @@ class _StreakWeek extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.only(left: 6, right: 6),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
             children: [
-              Expanded(child: Semantics(header: true, child: Text(l.dailyStreak, style: jw.text.h3.copyWith(fontSize: 21)))),
-              Text('${daily.streak}', style: jw.text.numM.copyWith(fontSize: 17, color: jw.accent)),
+              Transform.translate(
+                offset: const Offset(0, -1.5),
+                child: const IconBadge(icon: JwIcons.flame, fill: JwFill.coral, size: 32),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Semantics(header: true, child: Text(l.dailyStreak, style: jw.text.h3.copyWith(fontSize: 20)))),
+              // Coral is allowed as text at >= 18 pt bold (DESIGN_SYSTEM §3).
+              Text('${daily.streak}', style: jw.text.numM.copyWith(fontSize: 19, fontWeight: FontWeight.w700, color: JwFill.coral.edge)),
               const SizedBox(width: 6),
               Text(l.dailyStreakDays(daily.streak), style: jw.text.body.copyWith(fontSize: 16, color: jw.textMuted)),
             ],
@@ -270,7 +289,7 @@ class _StreakWeek extends StatelessWidget {
                     label: label,
                     excludeSemantics: true,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Column(
                         children: [
                           _DayBead(done: done, today: isToday, day: day.day),
@@ -289,6 +308,8 @@ class _StreakWeek extends StatelessWidget {
   }
 }
 
+/// A streak day dot: mint check when done, a raised dot with the date for
+/// today, a sunken dot otherwise.
 class _DayBead extends StatelessWidget {
   const _DayBead({required this.done, required this.today, required this.day});
 
@@ -300,18 +321,31 @@ class _DayBead extends StatelessWidget {
   Widget build(BuildContext context) {
     final jw = context.jw;
     const size = 38.0;
-    if (done) return const CheckDisc(size: size);
-    return DecoratedBox(
-      decoration: today ? jw.clay(ClayLevel.chip, gradient: jw.knobGradient) : jw.clay(ClayLevel.chip),
-      child: SizedBox.square(
-        dimension: size,
-        child: today
-            ? Center(child: Text('$day', style: jw.text.numM.copyWith(fontSize: 14, color: jw.accent)))
-            : null,
-      ),
-    );
+    final Widget dot;
+    if (done) {
+      dot = const CheckDisc(size: size, round: true);
+    } else {
+      dot = DecoratedBox(
+        decoration: today ? jw.clay(ClayLevel.chip, gradient: jw.knobGradient) : jw.clay(ClayLevel.sunken),
+        child: SizedBox.square(
+          dimension: size,
+          child: today
+              ? Center(child: Text('$day', style: jw.text.numM.copyWith(fontSize: 14.5, fontWeight: FontWeight.w700, color: jw.purpleText)))
+              : null,
+        ),
+      );
+    }
+    // Room for the mint dot's 3 pt base edge.
+    return SizedBox(width: size, height: size + 3, child: Align(alignment: Alignment.topCenter, child: dot));
   }
 }
+
+/// Trophy badge fill for a podium rank (1 yellow, 2 sky, 3 coral).
+JwFill rankFill(int rank) => switch (rank) {
+      1 => JwFill.yellow,
+      2 => JwFill.sky,
+      _ => JwFill.coral,
+    };
 
 class _TopThree extends ConsumerWidget {
   const _TopThree();
@@ -328,7 +362,7 @@ class _TopThree extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
               children: [
-                const JwIconWell(icon: JwIcons.trophy, size: 40),
+                const JwIconWell(icon: JwIcons.trophy, size: 40, fill: JwFill.yellow),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -352,14 +386,18 @@ class _TopThree extends ConsumerWidget {
             label: '${r.rank}, ${r.name}, ${formatClock(r.timeMs)}',
             excludeSemantics: true,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  SizedBox(width: 26, child: Text('${r.rank}', style: jw.text.numM.copyWith(fontSize: 16, color: jw.textMuted))),
-                  JwAvatar(name: r.name),
+                  Transform.translate(
+                    offset: const Offset(0, -1.5),
+                    child: IconBadge(icon: JwIcons.trophy, fill: rankFill(r.rank), size: 30),
+                  ),
+                  const SizedBox(width: 12),
+                  JwAvatar(name: r.name, fill: rankFill(r.rank)),
                   const SizedBox(width: 14),
-                  Expanded(child: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.body.copyWith(fontSize: 16.5))),
-                  Text(formatClock(r.timeMs), style: jw.text.numM.copyWith(fontSize: 16)),
+                  Expanded(child: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.body.copyWith(fontSize: 17))),
+                  Text(formatClock(r.timeMs), style: jw.text.numM.copyWith(fontSize: 17, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),

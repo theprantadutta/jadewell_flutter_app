@@ -5,19 +5,29 @@ import 'package:jadewell_flutter_app/data/repositories/social_repository.dart';
 import 'package:jadewell_flutter_app/state/session_controller.dart';
 import 'package:jadewell_flutter_app/state/social_providers.dart';
 import 'package:jadewell_flutter_app/ui/screens/friends/friends_screen.dart';
-import 'package:material_ui/material_ui.dart' show ValueKey;
+import 'package:material_ui/material_ui.dart' show Brightness, Size, ValueKey;
 
+import '../../ui/golden_helpers.dart' show loadJwFonts;
+import '../meta_checks.dart';
 import '../settings/harness.dart';
 
 const _mira = PlayerSummary(userId: 'u2', displayName: 'Mira K.', username: 'mira_k');
 const _kofi = PlayerSummary(userId: 'u3', displayName: 'Kofi A.');
 
 void main() {
-  Future<FakeSocialRepository> pump(WidgetTester tester, FakeSocialRepository repo) async {
+  setUpAll(loadJwFonts);
+
+  Future<FakeSocialRepository> pump(
+    WidgetTester tester,
+    FakeSocialRepository repo, {
+    Size size = const Size(390, 1400),
+    Brightness brightness = Brightness.light,
+  }) async {
     await pumpScreen(
       tester,
       const FriendsScreen(),
-      size: const Size(390, 1400),
+      size: size,
+      brightness: brightness,
       overrides: [
         sessionProvider.overrideWith(() => FakeSession(const BackendSession(identity: guestIdentity, user: testUser))),
         socialRepositoryProvider.overrideWithValue(repo),
@@ -124,4 +134,28 @@ void main() {
     expect(type('JW-7', 'JW-').text, '', reason: 'deleting into the prefix clears it');
     expect(type('', 'https://jadewell.pranta.dev/f/JW-7K3P9Q').text, 'JW-7K3P9Q', reason: 'pasted link');
   });
+
+  FakeSocialRepository full() => FakeSocialRepository(
+        friendList: [const Friend(player: _mira), const Friend(player: PlayerSummary(userId: 'u4', displayName: 'A rather long display name here', username: 'long_name_99'))],
+        incoming: [const FriendRequest(id: 'r1', player: _kofi)],
+        outgoing: [const FriendRequest(id: 'r2', player: PlayerSummary(userId: 'u5', displayName: 'Sana'))],
+      );
+  for (final size in layoutSizes.entries) {
+    for (final scale in textScales) {
+      testWidgets('friends layout · ${size.key} · text ${scale}x: no overflow', (tester) async {
+        setTextScale(tester, scale);
+        await pump(tester, full(), size: size.value);
+        await expectNoOverflow(tester);
+        await resetApp(tester);
+        await pump(tester, FakeSocialRepository(failWith: ApiFailure.offlineOrTransport), size: size.value);
+        await expectNoOverflow(tester);
+      });
+    }
+  }
+  for (final b in Brightness.values) {
+    testWidgets('friends shots ${b.name}', skip: !shotsEnabled, (tester) async {
+      await pump(tester, full(), brightness: b, size: const Size(390, 1250));
+      await maybeShot(tester, 'friends_${b.name}');
+    });
+  }
 }

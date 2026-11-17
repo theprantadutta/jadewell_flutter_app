@@ -13,7 +13,7 @@ void main() {
         tester,
         goldenFrame(brightness: b, child: const GalleryComponentsSheet()),
         'goldens/components_${b.name}.png',
-        surface: const Size(420, 2300),
+        surface: const Size(420, 3800),
       );
     });
   }

@@ -5,19 +5,31 @@ import 'package:jadewell_flutter_app/platform/auth/auth_service.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
 import 'package:jadewell_flutter_app/state/session_controller.dart';
 import 'package:jadewell_flutter_app/ui/screens/account/account_screen.dart';
+import 'package:material_ui/material_ui.dart' show Brightness, Size;
 
+import '../../ui/golden_helpers.dart' show loadJwFonts;
+import '../meta_checks.dart';
 import '../settings/harness.dart';
 
 void main() {
   late RecordingAnalytics analytics;
 
+  setUpAll(loadJwFonts);
   setUp(() => analytics = RecordingAnalytics());
 
-  Future<FakeSession> pump(WidgetTester tester, BackendSession session, {AuthException? linkError}) async {
+  Future<FakeSession> pump(
+    WidgetTester tester,
+    BackendSession session, {
+    AuthException? linkError,
+    Size size = const Size(390, 844),
+    Brightness brightness = Brightness.light,
+  }) async {
     final fake = FakeSession(session, linkError: linkError);
     await pumpScreen(
       tester,
       const AccountScreen(),
+      size: size,
+      brightness: brightness,
       overrides: [
         sessionProvider.overrideWith(() => fake),
         analyticsProvider.overrideWithValue(analytics),
@@ -107,4 +119,39 @@ void main() {
     expect(DisplayNames.isValid('two  spaces'), isFalse);
     expect(DisplayNames.isValid('emoji 😀'), isFalse);
   });
+
+  const sessions = {
+    'guest': BackendSession(identity: guestIdentity, user: testUser),
+    'linked': BackendSession(identity: googleIdentity, user: testUser),
+  };
+  for (final size in layoutSizes.entries) {
+    for (final scale in textScales) {
+      testWidgets('account layout · ${size.key} · text ${scale}x: no overflow', (tester) async {
+        setTextScale(tester, scale);
+        for (final s in sessions.values) {
+          await resetApp(tester);
+          await pump(tester, s, size: size.value);
+          await tester.pumpAndSettle();
+          await expectNoOverflow(tester);
+        }
+        // The edit profile sheet.
+        await tester.tap(find.bySemanticsLabel('Edit profile'));
+        await tester.pumpAndSettle();
+        await expectNoOverflow(tester);
+      });
+    }
+  }
+  for (final b in Brightness.values) {
+    testWidgets('account shots ${b.name}', skip: !shotsEnabled, (tester) async {
+      for (final s in sessions.entries) {
+        await resetApp(tester);
+        await pump(tester, s.value, brightness: b, size: const Size(390, 1000));
+        await tester.pumpAndSettle();
+        await maybeShot(tester, 'account_${s.key}_${b.name}');
+      }
+      await tester.tap(find.bySemanticsLabel('Edit profile'));
+      await tester.pumpAndSettle();
+      await maybeShot(tester, 'account_edit_${b.name}');
+    });
+  }
 }

@@ -16,6 +16,7 @@ import '../../../state/platform_providers.dart';
 import '../../board/board_view.dart';
 import '../../board/tile/tile_face_spec.dart';
 import '../../board/tile/tile_widget.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/jw_background.dart';
@@ -49,7 +50,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   bool _modalOpen = false;
   bool _leaving = false;
   bool _handoffReady = false;
-  String? _toast;
+  GameToast? _toast;
   Timer? _toastTimer;
   final List<Timer> _timers = [];
 
@@ -121,9 +122,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     context.go(AppRoutes.cleared(result.layoutId));
   }
 
-  void _showToast(String message) {
+  void _showToast(String message, {String icon = JwIcons.info, JwFill fill = JwFill.sky}) {
     _toastTimer?.cancel();
-    setState(() => _toast = message);
+    setState(() => _toast = (message: message, icon: icon, fill: fill));
     _toastTimer = Timer(const Duration(milliseconds: 2400), () {
       if (mounted) setState(() => _toast = null);
     });
@@ -159,7 +160,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         ),
         bottom: true,
       );
-      if ((granted ?? false) && mounted) _showToast(l.gameSecondChanceGranted);
+      if ((granted ?? false) && mounted) _showToast(l.gameSecondChanceGranted, icon: JwIcons.sparkle, fill: JwFill.yellow);
     });
   }
 
@@ -224,7 +225,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         unawaited(_showNoMoves());
       case HintAvailability.needsReward:
         final l = AppLocalizations.of(context);
-        unawaited(_offerReward(l.gameRewardHintTitle, l.gameRewardHintBody, _controller.watchAdForHint));
+        unawaited(_offerReward(l.gameRewardHintTitle, l.gameRewardHintBody, _controller.watchAdForHint, icon: JwIcons.hint));
       case HintAvailability.free || HintAvailability.none:
         break;
     }
@@ -239,21 +240,33 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         await _showNoMoves();
       case ShuffleAvailability.free:
         final ok = await _modal<bool>((_) => ShuffleConfirmDialog(tilesLeft: s.tilesLeft, freeLeft: s.freeShufflesLeft));
-        if ((ok ?? false) && mounted && !_controller.shuffleWithCredit()) _showToast(l.gameShuffleFailed);
+        if ((ok ?? false) && mounted && !_controller.shuffleWithCredit()) _showToast(l.gameShuffleFailed, icon: JwIcons.shuffle, fill: JwFill.pink);
       case ShuffleAvailability.needsReward:
-        await _offerReward(l.gameRewardShuffleTitle, l.gameRewardShuffleBody, _controller.watchAdForShuffle);
+        await _offerReward(
+          l.gameRewardShuffleTitle,
+          l.gameRewardShuffleBody,
+          _controller.watchAdForShuffle,
+          icon: JwIcons.shuffle,
+          fill: JwFill.pink,
+        );
       case ShuffleAvailability.none:
         break;
     }
   }
 
-  Future<void> _offerReward(String title, String body, Future<bool> Function() watch) async {
+  Future<void> _offerReward(
+    String title,
+    String body,
+    Future<bool> Function() watch, {
+    String icon = JwIcons.video,
+    JwFill fill = JwFill.yellow,
+  }) async {
     final l = AppLocalizations.of(context);
     final granted = await _modal<bool>(
-      (_) => RewardOfferSheet(title: title, body: body, watch: watch),
+      (_) => RewardOfferSheet(title: title, body: body, watch: watch, icon: icon, fill: fill),
       bottom: true,
     );
-    if (granted == false && mounted) _showToast(l.gameRewardUnavailable);
+    if (granted == false && mounted) _showToast(l.gameRewardUnavailable, icon: JwIcons.video, fill: JwFill.yellow);
   }
 
   Future<void> _showNoMoves() async {
@@ -267,7 +280,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (!mounted) return;
     switch (action) {
       case NoMovesAction.shuffle:
-        if (!_controller.shuffleFromDeadlock()) _showToast(l.gameShuffleFailed);
+        if (!_controller.shuffleFromDeadlock()) _showToast(l.gameShuffleFailed, icon: JwIcons.shuffle, fill: JwFill.pink);
       case NoMovesAction.undo:
         _controller.undo();
       case NoMovesAction.restart:
@@ -303,6 +316,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           child: ColoredBox(
             color: jw.surface,
             child: JwBackground(
+              blobs: PopBlobs.board,
               child: DefaultTextStyle(
                 style: jw.text.body,
                 child: SafeArea(
@@ -316,9 +330,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         onBack: () => unawaited(_onBack()),
                         onPause: () => unawaited(_showPause()),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _CountersRow(provider: _provider, toast: _toast),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 6),
                       Expanded(
                         child: phase == GamePhase.failed
                             ? _Failed(onBack: () => unawaited(_quit()))
@@ -349,6 +363,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
 typedef NotifierProviderFamilyRef = NotifierProvider<GameController, GameViewState>;
 
+/// A transient message in the counters row with its leading badge.
+typedef GameToast = ({String message, String icon, JwFill fill});
+
 class _TopBar extends ConsumerWidget {
   const _TopBar({required this.provider, required this.controller, required this.onBack, required this.onPause});
 
@@ -375,8 +392,9 @@ class _TopBar extends ConsumerWidget {
     final showTimer = ref.watch(settingsProvider.select((s) => s.value?.showTimer ?? true));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        height: 46,
+      child: ConstrainedBox(
+        // 46 tall; grows with large text instead of clipping the subtitle.
+        constraints: const BoxConstraints(minHeight: 46),
         child: Row(
           children: [
             JwIconButton(icon: JwIcons.back, semanticLabel: l.navBack, onPressed: onBack),
@@ -386,12 +404,25 @@ class _TopBar extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 25, height: 1.04)),
-                  Text(
-                    daily ? l.gameDailyChapter : chapter,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: jw.text.callout.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w400, color: jw.textMuted),
+                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 23, height: 1.04)),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      // Purple dot before "Chapter · Difficulty" (screen 03).
+                      DecoratedBox(
+                        decoration: BoxDecoration(color: JwFill.purple.mid, shape: BoxShape.circle),
+                        child: const SizedBox.square(dimension: 8),
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          daily ? l.gameDailyChapter : chapter,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: jw.text.callout.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w500, color: jw.textMuted),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -421,11 +452,10 @@ class _CountersRow extends ConsumerWidget {
   const _CountersRow({required this.provider, required this.toast});
 
   final NotifierProviderFamilyRef provider;
-  final String? toast;
+  final GameToast? toast;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final jw = context.jw;
     final l = AppLocalizations.of(context);
     final reduce = JwReduceMotion.of(context);
     final (tiles, pairs, hint, freeHints, combo, phase, paused) = ref.watch(
@@ -433,14 +463,22 @@ class _CountersRow extends ConsumerWidget {
     );
     final Widget content;
     if (phase == GamePhase.loading || phase == GamePhase.failed) {
-      content = const SizedBox(key: ValueKey('empty'), height: 40);
-    } else if (toast != null) {
-      content = JwToast(key: ValueKey('toast:$toast'), message: toast!, beadColor: jw.accent);
+      content = const SizedBox(key: ValueKey('empty'), height: CounterChip.height);
+    } else if (toast case final t?) {
+      content = Padding(
+        key: ValueKey('toast:${t.message}'),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: JwToast(message: t.message, icon: t.icon, fill: t.fill),
+      );
     } else if (hint != null) {
-      content = JwToast(
+      content = Padding(
         key: const ValueKey('hint'),
-        message: freeHints > 0 ? l.gameHintToast(freeHints) : l.gameHintToastRewarded,
-        beadColor: jw.accent,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: JwToast(
+          message: freeHints > 0 ? l.gameHintToast(freeHints) : l.gameHintToastRewarded,
+          icon: JwIcons.hint,
+          fill: JwFill.yellow,
+        ),
       );
     } else {
       // Three chips (tiles, pairs, streak) can be wider than a phone: shrink
@@ -453,9 +491,14 @@ class _CountersRow extends ConsumerWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              GameCounterChip(value: '$tiles', label: l.gameTilesLabel),
-              const SizedBox(width: 12),
-              GameCounterChip(value: paused ? '–' : '$pairs', label: l.gamePairsOpenLabel),
+              GameCounterChip(value: '$tiles', label: l.gameTilesLabel, icon: JwIcons.tile, fill: JwFill.mint),
+              const SizedBox(width: 10),
+              GameCounterChip(
+                value: paused ? '–' : '$pairs',
+                label: l.gamePairsOpenLabel,
+                icon: JwIcons.pairs,
+                fill: JwFill.pink,
+              ),
               _ComboChip(combo: combo),
             ],
           ),
@@ -467,7 +510,8 @@ class _CountersRow extends ConsumerWidget {
       duration: reduce ? Duration.zero : const Duration(milliseconds: 500),
       curve: JwMotion.standard,
       child: SizedBox(
-        height: 40,
+        // The chip plus room for the toast's float shadow.
+        height: 44,
         child: Center(
           child: AnimatedSwitcher(
             duration: reduce ? JwMotion.instant : JwMotion.quick,
@@ -553,14 +597,20 @@ class _ComboChipState extends State<_ComboChip> with TickerProviderStateMixin {
         final grow = 1 + (_shown - 3).clamp(0, 2) * 0.06;
         final pop = 0.4 + 0.6 * JwMotion.springPop.transform(_pop.value);
         return Padding(
-          padding: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.only(left: 10),
           child: Opacity(
             opacity: _fade.value,
             child: Transform.translate(
               offset: Offset(0, -6 * (1 - _fade.value)),
               child: Transform.scale(
                 scale: pop * grow * (0.9 + 0.1 * _fade.value),
-                child: GameCounterChip(value: l.gameStreakValue(_shown), label: l.gameStreakLabel, accent: true),
+                // Screen 03 shows the coral chip with the value only.
+                child: GameCounterChip(
+                  value: l.gameStreakValue(_shown),
+                  icon: JwIcons.flame,
+                  fill: JwFill.coral,
+                  semanticLabel: '${l.gameStreakValue(_shown)} ${l.gameStreakLabel}',
+                ),
               ),
             ),
           ),
@@ -614,28 +664,32 @@ class _Tray extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     void haptic() => ref.read(hapticsProvider).selection();
-    final (freeHints, canUndo, playing) = ref.watch(
-      provider.select((s) => (s.freeHintsLeft, s.canUndo, s.phase == GamePhase.playing && !s.paused)),
+    final (freeHints, canUndo, playing, hinting) = ref.watch(
+      provider.select((s) => (s.freeHintsLeft, s.canUndo, s.phase == GamePhase.playing && !s.paused, s.hint != null)),
     );
     return JwTray(
       children: [
-        JwToolKnob(
+        FillKnob(
           icon: JwIcons.hint,
           label: l.gameToolHint,
-          accentIcon: true,
+          fill: JwFill.yellow,
           badge: freeHints > 0 ? freeHints : null,
+          // Stays pressed while the suggested pair glows (screen 06).
+          held: hinting,
           onPressed: playing ? onHint : null,
           onHaptic: haptic,
         ),
-        JwToolKnob(
+        FillKnob(
           icon: JwIcons.undo,
           label: l.gameToolUndo,
+          fill: JwFill.sky,
           onPressed: playing && canUndo ? onUndo : null,
           onHaptic: haptic,
         ),
-        JwToolKnob(
+        FillKnob(
           icon: JwIcons.shuffle,
           label: l.gameToolShuffle,
+          fill: JwFill.pink,
           onPressed: playing ? onShuffle : null,
           onHaptic: haptic,
         ),

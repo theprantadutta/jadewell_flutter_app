@@ -1,18 +1,21 @@
 # Native splash: the flat background with the mark's tiles at their final pose
-# (design/splash/SPLASH.md option A). The Flutter splash continues from this frame.
+# (design/splash/SPLASH.md option A): purple squircle plate, no beads.
+# Android 12+: tiles-only foreground (960x960, mark inside the 640 circle) on #634FE0. The Flutter splash continues from this frame.
 # Regenerate: dart run flutter_native_splash:create
 # After regenerating, restore windowDrawsSystemBarBackgrounds=true in the Android
 # styles (the generator resets it; needed for Android 15 edge-to-edge).
 flutter_native_splash:
-  color: "#F6E9E1"
-  color_dark: "#241F1C"
+  color: "#F1EEFF"
+  color_dark: "#1C1838"
   image: assets/splash/splash_mark.png
   image_dark: assets/splash/splash_mark.png
   android_12:
     image: assets/splash/splash_android12.png
     image_dark: assets/splash/splash_android12.png
-    color: "#F6E9E1"
-    color_dark: "#241F1C"
+    icon_background_color: "#634FE0"
+    icon_background_color_dark: "#634FE0"
+    color: "#F1EEFF"
+    color_dark: "#1C1838"
   android: true
   ios: true
   web: false

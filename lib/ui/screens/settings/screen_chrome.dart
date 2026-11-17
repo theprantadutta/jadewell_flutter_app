@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../components/pop_background.dart';
 import '../../router.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_background.dart';
@@ -14,6 +15,10 @@ import '../../widgets/widgets.dart';
 // Shared chrome for the settings / store / account / friends / leaderboard
 // screens: page frame with the round back button, eyebrow headings, clay
 // text field, sheet / dialog / toast presentation and small formatters.
+
+/// Blobs of the meta screens (12–17): purple top-right, yellow and mint on
+/// the left edge, pink bottom-right, as in the reference screens.
+const kMetaBlobs = PopBlobs.board;
 
 /// Screen frame: background with orbs, safe area, 46 pt back (or close)
 /// button with a 32/700 title and optional subtitle, then [child].
@@ -56,6 +61,7 @@ class JwPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: jw.surface,
         body: JwBackground(
+          blobs: kMetaBlobs,
           child: DefaultTextStyle(
             style: jw.text.body,
             child: SafeArea(
@@ -85,7 +91,7 @@ class JwPage extends StatelessWidget {
                                       header: true,
                                       child: Text(
                                         title!,
-                                        style: jw.text.h1.copyWith(fontSize: subtitle == null ? 30 : 28),
+                                        style: jw.text.h1.copyWith(fontSize: subtitle == null ? 28 : 26, height: 1.15),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -93,7 +99,7 @@ class JwPage extends StatelessWidget {
                                     if (subtitle != null)
                                       Text(
                                         subtitle!,
-                                        style: jw.text.body.copyWith(fontSize: 16, color: jw.textMuted),
+                                        style: jw.text.body.copyWith(fontSize: 15.5, color: jw.textMuted),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -253,9 +259,13 @@ class JwNoticeCard extends StatelessWidget {
     this.onAction,
     this.busy = false,
     this.onHaptic,
+    this.fill = JwFill.purple,
   });
 
   final String icon;
+
+  /// Badge fill of [icon].
+  final JwFill fill;
   final String title;
   final String body;
   final String? actionLabel;
@@ -276,7 +286,7 @@ class JwNoticeCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                JwIconWell(icon: icon),
+                JwIconWell(icon: icon, fill: fill),
                 const SizedBox(width: 14),
                 Expanded(child: Text(title, style: jw.text.h3.copyWith(fontSize: 17.5))),
               ],
@@ -365,7 +375,7 @@ Future<T?> showJwSheet<T>(BuildContext context, {required WidgetBuilder builder,
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: const Color(0x00000000),
+    backgroundColor: JwBase.transparent,
     elevation: 0,
     barrierColor: jw.scrim,
     showDragHandle: false,
@@ -424,12 +434,14 @@ Future<bool> showJwConfirm(
   required String confirmLabel,
   required String cancelLabel,
   bool destructive = false,
+  Widget? leading,
 }) async {
   final result = await showJwDialog<bool>(
     context,
     builder: (ctx) {
       final jw = ctx.jw;
       return JwDialog(
+        leading: leading,
         title: title,
         body: body,
         actions: [
@@ -571,17 +583,29 @@ String formatClock(int ms) {
 }
 
 /// Parses `#RRGGBB`; null when absent or malformed.
-Color? parseHexColor(String? hex) {
-  if (hex == null) return null;
-  final m = RegExp(r'^#?([0-9a-fA-F]{6})$').firstMatch(hex.trim());
-  if (m == null) return null;
-  return Color(0xFF000000 | int.parse(m.group(1)!, radix: 16));
-}
+Color? parseHexColor(String? hex) => JwBase.fromHex(hex);
 
-/// The pastel avatar fill for a profile colour (the backend stores
-/// saturated colours; avatars show them softened, as in the design).
-Color? avatarPastel(String? hex, JwTheme jw) {
+/// The Clay Pop fill closest in hue to a profile colour (the backend
+/// stores a saturated `#RRGGBB`), so avatars always wear one of the six
+/// fills; greys and missing colours fall back to the fill for [name].
+JwFill avatarFill(String? hex, String name) {
   final c = parseHexColor(hex);
-  if (c == null) return null;
-  return Color.lerp(c, const Color(0xFFFFFFFF), jw.isDark ? 0.42 : 0.58);
+  if (c == null) return JwAvatar.fillFor(name);
+  final hsv = HSVColor.fromColor(c);
+  if (hsv.saturation < 0.15) return JwAvatar.fillFor(name);
+  double dist(double a, double b) {
+    final d = (a - b).abs() % 360;
+    return d > 180 ? 360 - d : d;
+  }
+
+  JwFill best = JwFill.purple;
+  var bestD = double.infinity;
+  for (final f in JwFill.all) {
+    final d = dist(hsv.hue, HSVColor.fromColor(f.mid).hue);
+    if (d < bestD) {
+      bestD = d;
+      best = f;
+    }
+  }
+  return best;
 }

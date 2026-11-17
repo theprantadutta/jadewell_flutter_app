@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jadewell_flutter_app/data/models/catalogue.dart';
 import 'package:jadewell_flutter_app/data/models/progress.dart';
+import 'package:jadewell_flutter_app/data/repositories/asset_catalogue_repository.dart';
 import 'package:jadewell_flutter_app/data/repositories/repositories.dart';
 import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
@@ -11,13 +13,19 @@ import 'package:jadewell_flutter_app/ui/screens/daily/countdown.dart';
 import 'package:jadewell_flutter_app/ui/screens/daily/daily_screen.dart';
 import 'package:jadewell_flutter_app/ui/screens/daily/daily_top_three.dart';
 import 'package:jadewell_flutter_app/ui/screens/home/layout_labels.dart' show formatClock;
-import 'package:material_ui/material_ui.dart' show ValueKey;
+import 'package:material_ui/material_ui.dart' show Brightness, Size, ValueKey;
 
 import '../../ui/golden_helpers.dart' show loadJwFonts;
 import '../home/screen_harness.dart';
+import '../meta_checks.dart';
+
+late Catalogue _real;
 
 void main() {
-  setUpAll(loadJwFonts);
+  setUpAll(() async {
+    await loadJwFonts();
+    _real = await AssetCatalogueRepository().load();
+  });
 
   group('countdown', () {
     test('formats H:MM:SS with unpadded hours', () {
@@ -49,13 +57,18 @@ void main() {
     _FakeDailyRepository? repo,
     InstantAdService? ads,
     RecordingAnalytics? analytics,
+    Size size = const Size(390, 844),
+    Brightness brightness = Brightness.light,
+    Catalogue? catalogue,
   }) async {
     await pumpScreen(
       tester,
       initial: '/daily',
+      size: size,
+      brightness: brightness,
       screens: {'/daily': (_) => const DailyScreen()},
       overrides: [
-        catalogueRepositoryProvider.overrideWithValue(FakeCatalogueRepository(testCatalogue())),
+        catalogueRepositoryProvider.overrideWithValue(FakeCatalogueRepository(catalogue ?? testCatalogue())),
         dailyProvider.overrideWith((ref) => Stream.value(status)),
         dailyTopThreeProvider.overrideWith((ref) async => top),
         dailyRepositoryProvider.overrideWith((ref) async => repo ?? _FakeDailyRepository(null)),
@@ -79,7 +92,7 @@ void main() {
     );
     expect(find.text('Lotus'), findsOneWidget);
     expect(find.text('Sunday 15 November'), findsOneWidget);
-    expect(find.text('14 tiles · Medium · everyone plays the same deal'), findsOneWidget);
+    expect(find.text('14 tiles · Medium · same deal for everyone'), findsOneWidget);
     expect(find.text('days'), findsOneWidget);
     expect(find.text('15'), findsOneWidget); // today's bead
     expect(find.text('Be the first today'), findsOneWidget);
@@ -136,6 +149,41 @@ void main() {
     expect(find.text('Keep your 3-day streak?'), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 3));
   });
+
+  const week = DailyStatus(
+    date: '2026-11-15',
+    layoutId: 'lotus',
+    seed: 1,
+    streak: 5,
+    weekDone: [true, true, true, true, true, false, false],
+  );
+  const top3 = [
+    DailyTopEntry(rank: 1, name: 'Mira K.', timeMs: 298000),
+    DailyTopEntry(rank: 2, name: 'tilewhisper', timeMs: 311000),
+    DailyTopEntry(rank: 3, name: 'Kofi A.', timeMs: 326000),
+  ];
+  for (final size in layoutSizes.entries) {
+    for (final scale in textScales) {
+      testWidgets('daily layout · ${size.key} · text ${scale}x: no overflow', (tester) async {
+        setTextScale(tester, scale);
+        await pumpDaily(tester, week, top: top3, size: size.value, catalogue: _real,
+            repo: _FakeDailyRepository(const StreakRepairOffer(restoredStreak: 12, missedDate: '2026-11-14')));
+        await expectNoOverflow(tester);
+        await resetApp(tester);
+        await pumpDaily(tester, const DailyStatus(date: '2026-11-15', layoutId: 'lotus', seed: 1, firstClearMs: 3725000, firstClearStars: 3, streak: 1),
+            size: size.value, catalogue: _real);
+        await expectNoOverflow(tester);
+        await tester.pumpAndSettle(const Duration(seconds: 3));
+      });
+    }
+  }
+
+  for (final b in Brightness.values) {
+    testWidgets('daily shot ${b.name}', skip: !shotsEnabled, (tester) async {
+      await pumpDaily(tester, week, top: top3, catalogue: _real, brightness: b);
+      await maybeShot(tester, 'daily_${b.name}');
+    });
+  }
 }
 
 class _FakeDailyRepository implements DailyRepository {

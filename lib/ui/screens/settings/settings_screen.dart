@@ -13,10 +13,12 @@ import '../../../state/entitlement_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../../state/social_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import 'screen_chrome.dart';
 
@@ -69,11 +71,12 @@ class SettingsScreen extends ConsumerWidget {
       child: ListView(
         padding: EdgeInsets.fromLTRB(16, 4, 16, 24 + MediaQuery.paddingOf(context).bottom),
         children: [
-          JwEyebrow(l.settingsGroupFeedback, top: 22),
+          JwEyebrow(l.settingsGroupFeedback, top: 18),
           JwListGroup(
             children: [
               JwListRow(
                 icon: JwIcons.sound,
+                badgeFill: JwFill.pink,
                 title: l.settingsMusic,
                 trailing: toggle(l.settingsMusic, s.music, (v) {
                   ref.read(audioProvider).setMusicEnabled(v);
@@ -82,6 +85,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.sparkle,
+                badgeFill: JwFill.pink,
                 title: l.settingsSoundEffects,
                 trailing: toggle(l.settingsSoundEffects, s.soundEffects, (v) {
                   ref.read(audioProvider).setSfxEnabled(v);
@@ -90,6 +94,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.vib,
+                badgeFill: JwFill.sky,
                 title: l.settingsHaptics,
                 trailing: toggle(l.settingsHaptics, s.haptics, (v) {
                   ref.read(hapticsProvider).setEnabled(v);
@@ -103,6 +108,7 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               JwListRow(
                 icon: JwIcons.moon,
+                badgeFill: JwFill.purple,
                 title: l.settingsTheme,
                 below: JwSegmented<ThemePreference>(
                   segments: {
@@ -117,11 +123,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.clock,
+                badgeFill: JwFill.yellow,
                 title: l.settingsShowTimer,
                 trailing: toggle(l.settingsShowTimer, s.showTimer, (v) => change('show_timer', (x) => x.copyWith(showTimer: v))),
               ),
               JwListRow(
                 icon: JwIcons.text,
+                badgeFill: JwFill.mint,
                 title: l.settingsTileSize,
                 value: _tileSizeLabel(l, s.tileSize),
                 chevron: true,
@@ -135,6 +143,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.motion,
+                badgeFill: JwFill.coral,
                 title: l.settingsReduceMotion,
                 trailing: toggle(
                   l.settingsReduceMotion,
@@ -149,6 +158,7 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               JwListRow(
                 icon: JwIcons.user,
+                badgeFill: JwFill.purple,
                 title: l.settingsAccount,
                 value: accountValue,
                 chevron: true,
@@ -157,6 +167,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.heart,
+                badgeFill: JwFill.mint,
                 title: l.settingsFriends,
                 chevron: true,
                 onHaptic: haptic,
@@ -164,6 +175,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.bag,
+                badgeFill: JwFill.yellow,
                 title: l.settingsRemoveAds,
                 value: adsRemoved ? l.storePurchased : removeAdsPrice,
                 monoValue: !adsRemoved,
@@ -173,6 +185,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               JwListRow(
                 icon: JwIcons.shield,
+                badgeFill: JwFill.sky,
                 title: l.settingsPrivacy,
                 chevron: true,
                 onHaptic: haptic,
@@ -183,6 +196,7 @@ class SettingsScreen extends ConsumerWidget {
               if (ads.privacyOptionsRequired)
                 JwListRow(
                   icon: JwIcons.eye,
+                badgeFill: JwFill.sky,
                   title: l.settingsAdPrivacy,
                   chevron: true,
                   onHaptic: haptic,
@@ -222,7 +236,9 @@ class SettingsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l.settingsTileSize, style: jw.text.h3, textAlign: TextAlign.center),
+            const Center(child: IconBadge(icon: JwIcons.text, fill: JwFill.mint, size: 60)),
+            const SizedBox(height: 14),
+            Text(l.settingsTileSize, style: jw.text.h3.copyWith(fontSize: 21), textAlign: TextAlign.center),
             const SizedBox(height: 6),
             Text(l.settingsTileSizeHint, style: jw.text.body.copyWith(color: jw.textMuted), textAlign: TextAlign.center),
             const SizedBox(height: 18),
@@ -232,7 +248,7 @@ class SettingsScreen extends ConsumerWidget {
                   JwListRow(
                     title: _tileSizeLabel(l, t),
                     semanticLabel: _tileSizeLabel(l, t),
-                    trailing: t == current ? JwIcon(JwIcons.check, size: 20, color: jw.accent) : null,
+                    trailing: t == current ? const IconBadge(icon: JwIcons.check, fill: JwFill.mint, size: 26) : null,
                     onHaptic: haptic,
                     onTap: () => Navigator.of(ctx).pop(t),
                   ),
@@ -266,7 +282,9 @@ class SettingsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l.privacyTitle, style: jw.text.h3, textAlign: TextAlign.center),
+            const Center(child: IconBadge(icon: JwIcons.shield, fill: JwFill.sky, size: 60)),
+            const SizedBox(height: 14),
+            Text(l.privacyTitle, style: jw.text.h3.copyWith(fontSize: 21), textAlign: TextAlign.center),
             const SizedBox(height: 8),
             Text(l.privacyBody, style: jw.text.body.copyWith(color: jw.textMuted), textAlign: TextAlign.center),
             const SizedBox(height: 16),
@@ -308,6 +326,7 @@ class SettingsScreen extends ConsumerWidget {
       confirmLabel: l.resetConfirm,
       cancelLabel: l.commonCancel,
       destructive: true,
+      leading: JwIconWell(icon: JwIcons.trash, color: context.jw.danger, size: 64),
     );
     if (!ok) return;
     await ref.read(progressRepositoryProvider).resetAll();

@@ -1,27 +1,32 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'clay.dart';
+import 'fill.dart';
 import 'jw_fonts.dart';
+import 'jw_palette.dart';
 import 'jw_tokens.dart';
 
-/// Text styles of DESIGN_SYSTEM.md §3, resolved against one theme's colours.
+export 'fill.dart' show FillDecoration;
+export 'jw_palette.dart';
+
+/// Text styles of DESIGN_SYSTEM.md §4, resolved against one theme's colours.
 ///
 /// Every style carries `textPrimary`; use `copyWith(color: …)` for others.
 /// Mono styles (num*) use JetBrains Mono with tabular figures and −0.02em.
 @immutable
 class JwTextStyles {
   JwTextStyles(JwColors c)
-    : display = _ui(38, 42, FontWeight.w600, -0.02, c.textPrimary),
-      h1 = _ui(32, 34, FontWeight.w700, -0.02, c.textPrimary),
+    : display = _ui(40, 44, FontWeight.w700, -0.02, c.textPrimary),
+      h1 = _ui(28, 32, FontWeight.w700, -0.02, c.textPrimary),
       h2 = _ui(26, 29, FontWeight.w700, -0.02, c.textPrimary),
-      h3 = _ui(19, 24, FontWeight.w600, -0.01, c.textPrimary),
-      title = _ui(21, 23, FontWeight.w600, -0.01, c.textPrimary),
+      h3 = _ui(19, 24, FontWeight.w700, -0.01, c.textPrimary),
+      title = _ui(21, 23, FontWeight.w700, -0.01, c.textPrimary),
       body = _ui(15, 22, FontWeight.w400, 0, c.textPrimary),
       callout = _ui(14, 19, FontWeight.w500, 0, c.textPrimary),
-      button = _ui(16, 20, FontWeight.w600, 0, c.textPrimary),
+      button = _ui(16, 20, FontWeight.w700, 0, c.textPrimary),
       caption = _ui(12.5, 16, FontWeight.w500, 0, c.textMuted),
-      eyebrow = _ui(12, 14, FontWeight.w600, 0.14, c.textMuted),
-      numXl = mono(52, FontWeight.w600, c.textPrimary),
+      eyebrow = _ui(12, 14, FontWeight.w700, 0.14, c.textMuted),
+      numXl = mono(52, FontWeight.w700, c.textPrimary),
       numL = mono(24, FontWeight.w700, c.textPrimary),
       numM = mono(15, FontWeight.w600, c.textPrimary),
       glyph = const TextStyle(
@@ -110,7 +115,7 @@ class JwRadii {
   double get pill => JwRadius.pill;
 }
 
-/// Jadewell theme extension: every colour token, the §3 text styles,
+/// Jadewell theme extension: every colour token, the §4 text styles,
 /// spacing, radii and clay helpers. Read with `JwTheme.of(context)` or
 /// `context.jw`.
 @immutable
@@ -163,6 +168,23 @@ class JwTheme extends ThemeExtension<JwTheme> {
   Color get scrim => colors.scrim;
   double get blockedFaceOpacity => colors.blockedFaceOpacity;
 
+  /// Glyph saturation on blocked tiles (35 % light, 45 % dark).
+  double get blockedFaceSaturation => isDark ? 0.45 : 0.35;
+
+  /// Hint ring + glow on tiles (`#FFC93C` / dark `#FFD15C`).
+  Color get tileHinted => isDark ? colors.warning : JwFill.yellow.mid;
+
+  /// The six fills with this theme's recipe strengths:
+  /// `jw.fills.purple`, `jw.fills.all`, `jw.fills.glowAlpha`.
+  JwFills get fills => isDark ? JwFills.dark : JwFills.light;
+
+  /// Small text in the purple fill colour (light `#4F3CC9`, 7:1 on white;
+  /// dark uses [accent]).
+  Color get purpleText => isDark ? colors.accent : JwFill.purple.edge;
+
+  /// Blob opacity on [PopBackground]-style decor (1 light, .42 dark).
+  double get blobOpacity => isDark ? 0.42 : 1;
+
   /// A [ClayDecoration] at [level] in this theme.
   ClayDecoration clay(
     ClayLevel level, {
@@ -178,6 +200,37 @@ class JwTheme extends ThemeExtension<JwTheme> {
     gradient: gradient,
     extraShadows: extraShadows,
   );
+
+  /// A [FillDecoration] of [fill] with this theme's recipe strengths.
+  /// Cards/knobs/buttons: edge 5 + glow (the defaults); badges: `edge: 3,
+  /// glow: false`.
+  FillDecoration fill(
+    JwFill fill, {
+    double radius = JwRadius.lg,
+    double edge = JwFills.cardEdge,
+    bool glow = true,
+    double pressed = 0,
+    bool dip = false,
+  }) => FillDecoration(fill: fill, colors: colors, radius: radius, edge: edge, glow: glow, pressed: pressed, dip: dip);
+
+  /// The fill recipe's inner highlight and shade (no edge, no glow), for
+  /// gradient surfaces that are not full fills (toggle track, chips).
+  List<ClayShadow> get fillInsets => [
+    ClayShadow.inset(2, 3, 6, 0, JwBase.white.withValues(alpha: fills.highlightAlpha)),
+    ClayShadow.inset(-3, -5, 10, 0, JwBase.black.withValues(alpha: fills.shadeAlpha)),
+  ];
+
+  /// A flat (edgeless, glowless) clay surface in [fill]'s gradient with the
+  /// fill insets: toggle-on tracks, tinted chips, avatars.
+  ClayDecoration fillFlat(JwFill fill, {double radius = JwRadius.pill, List<ClayShadow> extraShadows = const []}) =>
+      ClayDecoration(
+        level: ClayLevel.flat,
+        colors: colors,
+        color: fill.mid,
+        gradient: JwFills.gradient(fill),
+        radius: radius,
+        extraShadows: [...fillInsets, ...extraShadows],
+      );
 
   /// The knob/orb gradient (surfaceHi → surfaceRaised, lit top-left).
   Gradient get knobGradient => LinearGradient(
@@ -232,9 +285,9 @@ ThemeData buildJwThemeData(Brightness brightness) {
     scaffoldBackgroundColor: c.surface,
     canvasColor: c.surface,
     splashFactory: NoSplash.splashFactory,
-    splashColor: Colors.transparent,
-    highlightColor: Colors.transparent,
-    hoverColor: Colors.transparent,
+    splashColor: JwBase.transparent,
+    highlightColor: JwBase.transparent,
+    hoverColor: JwBase.transparent,
     textTheme: TextTheme(
       displayLarge: t.display,
       headlineLarge: t.h1,

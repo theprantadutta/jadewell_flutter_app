@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import 'jw_palette.dart';
 import 'jw_raster_cache.dart';
 import 'jw_tokens.dart';
 
@@ -78,8 +79,15 @@ enum ClayLevel {
   /// Any raised element while pressed.
   pressed,
 
-  /// Accent (primary) buttons.
+  /// Primary buttons: the purple fill (gradient, inner highlight and shade,
+  /// 5 pt solid base edge, same-hue glow). With a custom colour the edge and
+  /// glow derive from it.
   primary,
+
+  /// [primary] while pressed: base edge and glow gone, a dark inset added.
+  /// `copyWith(level: ClayLevel.pressed)` on a primary decoration yields
+  /// this level.
+  primaryPressed,
 
   /// Playable tile (4 pt edge).
   tile,
@@ -93,14 +101,15 @@ enum ClayLevel {
   /// The default fill for this level.
   Color fill(JwColors c) => switch (this) {
     ClayLevel.sunken => c.surfaceSunken,
-    ClayLevel.primary => c.accent,
+    ClayLevel.primary || ClayLevel.primaryPressed => JwFill.purple.mid,
     ClayLevel.tile || ClayLevel.tileLifted => c.tileFace,
     ClayLevel.tileBlocked => c.tileBlocked,
     _ => c.surfaceRaised,
   };
 
-  /// Resolved shadow stack, listed top-most first (CSS order).
-  List<ClayShadow> shadows(JwColors c) => switch (this) {
+  /// Resolved shadow stack, listed top-most first (CSS order). [tint]
+  /// recolours the [primary] edge and glow for a non-purple fill.
+  List<ClayShadow> shadows(JwColors c, {Color? tint}) => switch (this) {
     ClayLevel.flat => const [],
     ClayLevel.sunken => [
       ClayShadow.inset(3, 3, 7, 0, c.inner),
@@ -127,10 +136,10 @@ enum ClayLevel {
       ClayShadow.inset(3, 4, 8, 0, c.inner),
       ClayShadow.inset(-2, -2, 5, 0, c.highlightSoft),
     ],
-    ClayLevel.primary => [
-      const ClayShadow.inset(2, 2, 4, 0, Color(0x73FFFFFF)),
-      const ClayShadow.inset(-3, -3, 6, 0, Color(0x14000000)),
-      ClayShadow(0, 14, 22, -10, c.shadow),
+    ClayLevel.primary => _primary(c, tint),
+    ClayLevel.primaryPressed => [
+      ..._fillInsets(c),
+      ClayShadow.inset(2, 3, 6, 0, JwBase.black.withValues(alpha: 0.12)),
     ],
     ClayLevel.tile => [
       ClayShadow.inset(1.5, 1.5, 2, 0, c.highlight),
@@ -148,10 +157,43 @@ enum ClayLevel {
       ClayShadow.inset(1.5, 1.5, 2, 0, c.highlight),
       ClayShadow.inset(-2, -2.5, 3, 0, c.inner),
       ClayShadow(0, JwTile.edge, 0, 0, c.tileEdge),
+      ...tileRing(c.tileSelected),
       ClayShadow(0, 18, 18, -5, c.shadow),
-      ClayShadow(0, 0, 0, JwTile.selectedRing, c.tileSelected),
+      tileGlow(c.tileSelected, identical(c, JwColors.dark) ? 0.55 : 0.5),
     ],
   };
+
+  /// A 2.5 pt ring around a tile's face and its 4 pt edge (selected,
+  /// hinted).
+  static List<ClayShadow> tileRing(Color color, {double width = JwTile.selectedRing, double edge = JwTile.edge}) => [
+    ClayShadow(0, 0, 0, width, color),
+    ClayShadow(0, edge, 0, width, color),
+  ];
+
+  /// A soft same-hue glow under a ringed tile.
+  static ClayShadow tileGlow(Color color, double alpha) => ClayShadow(0, 4, 18, 3, color.withValues(alpha: alpha));
+
+  static JwFills _strengths(JwColors c) => identical(c, JwColors.dark) ? JwFills.dark : JwFills.light;
+
+  /// The fill recipe's inner highlight and shade for theme [c].
+  static List<ClayShadow> _fillInsets(JwColors c) {
+    final f = _strengths(c);
+    return [
+      ClayShadow.inset(2, 3, 6, 0, JwBase.white.withValues(alpha: f.highlightAlpha)),
+      ClayShadow.inset(-3, -5, 10, 0, JwBase.black.withValues(alpha: f.shadeAlpha)),
+    ];
+  }
+
+  static List<ClayShadow> _primary(JwColors c, Color? tint) {
+    final f = _strengths(c);
+    final edge = tint == null ? JwFill.purple.edge : JwFaceInks.darken(tint, 0.2);
+    final glow = tint ?? JwFill.purple.glow;
+    return [
+      ..._fillInsets(c),
+      ClayShadow(0, JwFills.cardEdge, 0, 0, edge),
+      ClayShadow(0, 16, f.glowBlur, -10, glow.withValues(alpha: f.glowAlpha)),
+    ];
+  }
 }
 
 /// A soft-clay [Decoration]: outer shadows (blurred with `MaskFilter.blur`),
@@ -189,10 +231,17 @@ class ClayDecoration extends Decoration {
 
   Color get resolvedFill => color ?? level.fill(colors);
 
-  List<ClayShadow> get resolvedShadows =>
-      extraShadows.isEmpty
-          ? level.shadows(colors)
-          : [...level.shadows(colors), ...extraShadows];
+  /// [gradient], or the purple fill gradient for an untinted primary.
+  Gradient? get resolvedGradient =>
+      gradient ??
+      ((level == ClayLevel.primary || level == ClayLevel.primaryPressed) && color == null
+          ? JwFills.gradient(JwFill.purple)
+          : null);
+
+  List<ClayShadow> get resolvedShadows {
+    final own = level.shadows(colors, tint: color);
+    return extraShadows.isEmpty ? own : [...own, ...extraShadows];
+  }
 
   ClayDecoration copyWith({
     ClayLevel? level,
@@ -202,7 +251,7 @@ class ClayDecoration extends Decoration {
     double? radius,
     List<ClayShadow>? extraShadows,
   }) => ClayDecoration(
-    level: level ?? this.level,
+    level: level == ClayLevel.pressed && this.level == ClayLevel.primary ? ClayLevel.primaryPressed : level ?? this.level,
     colors: colors ?? this.colors,
     color: color ?? this.color,
     gradient: gradient ?? this.gradient,
@@ -300,7 +349,7 @@ class ClayDecoration extends Decoration {
     final shadows = resolvedShadows;
     if (shadows.isEmpty) return null;
     final scale = JwRasterCache.bucket(devicePixelRatio * math.max(1.0, canvasScale(canvas)));
-    final key = _ClayRasterKey(_ClayKey(size, radius, resolvedFill, gradient, shadows), scale);
+    final key = _ClayRasterKey(_ClayKey(size, radius, resolvedFill, resolvedGradient, shadows), scale);
     final cache = JwRasterCache.instance;
     if (!create) return cache.peek(key);
     final reach = clayReach(shadows);
@@ -368,12 +417,12 @@ class ClayBlendDecoration extends Decoration {
   int get hashCode => Object.hash(a, b, t);
 }
 
-/// Shared by the clay box painters: decides whether a paint may render a new
+/// Shared by the clay and fill box painters: decides whether a paint may render a new
 /// texture. A box whose size changes every frame (AnimatedSize, an animated
 /// container) would otherwise render and cache a texture per frame, so while
 /// its size is moving it replays the picture, and once the size has held
 /// still for [_settle] it asks for one more paint that rasterizes.
-mixin _RasterGuard on BoxPainter {
+mixin ClayRasterGuard on BoxPainter {
   static const _settle = Duration(milliseconds: 250);
 
   Size? _lastSize;
@@ -408,7 +457,7 @@ mixin _RasterGuard on BoxPainter {
   }
 }
 
-class _ClayPainter extends BoxPainter with _RasterGuard {
+class _ClayPainter extends BoxPainter with ClayRasterGuard {
   _ClayPainter(this.decoration, super.onChanged);
 
   final ClayDecoration decoration;
@@ -426,7 +475,7 @@ class _ClayPainter extends BoxPainter with _RasterGuard {
   }
 }
 
-class _ClayBlendPainter extends BoxPainter with _RasterGuard {
+class _ClayBlendPainter extends BoxPainter with ClayRasterGuard {
   _ClayBlendPainter(this.decoration, super.onChanged);
 
   final ClayBlendDecoration decoration;
@@ -482,7 +531,7 @@ class ClayPictureCache {
       size,
       d.radius,
       d.resolvedFill,
-      d.gradient,
+      d.resolvedGradient,
       d.resolvedShadows,
     );
     final hit = _entries.remove(key);

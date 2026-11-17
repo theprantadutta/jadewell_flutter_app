@@ -2,11 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../../components/components.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 
-/// Row of three small stars; the first [earned] filled in accent.
+/// Row of three small stars; the first [earned] in the yellow fill (stars
+/// are rewards, DESIGN_SYSTEM §4), the rest faint.
 class StarRow extends StatelessWidget {
   const StarRow({super.key, required this.earned, this.size = 12, this.gap = 2, this.semanticLabel});
 
@@ -28,7 +31,9 @@ class StarRow extends StatelessWidget {
             if (i > 0) SizedBox(width: gap),
             CustomPaint(
               size: Size.square(size),
-              painter: _StarPainter(i < earned ? jw.accent : jw.tileBlockedEdge.withValues(alpha: jw.isDark ? 0.9 : 0.7)),
+              painter: i < earned
+                  ? _StarPainter(JwFill.yellow.mid, stroke: JwFill.yellow.edge)
+                  : _StarPainter(jw.tileBlockedEdge.withValues(alpha: jw.isDark ? 0.9 : 0.7)),
             ),
           ],
         ],
@@ -38,8 +43,9 @@ class StarRow extends StatelessWidget {
 }
 
 class _StarPainter extends CustomPainter {
-  _StarPainter(this.color);
+  _StarPainter(this.color, {Color? stroke}) : stroke = stroke ?? color;
   final Color color;
+  final Color stroke;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -64,7 +70,7 @@ class _StarPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = color
+        ..color = stroke
         ..style = PaintingStyle.stroke
         ..strokeJoin = StrokeJoin.round
         ..strokeWidth = size.shortestSide * 0.12,
@@ -72,30 +78,34 @@ class _StarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_StarPainter old) => old.color != color;
+  bool shouldRepaint(_StarPainter old) => old.color != color || old.stroke != stroke;
 }
 
-/// Accent check disc (cleared state).
+/// Mint check badge (cleared / done state).
 class CheckDisc extends StatelessWidget {
-  const CheckDisc({super.key, this.size = 22, this.color});
+  const CheckDisc({super.key, this.size = 22, this.round = false});
 
   final double size;
-  final Color? color;
+
+  /// A circle instead of the ⅓-radius badge (streak day dots).
+  final bool round;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
+    const fill = JwFill.mint;
+    if (!round) return IconBadge(icon: JwIcons.check, fill: fill, size: size);
     return DecoratedBox(
-      decoration: jw.clay(ClayLevel.chip, color: color ?? jw.accent),
+      decoration: jw.fill(fill, radius: size / 2, edge: JwFills.badgeEdge, glow: false),
       child: SizedBox.square(
         dimension: size,
-        child: Center(child: JwIcon(JwIcons.check, size: size * 0.6, color: jw.isDark ? jw.onAccent : jw.surfaceHi)),
+        child: Center(child: JwIcon(JwIcons.check, size: size * 0.5, color: fill.on, strokeWidth: JwIcon.badgeStroke)),
       ),
     );
   }
 }
 
-/// Small sunken track with an accent fill (resume state).
+/// Small sunken track with a purple fill bar (resume state).
 class MiniTrack extends StatelessWidget {
   const MiniTrack({super.key, required this.value, this.width = 54});
 
@@ -106,10 +116,10 @@ class MiniTrack extends StatelessWidget {
   Widget build(BuildContext context) {
     final jw = context.jw;
     return DecoratedBox(
-      decoration: jw.clay(ClayLevel.sunken, radius: 4),
+      decoration: jw.clay(ClayLevel.sunken, radius: 5),
       child: SizedBox(
         width: width,
-        height: 8,
+        height: 10,
         child: Padding(
           padding: const EdgeInsets.all(2),
           child: Align(
@@ -117,9 +127,38 @@ class MiniTrack extends StatelessWidget {
             child: FractionallySizedBox(
               widthFactor: value.clamp(0.0, 1.0),
               child: DecoratedBox(
-                decoration: BoxDecoration(color: jw.accent, borderRadius: BorderRadius.circular(2)),
+                decoration: jw.fillFlat(JwFill.purple, radius: 3),
                 child: const SizedBox.expand(),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Coral "NEW" pill (DESIGN_SYSTEM §4: coral = new).
+class NewPill extends StatelessWidget {
+  const NewPill({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
+    const fill = JwFill.coral;
+    return DecoratedBox(
+      decoration: jw.fill(fill, radius: 12, edge: 2, glow: false),
+      child: SizedBox(
+        height: 22,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label.toUpperCase(),
+              style: jw.text.caption.copyWith(fontSize: 12.5, fontWeight: FontWeight.w700, color: fill.on, letterSpacing: 0.4),
             ),
           ),
         ),

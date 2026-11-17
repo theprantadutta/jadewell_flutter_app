@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../components/primary_button.dart';
 import '../theme/clay.dart';
 import '../theme/jw_theme.dart';
 import '../theme/jw_tokens.dart';
@@ -11,9 +12,10 @@ enum JwButtonVariant { primary, secondary, tertiary }
 
 /// Primary / secondary / tertiary button (DESIGN_SYSTEM §11).
 ///
-/// Height 56 (42 when [small]), pill. Primary: accent fill, onAccent label,
-/// `primary` clay. Secondary: surfaceRaised, e2. Tertiary: text only in
-/// textMuted. [icon] is a [JwIcons] name. [expand] stretches to the width.
+/// Height 56 (42 when [small]), pill. Primary: a [PrimaryButton] (purple
+/// fill, 5 pt base edge, glow, fill press). Secondary: surfaceRaised, raised
+/// clay. Tertiary: text only in textMuted. [icon] is a [JwIcons] name.
+/// [expand] stretches to the width.
 class JwButton extends StatelessWidget {
   const JwButton({
     super.key,
@@ -78,13 +80,25 @@ class JwButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final jw = context.jw;
     final height = small ? 42.0 : 56.0;
+    if (variant == JwButtonVariant.primary) {
+      return PrimaryButton(
+        label: label,
+        onPressed: onPressed,
+        icon: icon,
+        height: height,
+        expand: expand,
+        onHaptic: onHaptic,
+        semanticLabel: semanticLabel,
+        reduceMotion: reduceMotion,
+      );
+    }
     final fg = switch (variant) {
       JwButtonVariant.primary => jw.onAccent,
       JwButtonVariant.secondary => jw.textPrimary,
       JwButtonVariant.tertiary => jw.textMuted,
     };
     final style = variant == JwButtonVariant.tertiary
-        ? jw.text.button.copyWith(color: fg, fontWeight: FontWeight.w500, fontSize: 17)
+        ? jw.text.button.copyWith(color: fg, fontWeight: FontWeight.w600, fontSize: 17)
         : jw.text.button.copyWith(color: fg, fontSize: small ? 15.5 : 16);
     final iconSize = variant == JwButtonVariant.primary ? 19.0 : 17.0;
     final content = Row(
@@ -118,8 +132,7 @@ class JwButton extends StatelessWidget {
       );
     }
 
-    final primary = variant == JwButtonVariant.primary;
-    final deco = jw.clay(primary ? ClayLevel.primary : ClayLevel.raised);
+    final deco = jw.clay(ClayLevel.raised);
     final pressed = deco.copyWith(level: ClayLevel.pressed);
     return ClayPressable(
       decoration: deco,

@@ -2,8 +2,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../components/icon_badge.dart';
 import '../theme/clay.dart';
 import '../theme/jw_theme.dart';
+import '../theme/jw_tokens.dart';
 
 /// Bottom sheet container: inset 12, radius 34, e3, padding 26/22/22, with a
 /// 40 × 5 sunken grip. Presentation (scrim, rise) is the router's job.
@@ -52,10 +54,15 @@ class JwSheet extends StatelessWidget {
   }
 }
 
-/// Dialog container: inset 28, radius 32, e3, centred, padding 26/22/20.
-/// Optional [title], [body] and [actions] (laid out in a row, gap 14).
+/// Dialog container: inset 28, radius 32, floating, centred, padding
+/// 26/22/20. Optional [leading] (a 64–68 pt `IconBadge`, centred above the
+/// title), [title], [body] and [actions] (laid out in a row, gap 14).
 class JwDialog extends StatelessWidget {
-  const JwDialog({super.key, this.title, this.body, this.actions = const [], this.child});
+  const JwDialog({super.key, this.title, this.body, this.actions = const [], this.child, this.leading});
+
+  /// Shown centred above the title (DESIGN_SYSTEM §11: dialogs lead with a
+  /// fill badge).
+  final Widget? leading;
 
   final String? title;
   final String? body;
@@ -83,6 +90,7 @@ class JwDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (leading != null) ...[Center(child: leading), const SizedBox(height: 16)],
                 if (title != null)
                   Text(title!, textAlign: TextAlign.center, style: jw.text.h3.copyWith(fontSize: 21)),
                 if (body != null) ...[
@@ -114,14 +122,21 @@ class JwDialog extends StatelessWidget {
   }
 }
 
-/// Toast: height 40, pill, e3, leading 16 pt clay bead.
+/// Toast: height 42, pill, floating. Leads with a 30 pt [IconBadge] when
+/// [icon] is set (in [fill], mint by default), otherwise a 16 pt clay bead.
 class JwToast extends StatelessWidget {
-  const JwToast({super.key, required this.message, this.beadColor});
+  const JwToast({super.key, required this.message, this.beadColor, this.icon, this.fill});
 
   final String message;
 
   /// Bead colour, defaults to jade.
   final Color? beadColor;
+
+  /// Leading badge icon ([JwIcons] name); replaces the bead.
+  final String? icon;
+
+  /// Badge fill (mint when null).
+  final JwFill? fill;
 
   @override
   Widget build(BuildContext context) {
@@ -133,13 +148,19 @@ class JwToast extends StatelessWidget {
       child: DecoratedBox(
         decoration: jw.clay(ClayLevel.floating),
         child: SizedBox(
-          height: 40,
+          height: 42,
           child: Padding(
-            padding: const EdgeInsets.only(left: 12, right: 18),
+            padding: EdgeInsets.only(left: icon == null ? 13 : 6, right: 18),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                JwBead(color: beadColor ?? jw.jade, size: 16),
+                if (icon == null)
+                  JwBead(color: beadColor ?? jw.jade, size: 16)
+                else
+                  Transform.translate(
+                    offset: const Offset(0, -1.5),
+                    child: IconBadge(icon: icon, fill: fill ?? JwFill.mint),
+                  ),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
@@ -179,8 +200,8 @@ class JwBeadPainter extends CustomPainter {
   /// Paints a bead of [diameter] centred at [c] (shared with tile faces).
   static void paintBead(Canvas canvas, Offset c, double diameter, Color color) {
     final r = diameter / 2;
-    final hi = Color.lerp(color, const Color(0xFFFFFFFF), 0.5)!;
-    final lo = Color.lerp(color, const Color(0xFF000000), 0.22)!;
+    final hi = JwFaceInks.lighten(color, 0.5);
+    final lo = JwFaceInks.darken(color, 0.22);
     canvas.drawCircle(
       c,
       r,
@@ -202,43 +223,48 @@ class JwBeadPainter extends CustomPainter {
   bool shouldRepaint(JwBeadPainter old) => old.color != color;
 }
 
-/// Avatar: 36 pt circle, e1, initial 14/600 on a pastel fill.
+/// Avatar: 36 pt circle, chip clay, initial 14/600. Without [color] the
+/// fill is one of the six Clay Pop fills (derived from [name]) with the
+/// initial in its `on` colour; a [color] (a profile colour) is drawn flat
+/// with dark ink.
 class JwAvatar extends StatelessWidget {
-  const JwAvatar({super.key, required this.name, this.size = 36, this.color});
+  const JwAvatar({super.key, required this.name, this.size = 36, this.color, this.fill});
 
   final String name;
   final double size;
 
-  /// Pastel fill; derived from [name] when null.
+  /// Fill colour; a Clay Pop fill derived from [name] when null.
   final Color? color;
 
-  static const _pastels = [
-    Color(0xFFF6D3C8),
-    Color(0xFFCFE6DA),
-    Color(0xFFD7DBF2),
-    Color(0xFFF3E1BF),
-    Color(0xFFF0D2DE),
-  ];
+  /// A specific Clay Pop fill (e.g. the rank colour); wins over [color].
+  final JwFill? fill;
+
+  /// The fill an avatar for [name] uses.
+  static JwFill fillFor(String name) => JwFill.all[name.codeUnits.fold<int>(0, (a, b) => a + b) % JwFill.all.length];
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
     final initial = name.isEmpty ? '?' : name.characters.first.toUpperCase();
-    final fill = color ?? _pastels[name.codeUnits.fold<int>(0, (a, b) => a + b) % _pastels.length];
+    final custom = this.fill == null ? color : null;
+    final fill = this.fill ?? fillFor(name);
+    final decoration = custom == null
+        ? jw.fillFlat(fill, extraShadows: jw.clay(ClayLevel.chip).resolvedShadows.where((s) => !s.inset).toList())
+        : jw.clay(ClayLevel.chip, color: custom);
     return Semantics(
       label: name,
       excludeSemantics: true,
       child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.chip, color: fill),
+        decoration: decoration,
         child: SizedBox.square(
           dimension: size,
           child: Center(
             child: Text(
               initial,
               style: jw.text.callout.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF4A3934),
+                fontSize: size * 0.39,
+                fontWeight: FontWeight.w700,
+                color: custom == null ? fill.on : JwTheme.light.textPrimary,
               ),
             ),
           ),

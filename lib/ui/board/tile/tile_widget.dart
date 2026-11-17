@@ -7,7 +7,7 @@ import '../../widgets/reduce_motion.dart';
 import 'tile_face_spec.dart';
 import 'tile_paint.dart';
 
-/// Visual states of a tile (DESIGN_SYSTEM §8).
+/// Visual states of a tile (DESIGN_SYSTEM §9).
 enum TileVisualState {
   playable,
   blocked,
@@ -67,13 +67,13 @@ class TileVisual extends StatelessWidget {
       case TileVisualState.selected:
         return jw.clay(ClayLevel.tileLifted, radius: JwTile.radius);
       case TileVisualState.hinted:
-        final ring = jw.isDark ? jw.accent : jw.accentSoft;
+        // Yellow ring + yellow glow (DESIGN_SYSTEM §9).
         return jw.clay(
           ClayLevel.tile,
           radius: JwTile.radius,
           extraShadows: [
-            ClayShadow(0, 0, 0, JwTile.selectedRing, ring),
-            ClayShadow(0, 0, 18, 0, jw.accent.withValues(alpha: jw.isDark ? 0.35 : 0.55)),
+            ...ClayLevel.tileRing(jw.tileHinted),
+            ClayLevel.tileGlow(jw.tileHinted, jw.isDark ? 0.6 : 0.9),
           ],
         );
       case TileVisualState.blocker:

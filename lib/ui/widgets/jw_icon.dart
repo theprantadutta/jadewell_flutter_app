@@ -1,5 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+import '../theme/jw_theme.dart';
 
 /// The 40 icons in `assets/icons/` (24 pt grid, 2 pt round stroke).
 abstract final class JwIcons {
@@ -23,25 +26,55 @@ abstract final class JwIcons {
 }
 
 /// Renders `assets/icons/<name>.svg` with `currentColor` mapped to [color]
-/// (defaults to the ambient [IconTheme] colour).
+/// (defaults to the ambient [IconTheme] colour, then `textPrimary`).
+///
+/// [strokeWidth] (in 24-grid units) overrides the drawn 2 pt stroke: icons
+/// inside fill badges use 2.4 (DESIGN_SYSTEM §12).
 class JwIcon extends StatelessWidget {
-  const JwIcon(this.name, {super.key, this.size = 22, this.color, this.semanticLabel});
+  const JwIcon(this.name, {super.key, this.size = 22, this.color, this.semanticLabel, this.strokeWidth});
 
   final String name;
   final double size;
   final Color? color;
   final String? semanticLabel;
+  final double? strokeWidth;
+
+  /// Stroke width of icons inside fill badges.
+  static const double badgeStroke = 2.4;
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? IconTheme.of(context).color ?? const Color(0xFF4A3934);
-    return SvgPicture.asset(
-      'assets/icons/$name.svg',
+    final c = color ?? IconTheme.of(context).color ?? JwTheme.of(context).textPrimary;
+    final theme = SvgTheme(currentColor: c);
+    final path = 'assets/icons/$name.svg';
+    final stroke = strokeWidth;
+    return SvgPicture(
+      stroke == null || stroke == 2 ? SvgAssetLoader(path, theme: theme) : _StrokeSvgLoader(path, stroke, theme: theme),
       width: size,
       height: size,
-      theme: SvgTheme(currentColor: c),
       semanticsLabel: semanticLabel,
       excludeFromSemantics: semanticLabel == null,
     );
   }
+}
+
+/// An icon asset with its `stroke-width="2"` replaced.
+class _StrokeSvgLoader extends SvgAssetLoader {
+  const _StrokeSvgLoader(super.assetName, this.strokeWidth, {super.theme});
+
+  final double strokeWidth;
+
+  @override
+  String provideSvg(ByteData? message) =>
+      super.provideSvg(message).replaceAll('stroke-width="2"', 'stroke-width="$strokeWidth"');
+
+  @override
+  SvgCacheKey cacheKey(BuildContext? context) =>
+      SvgCacheKey(theme: getTheme(context), colorMapper: colorMapper, keyData: (assetName, strokeWidth));
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, strokeWidth);
+
+  @override
+  bool operator ==(Object other) => other is _StrokeSvgLoader && other.strokeWidth == strokeWidth && super == other;
 }

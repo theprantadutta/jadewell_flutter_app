@@ -8,9 +8,10 @@ import '../../../platform/ads/ad_service.dart';
 import '../../../platform/analytics/analytics_service.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import 'layout_labels.dart';
 
@@ -20,7 +21,7 @@ Future<void> showUnlockLayoutSheet(BuildContext context, WidgetRef ref, LayoutIn
   final l = AppLocalizations.of(context);
   final watch = await showModalBottomSheet<bool>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: JwBase.transparent,
     elevation: 0,
     useSafeArea: true,
     isScrollControlled: true,
@@ -46,12 +47,19 @@ Future<void> showUnlockLayoutSheet(BuildContext context, WidgetRef ref, LayoutIn
             child: JwToast(message: message, beadColor: rewarded ? null : context.jw.warning),
           ),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: JwBase.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(milliseconds: 2400),
       ),
     );
+}
+
+/// The plate fill of [info] (its index among the chapter layouts).
+JwFill _plateFor(WidgetRef ref, LayoutInfo info) {
+  final layouts = ref.read(catalogueProvider).value?.chapterLayouts.toList() ?? const <LayoutInfo>[];
+  final i = layouts.indexWhere((l) => l.id == info.id);
+  return JwFills.plate(i < 0 ? 0 : i);
 }
 
 class _UnlockSheet extends ConsumerWidget {
@@ -75,16 +83,34 @@ class _UnlockSheet extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
+              // The layout's own coloured plate, with a lock badge on its
+              // corner: the same plate the card shows once it's unlocked.
               Center(
-                child: DecoratedBox(
-                  decoration: jw.clay(ClayLevel.sunken, radius: 18),
-                  child: SizedBox(
-                    width: 132,
-                    height: 92,
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: JwSilhouette(tiles: LayoutLabels.tiles(info)),
-                    ),
+                child: SizedBox(
+                  width: 156,
+                  height: 112,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        top: 4,
+                        right: 12,
+                        bottom: 8,
+                        child: DecoratedBox(
+                          decoration: jw.fill(_plateFor(ref, info), radius: 20, edge: 4, glow: false),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: JwSilhouette(tiles: LayoutLabels.tiles(info)),
+                          ),
+                        ),
+                      ),
+                      const Positioned(
+                        right: 0,
+                        top: -6,
+                        child: IconBadge(icon: JwIcons.lock, fill: JwFill.purple, size: 40),
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../components/components.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
@@ -28,51 +29,43 @@ class RollingText extends StatelessWidget {
   Widget build(BuildContext context) => OdometerText(text, style: style, reduceMotion: reduceMotion);
 }
 
-/// Counter chip as [JwChip] (30 tall, e1, mono value + label) with a
-/// rolling value; [accent] gives the accentSoft chip (streaks).
+/// Game counter (DESIGN_SYSTEM §11 `cchip`): a [CounterChip] with a
+/// leading [fill] badge and a rolling value. Tiles = mint, pairs = pink,
+/// streak = coral.
 class GameCounterChip extends StatelessWidget {
-  const GameCounterChip({super.key, required this.value, required this.label, this.accent = false});
+  const GameCounterChip({
+    super.key,
+    required this.value,
+    this.label,
+    required this.icon,
+    required this.fill,
+    this.semanticLabel,
+  });
 
   final String value;
-  final String label;
-  final bool accent;
+  final String? label;
+
+  /// A [JwIcons] name for the badge.
+  final String icon;
+  final JwFill fill;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
-    final deco = accent ? jw.clay(ClayLevel.flat, color: jw.accentSoft, radius: 15) : jw.clay(ClayLevel.chip, radius: 15);
-    return Semantics(
-      label: '$value $label',
-      excludeSemantics: true,
-      child: DecoratedBox(
-        decoration: deco,
-        child: SizedBox(
-          height: 30,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RollingText(value, style: jw.text.numM.copyWith(fontSize: 14.5)),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: jw.text.callout.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: accent ? jw.textPrimary : jw.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return CounterChip(
+      icon: icon,
+      value: value,
+      label: label,
+      fill: fill,
+      semanticLabel: semanticLabel,
+      valueWidget: RollingText(value, style: CounterChip.valueStyle(jw)),
     );
   }
 }
 
-/// The game's timer pill (46 tall, e2, accent pause glyph, mono 19 pt) with
-/// digits that roll once per second. Polls [elapsedMs] while [running].
+/// The game's timer pill (46 tall, raised, a 32 pt yellow pause badge, mono
+/// 19/700) with digits that roll once per second. Polls [elapsedMs] while [running].
 class GameTimerPill extends StatefulWidget {
   const GameTimerPill({
     super.key,
@@ -139,37 +132,36 @@ class _GameTimerPillState extends State<GameTimerPill> {
       semanticLabel: widget.semanticLabel(_text),
       height: 46,
       dimWhenDisabled: false,
-      padding: const EdgeInsets.only(left: 22, right: 22),
+      padding: const EdgeInsets.only(left: 7, right: 20),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          JwIcon(widget.icon, size: 17, color: jw.accent),
-          const SizedBox(width: 14),
-          RollingText(_text, style: jw.text.numM.copyWith(fontSize: 19)),
+          // Lift the badge 1.5 pt so its 3 pt edge sits inside the pill.
+          Transform.translate(
+            offset: const Offset(0, -1.5),
+            child: IconBadge(icon: widget.icon, fill: JwFill.yellow, size: 32),
+          ),
+          const SizedBox(width: 12),
+          RollingText(_text, style: jw.text.numM.copyWith(fontSize: 19, fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 }
 
-/// A sunken rounded well holding an accent icon (sheet and dialog headers).
+/// The 56–68 pt fill badge that leads game sheets and dialogs (DESIGN_SYSTEM
+/// §11: pink shuffle, yellow pause / rewards).
 class GameIconWell extends StatelessWidget {
-  const GameIconWell({super.key, required this.icon, this.size = 64});
+  const GameIconWell({super.key, required this.icon, this.fill = JwFill.purple, this.size = 64});
 
   final String icon;
+  final JwFill fill;
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    return DecoratedBox(
-      decoration: jw.clay(ClayLevel.sunken, radius: size * 0.34),
-      child: SizedBox.square(
-        dimension: size,
-        child: Center(child: JwIcon(icon, size: size * 0.42, color: jw.accent)),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      // The 4 pt base edge paints below the box; leave room for it.
+      Padding(padding: const EdgeInsets.only(bottom: 4), child: IconBadge(icon: icon, fill: fill, size: size, edge: 4));
 }
 
 /// Presents a sheet ([bottom]) or a centred card/dialog with the motion of
@@ -191,8 +183,6 @@ Future<T?> showGameModal<T>(
       dismissible: dismissible,
       label: barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel,
       reduce: reduce,
-      theme: Theme.of(context),
-      jw: context.jw,
     ),
   );
 }
@@ -204,8 +194,6 @@ class _GameModalRoute<T> extends PopupRoute<T> {
     required this.dismissible,
     required this.label,
     required this.reduce,
-    required this.theme,
-    required this.jw,
   });
 
   final WidgetBuilder builder;
@@ -213,8 +201,6 @@ class _GameModalRoute<T> extends PopupRoute<T> {
   final bool dismissible;
   final String label;
   final bool reduce;
-  final ThemeData theme;
-  final JwTheme jw;
 
   @override
   bool get barrierDismissible => dismissible;
@@ -233,12 +219,11 @@ class _GameModalRoute<T> extends PopupRoute<T> {
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
-    final content = Theme(
-      data: theme,
-      child: Material(
-        type: MaterialType.transparency,
-        child: DefaultTextStyle(style: jw.text.body, child: Builder(builder: builder)),
-      ),
+    // Read the theme here (not when pushed) so an open modal follows a
+    // light/dark switch.
+    final content = Material(
+      type: MaterialType.transparency,
+      child: DefaultTextStyle(style: context.jw.text.body, child: Builder(builder: builder)),
     );
     return SafeArea(
       child: bottom
@@ -254,6 +239,7 @@ class _GameModalRoute<T> extends PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    final jw = context.jw;
     return AnimatedBuilder(
       animation: animation,
       child: child,

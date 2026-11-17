@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs><clipPath id="m6c"><rect x="0" y="0" width="1024" height="1024" rx="230.4"/></clipPath><filter id="m6blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="34"/></filter><linearGradient id="m6face" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EEEBFD"/></linearGradient><linearGradient id="m6ih" x1="0" y1="0" x2=".6" y2=".6"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="m6is" x1="1" y1="1" x2=".45" y2=".45"><stop offset="0" stop-color="#6E5CD2" stop-opacity=".22"/><stop offset=".5" stop-color="#6E5CD2" stop-opacity="0"/></linearGradient><radialGradient id="m6bead" cx="34%" cy="30%" r="75%"><stop offset="0" stop-color="#9BF0CC"/><stop offset=".45" stop-color="#4FCB98"/><stop offset="1" stop-color="#2A9E70"/></radialGradient></defs><g transform="translate(512 522) scale(1) translate(-512 -512)"><g transform="rotate(-11 368 491)">
+<rect x="183.5" y="322" width="369" height="478" rx="89" fill="#2A1F6E" opacity="0.38" filter="url(#m6blur)"/>
+<rect x="183.5" y="286" width="369" height="478" rx="89" fill="#D9D2F6"/>
+<rect x="183.5" y="252" width="369" height="478" rx="89" fill="url(#m6face)"/>
+<rect x="183.5" y="252" width="369" height="478" rx="89" fill="url(#m6ih)"/>
+<rect x="183.5" y="252" width="369" height="478" rx="89" fill="url(#m6is)"/>
+</g><g transform="rotate(11 656 491)">
+<rect x="471.5" y="322" width="369" height="478" rx="89" fill="#2A1F6E" opacity="0.38" filter="url(#m6blur)"/>
+<rect x="471.5" y="286" width="369" height="478" rx="89" fill="#D9D2F6"/>
+<rect x="471.5" y="252" width="369" height="478" rx="89" fill="url(#m6face)"/>
+<rect x="471.5" y="252" width="369" height="478" rx="89" fill="url(#m6ih)"/>
+<rect x="471.5" y="252" width="369" height="478" rx="89" fill="url(#m6is)"/>
+</g></g></svg>

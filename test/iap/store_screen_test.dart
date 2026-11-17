@@ -9,7 +9,9 @@ import 'package:jadewell_flutter_app/ui/screens/store/store_controller.dart';
 import 'package:jadewell_flutter_app/ui/screens/store/store_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../screens/meta_checks.dart';
 import '../screens/settings/harness.dart' show pumpScreen;
+import '../ui/golden_helpers.dart' show loadJwFonts;
 import 'fakes.dart';
 
 class _Haptics extends NoOpHaptics {
@@ -19,12 +21,20 @@ class _Haptics extends NoOpHaptics {
 }
 
 void main() {
+  setUpAll(loadJwFonts);
+
   late FakePurchaseService service;
   late MemoryEntitlementRepository entitlements;
   late RecordingAnalytics analytics;
   late _Haptics haptics;
 
-  Future<void> pump(WidgetTester tester, StoreStatus status, {Entitlement owned = Entitlement.none}) async {
+  Future<void> pump(
+    WidgetTester tester,
+    StoreStatus status, {
+    Entitlement owned = Entitlement.none,
+    Size size = const Size(390, 844),
+    Brightness brightness = Brightness.light,
+  }) async {
     service = FakePurchaseService(status);
     entitlements = MemoryEntitlementRepository(owned);
     analytics = RecordingAnalytics();
@@ -32,6 +42,8 @@ void main() {
     await pumpScreen(
       tester,
       const StoreScreen(),
+      size: size,
+      brightness: brightness,
       overrides: [
         purchaseServiceProvider.overrideWithValue(service),
         entitlementRepositoryProvider.overrideWithValue(entitlements),
@@ -100,6 +112,8 @@ void main() {
     expect(find.text('Payment pending'), findsOneWidget);
 
     service.set(const StoreError('network_error', price: r'$1.99'));
+    // One more frame for the store event to reach the screen.
+    await tester.pump();
     await tester.pump();
     expect(find.textContaining("didn't go through"), findsOneWidget);
     await tester.ensureVisible(find.text('Try again'));
@@ -161,4 +175,33 @@ void main() {
       expect(StoreController.derive(const StoreReady('x'), owned: true).restoredOnly, isTrue);
     });
   });
+
+  final states = <String, (StoreStatus, Entitlement)>{
+    'ready': (const StoreReady(r'$1.99'), Entitlement.none),
+    'not_available': (const StoreUnavailable(), Entitlement.none),
+    'purchased': (const StoreReady(r'$1.99'), const Entitlement(removeAds: true, source: 'play')),
+  };
+  for (final size in layoutSizes.entries) {
+    for (final scale in textScales) {
+      testWidgets('store layout · ${size.key} · text ${scale}x: no overflow', (tester) async {
+        setTextScale(tester, scale);
+        for (final st in states.values) {
+          await resetApp(tester);
+          await pump(tester, st.$1, owned: st.$2, size: size.value);
+          await tester.pumpAndSettle();
+          await expectNoOverflow(tester);
+        }
+      });
+    }
+  }
+  for (final b in Brightness.values) {
+    testWidgets('store shots ${b.name}', skip: !shotsEnabled, (tester) async {
+      for (final st in states.entries) {
+        await resetApp(tester);
+        await pump(tester, st.value.$1, owned: st.value.$2, brightness: b);
+        await tester.pumpAndSettle();
+        await maybeShot(tester, 'store_${st.key}_${b.name}', depth: 2);
+      }
+    });
+  }
 }

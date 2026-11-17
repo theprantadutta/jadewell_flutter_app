@@ -6,15 +6,42 @@ import '../theme/jw_tokens.dart';
 import 'clay_pressable.dart';
 import 'reduce_motion.dart';
 
-LinearGradient _accentFill(JwTheme jw) => LinearGradient(
-  begin: Alignment.topCenter,
-  end: Alignment.bottomCenter,
-  colors: [Color.lerp(jw.accent, const Color(0xFFFFFFFF), 0.18)!, jw.accent],
-);
+/// A purple fill bar with a 2 pt base edge (progress fills, segments).
+/// Plain gradient + edge with no blur, so it is cheap to paint at an
+/// animating width.
+class _FillBar extends StatelessWidget {
+  const _FillBar({this.radius = 4});
 
-/// Progress track: 14 tall, radius 7, e0, padding 3; accent fill 8 tall with
-/// a highlight. Width animates over 1000 ms easeOutSoft (150 ms linear when
-/// reducing motion).
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(painter: _FillBarPainter(radius), child: const SizedBox.expand());
+}
+
+class _FillBarPainter extends CustomPainter {
+  _FillBarPainter(this.radius);
+
+  final double radius;
+  static const double edge = 2;
+  static const JwFill fill = JwFill.purple;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= edge) return;
+    final r = Radius.circular(radius.clamp(0, (size.height - edge) / 2).toDouble());
+    final body = Rect.fromLTWH(0, 0, size.width, size.height - edge);
+    canvas
+      ..drawRRect(RRect.fromRectAndRadius(body.shift(const Offset(0, edge)), r), Paint()..color = fill.edge)
+      ..drawRRect(RRect.fromRectAndRadius(body, r), Paint()..shader = JwFills.gradient(fill).createShader(body));
+  }
+
+  @override
+  bool shouldRepaint(_FillBarPainter old) => old.radius != radius;
+}
+
+/// Progress track: 14 tall, radius 7, sunken, padding 3; purple fill bar
+/// with a 2 pt base edge. Width animates over 1000 ms easeOutSoft (150 ms
+/// linear when reducing motion).
 class JwProgressTrack extends StatelessWidget {
   const JwProgressTrack({super.key, required this.value, this.semanticLabel, this.reduceMotion});
 
@@ -45,13 +72,7 @@ class JwProgressTrack extends StatelessWidget {
                 curve: reduce ? JwMotion.linear : JwMotion.easeOutSoft,
                 builder: (context, t, _) => FractionallySizedBox(
                   widthFactor: t,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: _accentFill(jw),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const SizedBox(height: 8),
-                  ),
+                  child: const SizedBox(height: 8, child: _FillBar()),
                 ),
               ),
             ),
@@ -62,8 +83,9 @@ class JwProgressTrack extends StatelessWidget {
   }
 }
 
-/// Segmented progress: 22 tall, e0, [segments] slots with 4 pt gaps, the
-/// first [filled] in accent. A newly filled segment pops (600 ms springPop).
+/// Segmented progress: 22 tall row of [segments] sunken slots (12 tall,
+/// 6 pt gaps); the first [filled] hold 10 pt purple fill segments with a
+/// 2 pt base edge. A newly filled segment pops (600 ms springPop).
 class JwSegmentedProgress extends StatelessWidget {
   const JwSegmentedProgress({
     super.key,
@@ -85,46 +107,46 @@ class JwSegmentedProgress extends StatelessWidget {
     return Semantics(
       label: semanticLabel,
       value: '$filled of $segments',
-      child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.sunken, radius: 11),
-        child: SizedBox(
-          height: 22,
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Row(
-              children: [
-                for (var i = 0; i < segments; i++) ...[
-                  if (i > 0) const SizedBox(width: 4),
-                  Expanded(
-                    child: AnimatedScale(
-                      scale: i < filled ? 1 : 0.6,
-                      duration: reduce ? Duration.zero : JwMotion.slow,
-                      curve: JwMotion.springPop,
-                      child: AnimatedOpacity(
-                        opacity: i < filled ? 1 : 0,
-                        duration: reduce ? const Duration(milliseconds: 150) : JwMotion.quick,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: _accentFill(jw),
-                            borderRadius: BorderRadius.circular(7),
+      child: SizedBox(
+        height: 22,
+        child: Row(
+          children: [
+            for (var i = 0; i < segments; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
+              Expanded(
+                child: Center(
+                  child: SizedBox(
+                    height: 12,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        DecoratedBox(decoration: jw.clay(ClayLevel.sunken, radius: 6)),
+                        AnimatedScale(
+                          scale: i < filled ? 1 : 0.6,
+                          duration: reduce ? Duration.zero : JwMotion.slow,
+                          curve: JwMotion.springPop,
+                          child: AnimatedOpacity(
+                            opacity: i < filled ? 1 : 0,
+                            duration: reduce ? const Duration(milliseconds: 150) : JwMotion.quick,
+                            child: const _FillBar(radius: 5),
                           ),
-                          child: const SizedBox.expand(),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-/// Toggle: 52 × 32 sunken track, 24 pt e1 knob. On: accent track, knob at
-/// x 24. Knob slides 220 ms springSoft; track colour crossfades.
+/// Toggle: 52 × 32. Off: sunken track; on: purple gradient track. 24 pt
+/// white chip knob (dark off: surfaceHi), at x 24 when on. Knob slides
+/// 220 ms springSoft; track crossfades.
 class JwToggle extends StatelessWidget {
   const JwToggle({
     super.key,
@@ -151,8 +173,8 @@ class JwToggle extends StatelessWidget {
     final reduce = JwReduceMotion.of(context, reduceMotion);
     final enabled = onChanged != null;
     final off = jw.clay(ClayLevel.sunken, radius: 16);
-    final on = jw.clay(ClayLevel.sunken, radius: 16, color: jw.accent);
-    final knobColor = value ? (jw.isDark ? jw.tileFace : jw.surfaceHi) : (jw.isDark ? const Color(0xFF4A423D) : jw.surfaceHi);
+    final on = jw.fillFlat(JwFill.purple, radius: 16);
+    final knobColor = value ? jw.onAccent : jw.surfaceHi;
     return Semantics(
       toggled: value,
       enabled: enabled,

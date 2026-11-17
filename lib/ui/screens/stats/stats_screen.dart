@@ -10,6 +10,7 @@ import '../../../data/models/catalogue.dart';
 import '../../../data/models/progress.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/clay.dart';
@@ -20,6 +21,7 @@ import '../../widgets/empty_state/jw_empty_state.dart';
 import '../../widgets/skeleton/jw_skeleton.dart';
 import '../../widgets/widgets.dart';
 import '../home/layout_labels.dart';
+import '../settings/screen_chrome.dart' show kMetaBlobs;
 
 /// Statistics (screens 14, 17c).
 class StatsScreen extends ConsumerWidget {
@@ -44,11 +46,11 @@ class StatsScreen extends ConsumerWidget {
           padding: EdgeInsets.fromLTRB(16, 22, 16, 0),
           child: Column(
             children: [
-              Row(children: [Expanded(child: JwSkeletonBox(height: 104)), SizedBox(width: 14), Expanded(child: JwSkeletonBox(height: 104))]),
+              Row(children: [Expanded(child: JwSkeletonBox(height: 108, radius: 26)), SizedBox(width: 14), Expanded(child: JwSkeletonBox(height: 108, radius: 26))]),
               SizedBox(height: 14),
-              Row(children: [Expanded(child: JwSkeletonBox(height: 104)), SizedBox(width: 14), Expanded(child: JwSkeletonBox(height: 104))]),
+              Row(children: [Expanded(child: JwSkeletonBox(height: 108, radius: 26)), SizedBox(width: 14), Expanded(child: JwSkeletonBox(height: 108, radius: 26))]),
               SizedBox(height: 14),
-              JwSkeletonBox(height: 184, radius: 30),
+              JwSkeletonBox(height: 186, radius: 26),
             ],
           ),
         ),
@@ -59,7 +61,7 @@ class StatsScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 22, 16, 32),
         children: [
           _StatGrid(stats: stats, empty: true),
-          const SizedBox(height: 64),
+          const SizedBox(height: 48),
           JwFadeUp(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -92,6 +94,7 @@ class StatsScreen extends ConsumerWidget {
       value: jw.isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: JwBackground(
+          blobs: kMetaBlobs,
           child: SafeArea(
             bottom: false,
             child: JwContentWidth(
@@ -108,13 +111,13 @@ class StatsScreen extends ConsumerWidget {
                           onHaptic: haptics.selection,
                           onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.home),
                         ),
-                        const SizedBox(width: 22),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Semantics(header: true, child: Text(l.statsTitle, style: jw.text.h1.copyWith(fontSize: 30, height: 1.1))),
-                              Text(l.statsAllTime, style: jw.text.body.copyWith(fontSize: 16, color: jw.textMuted, height: 1.3)),
+                              Semantics(header: true, child: Text(l.statsTitle, style: jw.text.h1.copyWith(fontSize: 26, height: 1.15))),
+                              Text(l.statsAllTime, style: jw.text.body.copyWith(fontSize: 15.5, color: jw.textMuted, height: 1.3)),
                             ],
                           ),
                         ),
@@ -140,13 +143,24 @@ class StatsScreen extends ConsumerWidget {
           (info: catalogue.layouts[p.layoutId]!, ms: p.bestTimeMs!),
     ]..sort((a, b) => a.ms.compareTo(b.ms));
     if (rows.isEmpty) return const [];
+    final layouts = catalogue.chapterLayouts.toList();
+    final plateIndex = {for (var i = 0; i < layouts.length; i++) layouts[i].id: i};
     return [
       const SizedBox(height: 30),
       JwFadeUp(
         index: 2,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Semantics(header: true, child: Text(l.statsBestTimes, style: jw.text.h3.copyWith(fontSize: 22))),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Row(
+            children: [
+              Transform.translate(
+                offset: const Offset(0, -1.5),
+                child: const IconBadge(icon: JwIcons.clock, fill: JwFill.yellow, size: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Semantics(header: true, child: Text(l.statsBestTimes, style: jw.text.h3.copyWith(fontSize: 21)))),
+            ],
+          ),
         ),
       ),
       const SizedBox(height: 14),
@@ -162,19 +176,23 @@ class StatsScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   child: Row(
                     children: [
-                      DecoratedBox(
-                        decoration: jw.clay(ClayLevel.sunken, radius: 14),
-                        child: SizedBox.square(
-                          dimension: 40,
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: JwSilhouette(tiles: LayoutLabels.tiles(r.info)),
-                          ),
+                      // The layout's coloured plate, as on its collection card.
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: FillBox(
+                          fill: JwFills.plate(plateIndex[r.info.id] ?? 0),
+                          radius: 13,
+                          edge: 3,
+                          glow: false,
+                          width: 40,
+                          height: 40,
+                          padding: const EdgeInsets.all(5),
+                          child: JwSilhouette(tiles: LayoutLabels.tiles(r.info)),
                         ),
                       ),
                       const SizedBox(width: 14),
-                      Expanded(child: Text(r.info.name, style: jw.text.body.copyWith(fontSize: 16.5))),
-                      Text(formatClock(r.ms), style: jw.text.numM.copyWith(fontSize: 16.5)),
+                      Expanded(child: Text(r.info.name, style: jw.text.button.copyWith(fontSize: 16.5))),
+                      Text(formatClock(r.ms), style: jw.text.numM.copyWith(fontSize: 17, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
@@ -197,11 +215,12 @@ class _StatGrid extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final n = NumberFormat.decimalPattern(l.localeName);
     final cards = [
-      _StatCard(icon: JwIcons.grid, value: n.format(stats.gamesPlayed), label: l.statsGamesPlayed, empty: empty),
-      _StatCard(icon: JwIcons.check, value: n.format(stats.boardsCleared), label: l.statsBoardsCleared, empty: empty),
-      _StatCard(icon: JwIcons.tile, value: n.format(stats.tilesMatched), label: l.statsTilesMatched, empty: empty),
+      _StatCard(icon: JwIcons.grid, fill: JwFill.purple, value: n.format(stats.gamesPlayed), label: l.statsGamesPlayed, empty: empty),
+      _StatCard(icon: JwIcons.check, fill: JwFill.mint, value: n.format(stats.boardsCleared), label: l.statsBoardsCleared, empty: empty),
+      _StatCard(icon: JwIcons.tile, fill: JwFill.sky, value: n.format(stats.tilesMatched), label: l.statsTilesMatched, empty: empty),
       _StatCard(
         icon: JwIcons.flame,
+        fill: JwFill.coral,
         value: n.format(stats.currentStreak),
         label: stats.bestStreak > 0 ? l.statsDayStreakBest(stats.bestStreak) : l.statsDayStreak,
         empty: empty,
@@ -217,10 +236,13 @@ class _StatGrid extends StatelessWidget {
   }
 }
 
+/// Stat card (§11): raised, radius 24, a 34 pt coloured badge, the value
+/// in mono and a caption. Empty (17c): sunken, badge at 55 %, value muted.
 class _StatCard extends StatelessWidget {
-  const _StatCard({required this.icon, required this.value, required this.label, this.empty = false});
+  const _StatCard({required this.icon, required this.fill, required this.value, required this.label, this.empty = false});
 
   final String icon;
+  final JwFill fill;
   final String value;
   final String label;
   final bool empty;
@@ -228,32 +250,35 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
+    final badge = IconBadge(icon: icon, fill: fill, size: 34);
     return Semantics(
       label: '$value $label',
       excludeSemantics: true,
       child: DecoratedBox(
-        decoration: jw.clay(empty ? ClayLevel.sunken : ClayLevel.raised, radius: 28),
+        decoration: jw.clay(empty ? ClayLevel.sunken : ClayLevel.raised, radius: 24),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 12, 14),
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 22, child: empty ? null : JwIcon(icon, size: 20, color: jw.accent)),
-              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: empty ? Opacity(opacity: 0.55, child: badge) : badge,
+              ),
+              const SizedBox(height: 4),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
                   value,
-                  style: jw.text.numL.copyWith(fontSize: 26, color: empty ? jw.textMuted : jw.textPrimary),
+                  style: jw.text.numL.copyWith(fontSize: 31, height: 1.15, color: empty ? jw.textMuted : jw.textPrimary),
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w400, color: jw.textPrimary),
+                style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w500, color: jw.textMuted),
               ),
             ],
           ),
@@ -262,6 +287,10 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
+
+/// Week chart bar fills, Monday-first look of screen 14 (sky, pink, mint,
+/// yellow, coral, purple, purple) applied oldest → today.
+const List<JwFill> weekBarFills = [JwFill.sky, JwFill.pink, JwFill.mint, JwFill.yellow, JwFill.coral, JwFill.purple, JwFill.purple];
 
 class _WeekChart extends StatelessWidget {
   const _WeekChart({required this.days, required this.today});
@@ -280,7 +309,7 @@ class _WeekChart extends StatelessWidget {
     final total = values.fold(0, (a, b) => a + b);
     final peak = math.max(1, values.reduce(math.max));
     return DecoratedBox(
-      decoration: jw.clay(ClayLevel.raised, radius: 30),
+      decoration: jw.clay(ClayLevel.raised, radius: 26),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
         child: Column(
@@ -288,7 +317,7 @@ class _WeekChart extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Semantics(header: true, child: Text(l.statsLast7Days, style: jw.text.h3.copyWith(fontSize: 18)))),
+                Expanded(child: Semantics(header: true, child: Text(l.statsLast7Days, style: jw.text.h3.copyWith(fontSize: 18.5)))),
                 Text(l.statsGamesCount(total), style: jw.text.callout.copyWith(fontWeight: FontWeight.w400, color: jw.textMuted)),
               ],
             ),
@@ -308,12 +337,19 @@ class _WeekChart extends StatelessWidget {
                           tween: Tween(begin: 0, end: values[i] / peak),
                           duration: JwReduceMotion.of(context) ? Duration.zero : const Duration(milliseconds: 1000),
                           curve: JwMotion.easeOutSoft,
-                          builder: (context, t, _) => DecoratedBox(
-                            decoration: i == 6
-                                ? jw.clay(ClayLevel.chip, color: jw.accent, radius: 16)
-                                : jw.clay(ClayLevel.sunken, radius: 16),
-                            child: SizedBox(height: 26 + 86 * t, width: double.infinity),
-                          ),
+                          // Fill bars (edge 3); a day without games is a sunken stub.
+                          builder: (context, t, _) => values[i] == 0
+                              ? DecoratedBox(
+                                  decoration: jw.clay(ClayLevel.sunken, radius: 12),
+                                  child: const SizedBox(height: 18, width: double.infinity),
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.only(bottom: 3),
+                                  child: DecoratedBox(
+                                    decoration: jw.fill(weekBarFills[i], radius: 14, edge: 3, glow: false),
+                                    child: SizedBox(height: 23 + 86 * t, width: double.infinity),
+                                  ),
+                                ),
                         ),
                       ),
                     ),

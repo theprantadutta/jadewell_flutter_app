@@ -24,7 +24,8 @@ class SilhouetteTile {
 
 /// Layout silhouette in the mini clay style: every cell is a tiny tile
 /// (`tileFace`, radius 2, 1.2 pt edge), higher layers shift up 1 pt per
-/// level, the top layer is tinted `accentSoft`. [locked] draws it at 35%.
+/// level, the top layer is tinted `accentSoft`. [locked] draws it at 35%
+/// (18% in dark, DESIGN_SYSTEM §11).
 class JwSilhouette extends StatelessWidget {
   const JwSilhouette({super.key, required this.tiles, this.locked = false, this.semanticLabel});
 
@@ -32,18 +33,21 @@ class JwSilhouette extends StatelessWidget {
   final bool locked;
   final String? semanticLabel;
 
+  /// Alpha of a locked silhouette: 35 % light, 18 % dark.
+  static double lockedOpacity(JwTheme jw) => jw.isDark ? 0.18 : 0.35;
+
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
     // Drawn from a cached texture (one per layout, size and theme): a full
     // silhouette is hundreds of blurred mini tiles. Locked is that texture at
-    // 35 % alpha, the same as an opacity layer over a single image.
+    // 35 % (dark 18 %) alpha, the same as an opacity layer over a single image.
     final paint = CustomPaint(
       painter: _SilhouetteRasterPainter(
         tiles: tiles,
         colors: jw.colors,
         devicePixelRatio: MediaQuery.maybeDevicePixelRatioOf(context) ?? 1,
-        opacity: locked ? 0.35 : 1,
+        opacity: locked ? lockedOpacity(jw) : 1,
       ),
       size: Size.infinite,
     );
@@ -77,7 +81,7 @@ class _SilhouetteRasterPainter extends CustomPainter {
       raster.paint(canvas, Offset.zero, opacity: opacity);
       return;
     }
-    if (opacity < 1) canvas.saveLayer(Offset.zero & size, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
+    if (opacity < 1) canvas.saveLayer(Offset.zero & size, JwBase.alphaPaint(opacity));
     JwSilhouettePainter(tiles: tiles, colors: colors).paint(canvas, size);
     if (opacity < 1) canvas.restore();
   }
@@ -130,15 +134,20 @@ class JwSilhouettePainter extends CustomPainter {
       maxY = math.max(maxY, t.y + 2);
       maxZ = math.max(maxZ, t.z);
     }
-    // Half-cell size keeps the 32:39 tile aspect.
+    // Half-cell size keeps the 32:39 tile aspect. The edge and the layer
+    // step shrink with the cells so tiny silhouettes (40 pt plates) still
+    // draw: at full size they stay 1.2 pt and 1 pt.
     final cols = (maxX - minX).toDouble();
     final rows = (maxY - minY).toDouble();
-    final extraH = _edge + maxZ * 1.0;
+    final rough = math.min(size.width / cols, size.height / (rows * 39 / 32));
+    final edgeH = math.min(_edge, rough * 0.35);
+    final step = math.min(1.0, rough * 0.3);
+    final extraH = edgeH + maxZ * step;
     final unitW = math.min(size.width / cols, (size.height - extraH) / (rows * 39 / 32));
     final unitH = unitW * 39 / 32;
     final w = cols * unitW, h = rows * unitH + extraH;
-    final origin = Offset((size.width - w) / 2, (size.height - h) / 2 + maxZ * 1.0);
-    final gap = math.max(0.5, unitW * 0.16);
+    final origin = Offset((size.width - w) / 2, (size.height - h) / 2 + maxZ * step);
+    final gap = math.min(math.max(0.5, unitW * 0.16), unitW * 0.4);
 
     final face = Paint();
     final edge = Paint()..color = colors.tileEdge;
@@ -152,14 +161,14 @@ class JwSilhouettePainter extends CustomPainter {
     for (final t in tiles) {
       final r = Rect.fromLTWH(
         origin.dx + (t.x - minX) * unitW + gap / 2,
-        origin.dy + (t.y - minY) * unitH + gap / 2 - t.z * 1.0,
+        origin.dy + (t.y - minY) * unitH + gap / 2 - t.z * step,
         2 * unitW - gap,
-        2 * unitH - gap - _edge,
+        2 * unitH - gap - edgeH,
       );
       final rr = RRect.fromRectAndRadius(r, const Radius.circular(2));
       canvas
-        ..drawRRect(rr.shift(const Offset(0, _edge + 0.8)), shadow)
-        ..drawRRect(rr.shift(const Offset(0, _edge)), edge);
+        ..drawRRect(rr.shift(Offset(0, edgeH + 0.8)), shadow)
+        ..drawRRect(rr.shift(Offset(0, edgeH)), edge);
       face.color = (maxZ > 0 && t.z == maxZ) ? top : colors.tileFace;
       canvas.drawRRect(rr, face);
     }
@@ -169,10 +178,13 @@ class JwSilhouettePainter extends CustomPainter {
   bool shouldRepaint(JwSilhouettePainter old) => old.colors != colors || old.tiles.length != tiles.length || !identical(old.tiles, tiles);
 }
 
-/// Layout card: 172 × 190, radius 24, e2, padding 12; sunken plate 96 tall
-/// (radius 18) holding [silhouette]; [name] 16/600; [meta] caption;
-/// [stateRow] at the bottom. [locked]: whole card e0 and silhouette at 35%
-/// (pass `locked: true` to the [JwSilhouette] too, or use [JwLayoutCard.tiles]).
+/// Layout card (DESIGN_SYSTEM §11): 172 × 196, radius 26, raised, padding
+/// 10; a plate 104 tall (radius 20) holding [silhouette]; [name] 16/700;
+/// [meta] caption; [stateRow] at the bottom. [plateFill] makes the plate a
+/// Clay Pop coloured fill plate (`JwFills.plate(index)`) with a 4 pt base
+/// edge; null keeps a sunken plate. [locked]: the whole card sunken, no
+/// plate, silhouette at 35 % (dark 18 %; pass `locked: true` to the
+/// [JwSilhouette] too, or use [JwLayoutCard.tiles]).
 class JwLayoutCard extends StatelessWidget {
   const JwLayoutCard({
     super.key,
@@ -186,7 +198,8 @@ class JwLayoutCard extends StatelessWidget {
     this.semanticLabel,
     this.reduceMotion,
     this.width = 172,
-    this.height = 190,
+    this.height = 196,
+    this.plateFill,
   });
 
   /// Convenience: builds the silhouette from tile positions.
@@ -202,7 +215,8 @@ class JwLayoutCard extends StatelessWidget {
     this.semanticLabel,
     this.reduceMotion,
     this.width = 172,
-    this.height = 190,
+    this.height = 196,
+    this.plateFill,
   }) : silhouette = JwSilhouette(tiles: tiles, locked: locked);
 
   final String name;
@@ -215,40 +229,71 @@ class JwLayoutCard extends StatelessWidget {
   final String? semanticLabel;
   final bool? reduceMotion;
   final double width;
-  final double height;
+
+  /// Fixed height; null sizes the card from its content (give it a tight
+  /// height from outside, e.g. an `IntrinsicHeight` row, to align cards).
+  final double? height;
+
+  /// Coloured plate fill; null keeps the sunken plate.
+  final JwFill? plateFill;
+
+  /// Plate height including its base edge.
+  static const double plateHeight = 104;
+  static const double _plateEdge = 4;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
-    final deco = jw.clay(locked ? ClayLevel.sunken : ClayLevel.raised, radius: 24);
+    final deco = jw.clay(locked ? ClayLevel.sunken : ClayLevel.raised, radius: 26);
+    final plate = plateFill;
+    final Decoration? plateDeco = locked
+        ? null
+        : (plate == null ? jw.clay(ClayLevel.sunken, radius: 20) : jw.fill(plate, radius: 20, edge: _plateEdge, glow: false));
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DecoratedBox(
-          decoration: jw.clay(ClayLevel.sunken, radius: 18),
-          child: SizedBox(
-            height: 96,
-            width: double.infinity,
-            child: Padding(padding: const EdgeInsets.all(9), child: silhouette),
+        // The fill plate's edge paints below its box: the box is 100 tall
+        // and the edge takes the plate to 104.
+        SizedBox(
+          height: plateHeight,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              height: plateHeight - _plateEdge,
+              width: double.infinity,
+              child: plateDeco == null
+                  ? Padding(padding: const EdgeInsets.all(10), child: silhouette)
+                  : DecoratedBox(
+                      decoration: plateDeco,
+                      child: Padding(padding: const EdgeInsets.all(10), child: silhouette),
+                    ),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: jw.text.button.copyWith(fontSize: 17, color: locked ? jw.textMuted : jw.textPrimary),
+            style: jw.text.button.copyWith(fontSize: 16.5, color: locked ? jw.textMuted : jw.textPrimary),
           ),
         ),
         if (meta != null)
           Padding(
-            padding: const EdgeInsets.only(left: 2, top: 2),
-            child: Text(meta!, style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400)),
+            padding: const EdgeInsets.only(left: 4, right: 4, top: 1),
+            child: Text(
+              meta!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400),
+            ),
           ),
+        // A minimum gap for content sizing; the rest goes above the state row.
+        const SizedBox(height: 2),
         const Spacer(),
-        ?stateRow,
+        if (stateRow != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: stateRow),
       ],
     );
     return ClayPressable(
@@ -262,7 +307,7 @@ class JwLayoutCard extends StatelessWidget {
       dimWhenDisabled: false,
       width: width,
       height: height,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 11),
       child: body,
     );
   }

@@ -122,7 +122,10 @@ at the test view's 3× ratio and captures at 1×, so edges resample slightly.
 1. **No blur at frame time.** No `MaskFilter.blur`, `ImageFilter.blur`,
    `BackdropFilter` or `BoxShadow` with a blur radius on anything that is on
    screen while something animates, unless it goes through `JwRasterCache`.
-   Use `jw.clay(...)` for raised/sunken looks; it is already cached.
+   Use `jw.clay(...)` for raised/sunken looks and `jw.fill(...)` /
+   `FillBox` / `FillPressable` (lib/ui/components) for Clay Pop fills; both
+   are cached, and a fill press only moves textures and a plain edge rect.
+   `PopBackground` caches its blobs.
 2. **No per-item `saveLayer`.** Avoid `Opacity`, `ColorFiltered`,
    `ShaderMask` and `saveLayer` around list items, tiles or anything repeated.
    Bake static effects (desaturation, dimming) into the cached texture, and

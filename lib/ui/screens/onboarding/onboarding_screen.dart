@@ -10,6 +10,7 @@ import '../../../platform/analytics/analytics_service.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../board/tile/tile_face_spec.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/clay.dart';
@@ -128,6 +129,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         onPageChanged: _onPageChanged,
                         children: [
                           _Page(
+                            fill: JwFill.purple,
+                            confetti: true,
                             title: l.onboardingMatchTitle,
                             body: Text(l.onboardingMatchBody),
                             illustration: (s) => faces == null
@@ -135,6 +138,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 : MatchIllustration(faces: faces, s: s, badge: l.onboardingMatchBadge),
                           ),
                           _Page(
+                            fill: JwFill.sky,
                             title: l.onboardingFreeTitle,
                             body: Text.rich(
                               TextSpan(
@@ -163,6 +167,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                   ),
                           ),
                           _Page(
+                            fill: JwFill.mint,
                             title: l.onboardingSolvableTitle,
                             body: Text(l.onboardingSolvableBody),
                             illustration: (s) => faces == null
@@ -174,10 +179,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     _Dots(count: OnboardingScreen.pageCount, index: _page),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 26, 24, 16),
-                      child: _NextButton(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                      child: PrimaryButton(
                         key: const ValueKey('onboarding-next'),
                         label: last ? l.onboardingStart : l.onboardingNext,
+                        trailingIcon: JwIcons.arrow,
+                        height: 60,
+                        expand: true,
                         onHaptic: last ? haptics.medium : haptics.light,
                         onPressed: _next,
                       ),
@@ -194,8 +202,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _Page extends StatelessWidget {
-  const _Page({required this.title, required this.body, required this.illustration});
+  const _Page({required this.fill, required this.title, required this.body, required this.illustration, this.confetti = false});
 
+  /// The art card's fill (purple / sky / mint).
+  final JwFill fill;
+  final bool confetti;
   final String title;
   final Widget body;
   final Widget Function(double scale) illustration;
@@ -205,26 +216,30 @@ class _Page extends StatelessWidget {
     final jw = context.jw;
     return LayoutBuilder(
       builder: (context, box) {
-        final cardW = box.maxWidth - 48;
+        final cardW = box.maxWidth - 40;
         // Leave ~40% of the height for the title and body.
         final s = math.min(cardW / kIllustrationFrame.width, (box.maxHeight * 0.6 - 24) / kIllustrationFrame.height);
         final cardH = kIllustrationFrame.height * s;
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DecoratedBox(
-                decoration: jw.clay(ClayLevel.sunken, radius: 40),
-                child: SizedBox(
-                  width: cardW,
-                  height: cardH,
-                  child: Center(
-                    child: SizedBox(
-                      width: kIllustrationFrame.width * s,
-                      height: cardH,
-                      child: ExcludeSemantics(child: illustration(s)),
-                    ),
+              // Full fill card (radius 38); its 5 pt base edge paints below.
+              HeroCard(
+                fill: fill,
+                radius: JwRadius.xxl,
+                padding: EdgeInsets.zero,
+                confetti: confetti,
+                confettiSeed: 1,
+                width: cardW,
+                height: cardH,
+                child: Center(
+                  child: SizedBox(
+                    width: kIllustrationFrame.width * s,
+                    height: cardH,
+                    // Decorative and laid out in a fixed frame: no OS text scaling.
+                    child: ExcludeSemantics(child: MediaQuery.withNoTextScaling(child: illustration(s))),
                   ),
                 ),
               ),
@@ -272,43 +287,10 @@ class _Dots extends StatelessWidget {
                 width: i == index ? 22 : 9,
                 height: 9,
                 decoration: i == index
-                    ? BoxDecoration(color: jw.accent, borderRadius: BorderRadius.circular(5))
+                    ? jw.fillFlat(JwFill.purple, radius: 5)
                     : jw.clay(ClayLevel.sunken, radius: 5),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Primary button with a trailing arrow ("Next →").
-class _NextButton extends StatelessWidget {
-  const _NextButton({super.key, required this.label, required this.onPressed, this.onHaptic});
-
-  final String label;
-  final VoidCallback onPressed;
-  final VoidCallback? onHaptic;
-
-  @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    final deco = jw.clay(ClayLevel.primary);
-    return ClayPressable(
-      decoration: deco,
-      pressedDecoration: deco.copyWith(level: ClayLevel.pressed),
-      onTap: onPressed,
-      onHaptic: onHaptic,
-      semanticLabel: label,
-      height: 56,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.button.copyWith(color: jw.onAccent, fontSize: 17))),
-          const SizedBox(width: 12),
-          JwIcon(JwIcons.arrow, size: 20, color: jw.onAccent),
         ],
       ),
     );
