@@ -213,6 +213,25 @@ class JwTheme extends ThemeExtension<JwTheme> {
     bool dip = false,
   }) => FillDecoration(fill: fill, colors: colors, radius: radius, edge: edge, glow: glow, pressed: pressed, dip: dip);
 
+  /// The fill recipe's inner highlight and shade (no edge, no glow), for
+  /// gradient surfaces that are not full fills (toggle track, chips).
+  List<ClayShadow> get fillInsets => [
+    ClayShadow.inset(2, 3, 6, 0, JwBase.white.withValues(alpha: fills.highlightAlpha)),
+    ClayShadow.inset(-3, -5, 10, 0, JwBase.black.withValues(alpha: fills.shadeAlpha)),
+  ];
+
+  /// A flat (edgeless, glowless) clay surface in [fill]'s gradient with the
+  /// fill insets: toggle-on tracks, tinted chips, avatars.
+  ClayDecoration fillFlat(JwFill fill, {double radius = JwRadius.pill, List<ClayShadow> extraShadows = const []}) =>
+      ClayDecoration(
+        level: ClayLevel.flat,
+        colors: colors,
+        color: fill.mid,
+        gradient: JwFills.gradient(fill),
+        radius: radius,
+        extraShadows: [...fillInsets, ...extraShadows],
+      );
+
   /// The knob/orb gradient (surfaceHi → surfaceRaised, lit top-left).
   Gradient get knobGradient => LinearGradient(
     begin: Alignment.topLeft,

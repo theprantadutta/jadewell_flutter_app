@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
 
+import '../components/fill_knob.dart';
+import '../components/icon_badge.dart';
 import '../theme/clay.dart';
 import '../theme/jw_theme.dart';
 import '../theme/jw_tokens.dart';
-import 'clay_pressable.dart';
 import 'jw_icon.dart';
 import 'reduce_motion.dart';
 
@@ -32,23 +33,35 @@ class JwListGroup extends StatelessWidget {
   }
 }
 
-/// 34 pt sunken icon well (leading slot of list rows).
+/// 34 pt leading icon of list rows: a coloured [IconBadge] in [fill]
+/// (purple by default). With [color] and no [fill] it is a tinted well
+/// instead (the colour at 16 % behind an icon in that colour), used for
+/// destructive rows.
 class JwIconWell extends StatelessWidget {
-  const JwIconWell({super.key, required this.icon, this.color, this.size = 34});
+  const JwIconWell({super.key, required this.icon, this.color, this.size = 34, this.fill});
 
   final String icon;
   final Color? color;
   final double size;
+  final JwFill? fill;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
-    return DecoratedBox(
-      decoration: jw.clay(ClayLevel.sunken, radius: 11),
-      child: SizedBox.square(
-        dimension: size,
-        child: Center(child: JwIcon(icon, size: 20, color: color ?? jw.accent)),
-      ),
+    final tint = color;
+    if (fill == null && tint != null) {
+      return DecoratedBox(
+        decoration: jw.clay(ClayLevel.flat, color: tint.withValues(alpha: 0.16), radius: size / 3),
+        child: SizedBox.square(
+          dimension: size,
+          child: Center(child: JwIcon(icon, size: IconBadge.iconSizeFor(size), color: tint, strokeWidth: JwIcon.badgeStroke)),
+        ),
+      );
+    }
+    // Lift by half the 3 pt edge so the badge stays optically centred.
+    return Transform.translate(
+      offset: const Offset(0, -1.5),
+      child: IconBadge(icon: icon, fill: fill ?? JwFill.purple, size: size),
     );
   }
 }
@@ -70,10 +83,15 @@ class JwListRow extends StatefulWidget {
     this.semanticLabel,
     this.reduceMotion,
     this.below,
+    this.badgeFill,
   });
 
   final String title;
   final String? icon;
+
+  /// Fill of the leading [icon] badge (DESIGN_SYSTEM §4 colour roles);
+  /// purple when null. Destructive rows use a danger-tinted well.
+  final JwFill? badgeFill;
   final String? value;
 
   /// Render [value] in mono (prices, versions).
@@ -110,7 +128,7 @@ class _JwListRowState extends State<JwListRow> {
         child: Row(
           children: [
             if (widget.icon != null) ...[
-              JwIconWell(icon: widget.icon!, color: widget.destructive ? jw.danger : jw.accent),
+              JwIconWell(icon: widget.icon!, color: widget.destructive ? jw.danger : null, fill: widget.destructive ? null : widget.badgeFill),
               const SizedBox(width: 16),
             ],
             // With a value, the title keeps its natural width and the value
@@ -185,8 +203,9 @@ class _JwListRowState extends State<JwListRow> {
   }
 }
 
-/// Tool knob: 54 pt circle, surfaceHi → surfaceRaised gradient with chip
-/// clay, caption label below, optional accent badge with a mono count.
+/// Tool knob: a [FillKnob] (58 pt coloured fill object, caption below,
+/// optional purple count badge). [fill] defaults by icon: hint yellow,
+/// undo sky, shuffle pink, anything else purple.
 class JwToolKnob extends StatelessWidget {
   const JwToolKnob({
     super.key,
@@ -198,7 +217,8 @@ class JwToolKnob extends StatelessWidget {
     this.accentIcon = false,
     this.semanticLabel,
     this.reduceMotion,
-    this.size = 54,
+    this.size = 58,
+    this.fill,
   });
 
   final String icon;
@@ -209,101 +229,44 @@ class JwToolKnob extends StatelessWidget {
   /// Count shown in the badge (null hides it).
   final int? badge;
 
-  /// Draw the icon in accent (Hint).
+  /// Unused since Clay Pop (the knob colour carries the meaning); kept for
+  /// API compatibility.
   final bool accentIcon;
   final String? semanticLabel;
   final bool? reduceMotion;
   final double size;
+  final JwFill? fill;
+
+  /// The colour-role fill for a tool icon (DESIGN_SYSTEM §4).
+  static JwFill fillFor(String icon) => switch (icon) {
+    JwIcons.hint => JwFill.yellow,
+    JwIcons.undo => JwFill.sky,
+    JwIcons.shuffle => JwFill.pink,
+    _ => JwFill.purple,
+  };
 
   @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    final deco = jw.clay(ClayLevel.chip, gradient: jw.knobGradient).copyWith(
-      extraShadows: [ClayShadow(0, 8, 14, -6, jw.shadow)],
-    );
-    return Semantics(
-      container: true,
-      label: semanticLabel ?? (badge == null ? label : '$label, $badge left'),
-      button: true,
-      excludeSemantics: true,
-      onTap: onPressed == null ? null : () {
-        onHaptic?.call();
-        onPressed!();
-      },
-      child: ExcludeSemantics(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                ClayPressable(
-                  decoration: deco,
-                  pressedDecoration: deco.copyWith(level: ClayLevel.pressed, extraShadows: const []),
-                  onTap: onPressed,
-                  onHaptic: onHaptic,
-                  reduceMotion: reduceMotion,
-                  width: size,
-                  height: size,
-                  child: Center(
-                    child: JwIcon(icon, size: 23, color: accentIcon ? jw.accent : jw.textPrimary),
-                  ),
-                ),
-                if (badge != null)
-                  Positioned(
-                    right: -6,
-                    top: -5,
-                    child: _Badge(count: badge!),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(label, style: jw.text.callout.copyWith(fontSize: 15, color: jw.textPrimary)),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => FillKnob(
+    icon: icon,
+    label: label,
+    fill: fill ?? fillFor(icon),
+    onPressed: onPressed,
+    onHaptic: onHaptic,
+    badge: badge,
+    semanticLabel: semanticLabel,
+    reduceMotion: reduceMotion,
+    size: size,
+  );
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    return DecoratedBox(
-      decoration: jw.clay(ClayLevel.flat, color: jw.accent).copyWith(
-        extraShadows: [ClayShadow(0, 2, 4, 0, jw.shadow)],
-      ),
-      child: SizedBox(
-        height: 20,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Center(
-              widthFactor: 1,
-              child: Text(
-                '$count',
-                style: jw.text.numM.copyWith(fontSize: 11.5, fontWeight: FontWeight.w700, color: jw.onAccent, height: 1),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Game tray: inset 22, radius 32, height 96, e2, children evenly spaced.
+/// Game tray: inset 16, radius 34, height 104, raised, children evenly
+/// spaced.
 class JwTray extends StatelessWidget {
-  const JwTray({super.key, required this.children, this.margin = const EdgeInsets.symmetric(horizontal: 22)});
+  const JwTray({super.key, required this.children, this.margin = const EdgeInsets.symmetric(horizontal: 16), this.height = 104});
 
   final List<Widget> children;
   final EdgeInsetsGeometry margin;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -311,9 +274,9 @@ class JwTray extends StatelessWidget {
     return Padding(
       padding: margin,
       child: DecoratedBox(
-        decoration: jw.clay(ClayLevel.raised, radius: 32),
+        decoration: jw.clay(ClayLevel.raised, radius: 34),
         child: SizedBox(
-          height: 96,
+          height: height,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: children,

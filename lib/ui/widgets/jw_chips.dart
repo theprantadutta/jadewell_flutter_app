@@ -1,13 +1,16 @@
 import 'package:flutter/widgets.dart';
 
+import '../components/icon_badge.dart';
 import '../theme/clay.dart';
 import '../theme/jw_theme.dart';
+import '../theme/jw_tokens.dart';
 import 'clay_pressable.dart';
 import 'jw_icon.dart';
 
-/// Counter chip: height 30, padding 13, radius 15, e1; [value] in mono
-/// 14/600 then [label] (e.g. "86" "tiles"). [accent] gives the accent chip
-/// (accentSoft fill, no shadow), used for streaks and personal bests.
+/// Small chip: height 30, padding 13, radius 15, chip clay; [value] in mono
+/// 14.5/600 then [label] (e.g. "86" "tiles"). [accent] gives the coral fill
+/// chip (streaks, "New best"). For the 38 pt game counters with a leading
+/// badge use `CounterChip`.
 class JwChip extends StatelessWidget {
   const JwChip({
     super.key,
@@ -17,7 +20,7 @@ class JwChip extends StatelessWidget {
     this.semanticLabel,
   });
 
-  /// Accent chip (accentSoft, no shadow).
+  /// Accent chip (coral fill).
   const JwChip.accent({super.key, required this.value, this.label, this.semanticLabel})
     : accent = true;
 
@@ -29,9 +32,8 @@ class JwChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
-    final deco = accent
-        ? jw.clay(ClayLevel.flat, color: jw.accentSoft, radius: 15)
-        : jw.clay(ClayLevel.chip, radius: 15);
+    final deco = accent ? jw.fillFlat(JwFill.coral, radius: 15) : jw.clay(ClayLevel.chip, radius: 15);
+    final fg = accent ? JwFill.coral.on : null;
     return Semantics(
       label: semanticLabel ?? [value, ?label].join(' '),
       excludeSemantics: true,
@@ -45,14 +47,14 @@ class JwChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(value, style: jw.text.numM.copyWith(fontSize: 14.5)),
+                Text(value, style: jw.text.numM.copyWith(fontSize: 14.5, color: fg, fontWeight: accent ? FontWeight.w700 : null)),
                 if (label != null) ...[
                   const SizedBox(width: 6),
                   Text(
                     label!,
                     style: jw.text.callout.copyWith(
-                      fontWeight: FontWeight.w400,
-                      color: accent ? jw.textPrimary : jw.textMuted,
+                      fontWeight: accent ? FontWeight.w600 : FontWeight.w400,
+                      color: fg ?? jw.textMuted,
                     ),
                   ),
                 ],
@@ -65,8 +67,9 @@ class JwChip extends StatelessWidget {
   }
 }
 
-/// Timer pill: height 40, radius 20, e2; accent pause glyph + mono 16/600.
-/// Tapping it pauses ([onTap]).
+/// Timer pill: height 40 (46 [large]), pill, raised; a leading 30 pt yellow
+/// badge with the pause glyph, then the time in mono 16/700. Tapping it
+/// pauses ([onTap]).
 class JwTimerPill extends StatelessWidget {
   const JwTimerPill({
     super.key,
@@ -99,13 +102,16 @@ class JwTimerPill extends StatelessWidget {
       reduceMotion: reduceMotion,
       height: h,
       dimWhenDisabled: false,
-      padding: EdgeInsets.only(left: large ? 22 : 18, right: large ? 22 : 20),
+      padding: EdgeInsets.only(left: large ? 7 : 5, right: large ? 20 : 18),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          JwIcon(JwIcons.pause, size: large ? 17 : 15, color: jw.accent),
-          SizedBox(width: large ? 14 : 12),
-          Text(time, style: jw.text.numM.copyWith(fontSize: large ? 19 : 16)),
+          Transform.translate(
+            offset: const Offset(0, -1.5),
+            child: IconBadge(icon: JwIcons.pause, fill: JwFill.yellow, size: large ? 32 : 30),
+          ),
+          SizedBox(width: large ? 12 : 10),
+          Text(time, style: jw.text.numM.copyWith(fontSize: large ? 19 : 16, fontWeight: FontWeight.w700)),
         ],
       ),
     );

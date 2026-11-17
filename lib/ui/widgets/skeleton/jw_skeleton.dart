@@ -316,7 +316,7 @@ class JwSkeletonHome extends StatelessWidget {
                     spacing: gap,
                     runSpacing: gap,
                     children: [
-                      for (var i = 0; i < columns * 2; i++) JwSkeletonBox(width: cardW, height: 190, radius: 24),
+                      for (var i = 0; i < columns * 2; i++) JwSkeletonBox(width: cardW, height: 190, radius: 26),
                     ],
                   ),
                 ],

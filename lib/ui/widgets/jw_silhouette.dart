@@ -173,6 +173,8 @@ class JwSilhouettePainter extends CustomPainter {
 /// (radius 18) holding [silhouette]; [name] 16/600; [meta] caption;
 /// [stateRow] at the bottom. [locked]: whole card e0 and silhouette at 35%
 /// (pass `locked: true` to the [JwSilhouette] too, or use [JwLayoutCard.tiles]).
+/// [plateFill] turns the plate into a Clay Pop coloured fill plate
+/// (`JwFills.plate(index)`; DESIGN_SYSTEM §11) with a 4 pt base edge.
 class JwLayoutCard extends StatelessWidget {
   const JwLayoutCard({
     super.key,
@@ -187,6 +189,7 @@ class JwLayoutCard extends StatelessWidget {
     this.reduceMotion,
     this.width = 172,
     this.height = 190,
+    this.plateFill,
   });
 
   /// Convenience: builds the silhouette from tile positions.
@@ -203,6 +206,7 @@ class JwLayoutCard extends StatelessWidget {
     this.reduceMotion,
     this.width = 172,
     this.height = 190,
+    this.plateFill,
   }) : silhouette = JwSilhouette(tiles: tiles, locked: locked);
 
   final String name;
@@ -217,15 +221,19 @@ class JwLayoutCard extends StatelessWidget {
   final double width;
   final double height;
 
+  /// Coloured plate fill; null keeps the sunken plate.
+  final JwFill? plateFill;
+
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
     final deco = jw.clay(locked ? ClayLevel.sunken : ClayLevel.raised, radius: 24);
+    final plate = plateFill;
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DecoratedBox(
-          decoration: jw.clay(ClayLevel.sunken, radius: 18),
+          decoration: plate == null || locked ? jw.clay(ClayLevel.sunken, radius: 18) : jw.fill(plate, radius: 18, edge: 4, glow: false),
           child: SizedBox(
             height: 96,
             width: double.infinity,

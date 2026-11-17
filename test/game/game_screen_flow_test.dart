@@ -14,6 +14,7 @@ import 'package:jadewell_flutter_app/state/game/game_controller.dart';
 import 'package:jadewell_flutter_app/state/game/game_launch.dart';
 import 'package:jadewell_flutter_app/state/game/game_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_view_state.dart';
+import 'package:jadewell_flutter_app/ui/components/components.dart';
 import 'package:jadewell_flutter_app/ui/l10n/generated/app_localizations.dart';
 import 'package:jadewell_flutter_app/ui/router.dart';
 import 'package:jadewell_flutter_app/ui/screens/cleared/cleared_screen.dart';
@@ -88,7 +89,7 @@ Future<void> _wait(WidgetTester tester, int ms) async {
   }
 }
 
-Finder _knob(int i) => find.descendant(of: find.byType(JwToolKnob).at(i), matching: find.byType(ClayPressable));
+Finder _knob(int i) => find.descendant(of: find.byType(JwToolKnob).at(i), matching: find.byType(FillPressable));
 
 void main() {
   setUpAll(loadJwFonts);

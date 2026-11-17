@@ -132,6 +132,10 @@ class FillDecoration extends Decoration {
     _body.paintInto(canvas, body, devicePixelRatio: devicePixelRatio, allowRaster: allowRaster, opacity: opacity);
     if (tc > 0) {
       _pressedBody.paintInto(canvas, body, devicePixelRatio: devicePixelRatio, allowRaster: allowRaster, opacity: opacity * tc);
+      if (dip) {
+        // Reduce motion: a brightness dip over the whole body.
+        canvas.drawRRect(_rrect(body), Paint()..color = JwBase.black.withValues(alpha: 0.10 * tc * opacity));
+      }
     }
   }
 

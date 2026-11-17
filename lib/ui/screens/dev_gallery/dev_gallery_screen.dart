@@ -8,6 +8,7 @@ import '../../board/tile/tile_face_spec.dart';
 import '../../board/tile/tile_widget.dart';
 import '../../theme/jw_background.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import 'gallery_sheets.dart';
 
@@ -82,12 +83,13 @@ class _DevGalleryScreenState extends State<DevGalleryScreen> {
                             sliver: SliverList.list(
                               children: [
                                 Text('Jadewell', style: jw.text.h1),
-                                Text('Dev gallery · Soft 3D Clay', style: jw.text.body.copyWith(color: jw.textMuted)),
+                                Text('Dev gallery · Clay Pop', style: jw.text.body.copyWith(color: jw.textMuted)),
                                 const SizedBox(height: 14),
                                 JwListGroup(
                                   children: [
                                     JwListRow(
                                       icon: JwIcons.moon,
+                                      badgeFill: JwFill.purple,
                                       title: 'Dark theme',
                                       trailing: JwToggle(
                                         value: dark,
@@ -99,6 +101,7 @@ class _DevGalleryScreenState extends State<DevGalleryScreen> {
                                     ),
                                     JwListRow(
                                       icon: JwIcons.motion,
+                                      badgeFill: JwFill.coral,
                                       title: 'Reduce motion',
                                       trailing: JwToggle(
                                         value: _reduceMotion,
@@ -109,6 +112,10 @@ class _DevGalleryScreenState extends State<DevGalleryScreen> {
                                     ),
                                   ],
                                 ),
+                                if (_faces != null) ...[
+                                  const GalleryEyebrow('Tiles · playable, blocked, selected, hinted, blocker, face-down'),
+                                  GalleryTileRow(face: _faces![4]),
+                                ],
                                 GalleryComponentsSheet(silhouette: _fortress, onHaptic: _haptic),
                                 const GalleryEyebrow('Icons'),
                                 Wrap(
