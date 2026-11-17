@@ -79,6 +79,7 @@ class FillPressable extends StatefulWidget {
     this.reduceMotion,
     this.isButton = true,
     this.dimWhenDisabled = true,
+    this.held = false,
   });
 
   final JwFill fill;
@@ -102,6 +103,10 @@ class FillPressable extends StatefulWidget {
   /// Fade to 50 % when [onTap] is null.
   final bool dimWhenDisabled;
 
+  /// Hold the pressed pose (e.g. the Hint knob while a hint shows); it
+  /// animates like a press when this changes.
+  final bool held;
+
   @override
   State<FillPressable> createState() => _FillPressableState();
 }
@@ -115,6 +120,12 @@ class _FillPressableState extends State<FillPressable> with SingleTickerProvider
   bool get _enabled => widget.onTap != null;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.held) _press.value = 1;
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reduce = JwReduceMotion.of(context, widget.reduceMotion);
@@ -124,6 +135,7 @@ class _FillPressableState extends State<FillPressable> with SingleTickerProvider
   void didUpdateWidget(FillPressable oldWidget) {
     super.didUpdateWidget(oldWidget);
     _reduce = JwReduceMotion.of(context, widget.reduceMotion);
+    if (widget.held != oldWidget.held) widget.held ? _down() : _up();
   }
 
   @override
@@ -142,7 +154,7 @@ class _FillPressableState extends State<FillPressable> with SingleTickerProvider
 
   void _up() {
     void release() {
-      if (!mounted) return;
+      if (!mounted || widget.held) return;
       if (_reduce) {
         _press.animateTo(0, duration: JwMotion.instant, curve: JwMotion.linear);
       } else {

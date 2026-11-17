@@ -25,6 +25,7 @@ class FillKnob extends StatelessWidget {
     this.semanticLabel,
     this.reduceMotion,
     this.size = 58,
+    this.held = false,
   });
 
   /// A [JwIcons] name.
@@ -39,6 +40,9 @@ class FillKnob extends StatelessWidget {
   final String? semanticLabel;
   final bool? reduceMotion;
   final double size;
+
+  /// Show the knob pressed ([FillPressable.held]).
+  final bool held;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +74,7 @@ class FillKnob extends StatelessWidget {
                   onTap: onPressed,
                   onHaptic: onHaptic,
                   reduceMotion: reduceMotion,
+                  held: held,
                   child: Center(
                     child: JwIcon(icon, size: size * 26 / 58, color: fill.on, strokeWidth: JwIcon.badgeStroke),
                   ),
