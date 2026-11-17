@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
+import '../jw_logo_tile.dart';
 import '../reduce_motion.dart';
 
 /// Drives the light sweep of every [JwSkeletonBox] below it (MOTION_SPEC §4
@@ -263,19 +264,17 @@ class _JwFadeUpState extends State<JwFadeUp> with SingleTickerProviderStateMixin
   }
 }
 
-/// The layout-select skeleton of screen 18: a title, subtitle and progress
-/// bars, the daily hero block, a section label and a 2-column card grid.
+/// The layout-select skeleton of screen 18, in the real radii: the logo
+/// tile (shown for real), greeting and title bars, the daily hero (30), a
+/// section label, three chapter cards (22) and a 2-column card grid (26).
 class JwSkeletonHome extends StatelessWidget {
-  const JwSkeletonHome({super.key, required this.title, this.columns = 2, this.semanticLabel});
+  const JwSkeletonHome({super.key, this.columns = 2, this.semanticLabel});
 
-  /// Shown for real (the title never waits on data).
-  final String title;
   final int columns;
   final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    final jw = context.jw;
     return Semantics(
       label: semanticLabel,
       liveRegion: true,
@@ -290,33 +289,44 @@ class JwSkeletonHome extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(title, style: jw.text.h1),
-                  ),
-                  const SizedBox(height: 14),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: Align(alignment: Alignment.centerLeft, child: JwSkeletonBox(width: 180, height: 14, radius: 7)),
-                  ),
-                  const SizedBox(height: 14),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: JwSkeletonBox(height: 14, radius: 7),
+                  const Row(
+                    children: [
+                      JwLogoTile(size: 54),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            JwSkeletonBox(width: 120, height: 14, radius: 7),
+                            SizedBox(height: 12),
+                            FractionallySizedBox(widthFactor: 0.85, child: JwSkeletonBox(height: 20, radius: 10)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 22),
-                  const JwSkeletonBox(height: 164, radius: 30),
-                  const SizedBox(height: 34),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: Align(alignment: Alignment.centerLeft, child: JwSkeletonBox(width: 120, height: 16, radius: 8)),
+                  const JwSkeletonBox(height: 172, radius: 30),
+                  const SizedBox(height: 30),
+                  const Align(alignment: Alignment.centerLeft, child: JwSkeletonBox(width: 160, height: 18, radius: 9)),
+                  const SizedBox(height: 14),
+                  const Row(
+                    children: [
+                      Expanded(child: JwSkeletonBox(height: 84, radius: 22)),
+                      SizedBox(width: 12),
+                      Expanded(child: JwSkeletonBox(height: 84, radius: 22)),
+                      SizedBox(width: 12),
+                      Expanded(child: JwSkeletonBox(height: 84, radius: 22)),
+                    ],
                   ),
+                  const SizedBox(height: 30),
+                  const Align(alignment: Alignment.centerLeft, child: JwSkeletonBox(width: 120, height: 18, radius: 9)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: gap,
                     runSpacing: gap,
                     children: [
-                      for (var i = 0; i < columns * 2; i++) JwSkeletonBox(width: cardW, height: 190, radius: 26),
+                      for (var i = 0; i < columns * 2; i++) JwSkeletonBox(width: cardW, height: 196, radius: 26),
                     ],
                   ),
                 ],

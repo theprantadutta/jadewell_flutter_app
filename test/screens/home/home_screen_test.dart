@@ -70,9 +70,14 @@ void main() {
       },
     );
 
-    expect(find.text('1 of 8 layouts cleared'), findsOneWidget);
+    // Star chip: stars earned of 3 per chapter layout.
+    expect(find.text('2/24'), findsOneWidget);
+    expect(find.text('Ready for a board?'), findsOneWidget);
     expect(find.text('Lotus'), findsOneWidget);
-    expect(find.text('Today · Sun 15 Nov'), findsOneWidget);
+    expect(find.text('Daily · Sun 15 Nov'), findsOneWidget);
+    // Explore collections: one card per chapter.
+    expect(find.text('Explore collections'), findsOneWidget);
+    expect(find.text('1/4'), findsOneWidget);
 
     // Pyramid: best time with a check and two of three stars.
     final pyramid = find.byKey(const ValueKey('layout-card-pyramid'));
@@ -81,12 +86,12 @@ void main() {
     expect(tester.widget<StarRow>(find.descendant(of: pyramid, matching: find.byType(StarRow))).earned, 2);
 
     final turtle = find.byKey(const ValueKey('layout-card-turtle'));
-    expect(find.descendant(of: turtle, matching: find.text('Resume')), findsOneWidget);
+    expect(find.descendant(of: turtle, matching: find.byType(MiniTrack)), findsOneWidget);
     expect(find.descendant(of: turtle, matching: find.text('40%')), findsOneWidget);
 
     final bridge = find.byKey(const ValueKey('layout-card-bridge'));
     await _scrollTo(tester, bridge);
-    expect(find.descendant(of: bridge, matching: find.text('New')), findsOneWidget);
+    expect(find.descendant(of: bridge, matching: find.text('NEW')), findsOneWidget);
 
     // Creatures need 2 Classics clears; 1 cleared → 1 more.
     final crab = find.byKey(const ValueKey('layout-card-crab'));
@@ -94,13 +99,15 @@ void main() {
     expect(find.descendant(of: crab, matching: find.text('Clear 1 more Classic')), findsOneWidget);
 
     // Wonders is a collapsed locked row.
-    await _scrollTo(tester, find.text('Unlocks at 8 clears'));
-    expect(find.byKey(const ValueKey('locked-silhouette-spiral')), findsOneWidget);
+    await _scrollTo(tester, find.text('2 layouts · unlocks at 8 clears'));
+    expect(find.byKey(const ValueKey('locked-chapter-wonders')), findsOneWidget);
   });
 
   testWidgets('first run shows the start-here card', (tester) async {
     await _pump(tester, seed: (_) async {});
-    expect(find.text('Your collection is waiting'), findsOneWidget);
+    expect(find.text('Welcome'), findsOneWidget);
+    expect(find.text('Let’s play your first board'), findsOneWidget);
+    expect(find.text('0/24'), findsOneWidget);
     expect(find.text('START HERE'), findsOneWidget);
     expect(find.text('Play first board'), findsOneWidget);
   });
@@ -117,7 +124,7 @@ void main() {
     await _scrollTo(tester, dragon);
     expect(find.descendant(of: dragon, matching: find.text('Clear Crab first')), findsOneWidget);
     final crab = find.byKey(const ValueKey('layout-card-crab'));
-    expect(find.descendant(of: crab, matching: find.text('New')), findsOneWidget);
+    expect(find.descendant(of: crab, matching: find.text('NEW')), findsOneWidget);
   });
 
   testWidgets('open card pushes the game route', (tester) async {
@@ -127,9 +134,9 @@ void main() {
     expect(find.text('route:/game/turtle'), findsOneWidget);
   });
 
-  testWidgets('locked silhouette unlocks with a rewarded ad', (tester) async {
+  testWidgets('locked chapter row unlocks its first layout with a rewarded ad', (tester) async {
     final (analytics, ads, repo) = await _pump(tester, seed: (_) async {});
-    final spiral = find.byKey(const ValueKey('locked-silhouette-spiral'));
+    final spiral = find.byKey(const ValueKey('locked-chapter-wonders'));
     await _scrollTo(tester, spiral);
     await tester.tap(spiral);
     await tester.pumpAndSettle();
@@ -144,7 +151,7 @@ void main() {
     // The chapter now shows cards; Spiral is open and new.
     final card = find.byKey(const ValueKey('layout-card-spiral'));
     await _scrollTo(tester, card);
-    expect(find.descendant(of: card, matching: find.text('New')), findsOneWidget);
+    expect(find.descendant(of: card, matching: find.text('NEW')), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 3));
   });
 
@@ -153,5 +160,17 @@ void main() {
     final a = tester.getTopLeft(find.byKey(const ValueKey('layout-card-pyramid')));
     final c = tester.getTopLeft(find.byKey(const ValueKey('layout-card-fortress')));
     expect(c.dy, a.dy);
+  });
+
+  testWidgets('a collection card scrolls to its chapter', (tester) async {
+    await _pump(tester, seed: (_) async {});
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scrollable.position.pixels, 0);
+    await tester.tap(find.bySemanticsLabel(RegExp(r'^Wonders, 0 of 2 cleared')));
+    await tester.pumpAndSettle();
+    // Scrolled as far as it goes towards Wonders, which is now fully visible.
+    expect(scrollable.position.pixels, greaterThan(0));
+    final row = tester.getRect(find.byKey(const ValueKey('locked-chapter-wonders')));
+    expect(row.bottom, lessThanOrEqualTo(844));
   });
 }
