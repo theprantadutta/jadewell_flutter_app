@@ -4,8 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jadewell_flutter_app/data/models/settings.dart';
 import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart';
 import 'package:jadewell_flutter_app/engine/engine.dart';
-import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
-import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_view_state.dart';
