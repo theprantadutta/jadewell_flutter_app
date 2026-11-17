@@ -443,15 +443,23 @@ class _CountersRow extends ConsumerWidget {
         beadColor: jw.accent,
       );
     } else {
-      content = Row(
+      // Three chips (tiles, pairs, streak) can be wider than a phone: shrink
+      // the row to fit inside the side margins instead of running off-screen.
+      content = Padding(
         key: const ValueKey('chips'),
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          GameCounterChip(value: '$tiles', label: l.gameTilesLabel),
-          const SizedBox(width: 12),
-          GameCounterChip(value: paused ? '–' : '$pairs', label: l.gamePairsOpenLabel),
-          _ComboChip(combo: combo),
-        ],
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GameCounterChip(value: '$tiles', label: l.gameTilesLabel),
+              const SizedBox(width: 12),
+              GameCounterChip(value: paused ? '–' : '$pairs', label: l.gamePairsOpenLabel),
+              _ComboChip(combo: combo),
+            ],
+          ),
+        ),
       );
     }
     return AnimatedOpacity(
@@ -540,7 +548,9 @@ class _ComboChipState extends State<_ComboChip> with TickerProviderStateMixin {
       animation: Listenable.merge([_pop, _fade]),
       builder: (context, _) {
         if (_fade.value == 0 || _shown < 3) return const SizedBox.shrink();
-        final grow = 1 + (_shown - 3).clamp(0, 5) * 0.06;
+        // Grows a little per further match (MOTION_SPEC: 6 % steps), capped at
+        // 1.12× so the scaled chip stays inside the counters row.
+        final grow = 1 + (_shown - 3).clamp(0, 2) * 0.06;
         final pop = 0.4 + 0.6 * JwMotion.springPop.transform(_pop.value);
         return Padding(
           padding: const EdgeInsets.only(left: 12),
