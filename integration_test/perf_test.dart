@@ -77,7 +77,7 @@ void main() {
     //    then the cleared-screen beat sheet (medal, stars, counter roll).
     await binding.traceAction(() async {
       await tester.longPress(label(r'^Pause'));
-      await waitFor(label(r'cleared$|^Head start'), timeout: const Duration(seconds: 90));
+      await waitFor(label(r'cleared!?$|^Head start'), timeout: const Duration(seconds: 90));
       await run(const Duration(seconds: 4));
     }, reportKey: 'gameplay_clear');
 

@@ -16,6 +16,7 @@ import '../../../state/game/game_controller.dart' show kHeadStartHints;
 import '../../../state/game/game_providers.dart';
 import '../../../state/game/game_view_state.dart';
 import '../../../state/platform_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/clay.dart';
@@ -39,8 +40,10 @@ abstract final class ClearedBeats {
   static const skipAfter = 1250;
 }
 
-/// Board cleared (screen 10) with the full beat sheet, plus three star beads
-/// that drop in with the medal and the optional "Head start" offer.
+/// Board cleared (screen 10) with the full beat sheet: the purple hero
+/// scales in with a confetti burst and the medal, our 1–3 stars pop in under
+/// the title, then time, best, stats, chapter progress and actions; then the
+/// optional "Head start" offer.
 class ClearedScreen extends ConsumerStatefulWidget {
   const ClearedScreen({super.key, required this.layoutId});
 
@@ -195,7 +198,25 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
                 child: Listener(
                   behavior: HitTestBehavior.translucent,
                   onPointerDown: (_) => _skip(),
-                  child: content,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: content),
+                      // Top, so it never covers the actions.
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        top: 8,
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: JwMotion.quick,
+                            child: _toast == null
+                                ? const SizedBox.shrink()
+                                : JwToast(key: ValueKey(_toast), message: _toast!, icon: JwIcons.hint, fill: JwFill.yellow),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -206,12 +227,11 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
   }
 
   Widget _content(BuildContext context, ClearedResult r, Catalogue? catalogue, Map<String, LayoutProgress>? progress) {
-    final jw = context.jw;
     final l = AppLocalizations.of(context);
     final chapterName = r.isDaily ? l.gameDailyChapter : r.chapterName;
 
-    // Chapter / collection progress (live from the repository).
-    int? chapterCleared, chapterTotal, totalCleared, totalLayouts;
+    // Chapter progress (live from the repository).
+    int? chapterCleared, chapterTotal;
     LayoutInfo? next;
     var nextOpen = false;
     if (catalogue != null && progress != null && !r.isDaily) {
@@ -220,8 +240,6 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
         chapterCleared = Unlocks.chapterClears(catalogue, ch.id, progress);
         chapterTotal = ch.layoutIds.length;
       }
-      totalCleared = Unlocks.totalClears(catalogue, progress);
-      totalLayouts = catalogue.chapterLayouts.length;
       // "Next" = the next open layout in collection order that isn't cleared
       // yet (skipping locked ones), else any open one; never this board.
       final all = catalogue.chapterLayouts.toList();
@@ -242,54 +260,37 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final k = (constraints.maxHeight / 790).clamp(0.72, 1.0);
-        double gap(double v) => v * k;
+        // Screen 10 is ~825 pt tall at k = 1: ~375 pt of text and buttons
+        // that never scale and ~450 pt of gaps, medal, stars and pill that do.
+        // Shorter screens shrink the scalable part (to 0.7×); every block
+        // still sizes to its content, and the page scrolls when even that
+        // isn't enough (large text).
+        final k = ((constraints.maxHeight - 375) / 450).clamp(0.7, 1.0);
+        double v(double x) => x * k;
         return SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 children: [
-                  SizedBox(height: gap(16)),
+                  SizedBox(height: v(16)),
                   _topBar(context, r, chapterName),
-                  SizedBox(height: gap(30)),
-                  _medalAndStars(context, r, k),
-                  SizedBox(height: gap(28)),
-                  _fadeUp(
-                    _p(ClearedBeats.title, 600),
-                    Column(
-                      children: [
-                        Text(l.clearedTitle(r.layoutName), textAlign: TextAlign.center, style: jw.text.h2.copyWith(fontSize: 30)),
-                        const SizedBox(height: 6),
-                        Text(
-                          l.clearedMeta(chapterName, r.tileCount),
-                          textAlign: TextAlign.center,
-                          style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w400, color: jw.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: gap(22)),
-                  _timePill(context, r, k),
-                  SizedBox(height: gap(16)),
-                  _bestChip(context, r),
-                  SizedBox(height: gap(22)),
-                  _stats(context, r),
+                  SizedBox(height: v(14)),
+                  _heroAndTime(context, r, k),
+                  SizedBox(height: v(12)),
+                  _bestChip(context, r, k),
+                  SizedBox(height: v(16)),
+                  _stats(context, r, k),
                   if (chapterCleared != null && chapterTotal != null) ...[
-                    SizedBox(height: gap(26)),
-                    _chapterProgress(context, r, chapterName, chapterCleared, chapterTotal, totalCleared, totalLayouts),
+                    SizedBox(height: v(16)),
+                    _chapterProgress(context, r, chapterName, chapterCleared, chapterTotal, k),
                   ],
-                  SizedBox(height: gap(26)),
-                  _actions(context, r, next, nextOpen),
-                  SizedBox(height: gap(16)),
-                  AnimatedSwitcher(
-                    duration: JwMotion.quick,
-                    child: _toast == null
-                        ? const SizedBox(height: 40)
-                        : JwToast(key: ValueKey(_toast), message: _toast!, beadColor: jw.accent),
-                  ),
+                  SizedBox(height: v(20)),
+                  _actions(context, r, next, nextOpen, k),
+                  // Clear of the gesture bar (SafeArea adds the inset).
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -313,8 +314,8 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
   Widget _topBar(BuildContext context, ClearedResult r, String chapterName) {
     final jw = context.jw;
     final l = AppLocalizations.of(context);
-    return SizedBox(
-      height: 46,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 46),
       child: Row(
         children: [
           JwIconButton(icon: JwIcons.back, semanticLabel: l.navBack, onPressed: () => context.go(AppRoutes.home)),
@@ -324,34 +325,14 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(r.layoutName, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 25, height: 1.04)),
+                Text(r.layoutName, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.title.copyWith(fontSize: 23, height: 1.04)),
+                const SizedBox(height: 3),
                 Text(
                   chapterName,
                   maxLines: 1,
-                  style: jw.text.callout.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w400, color: jw.textMuted),
+                  style: jw.text.callout.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w500, color: jw.textMuted),
                 ),
               ],
-            ),
-          ),
-          Semantics(
-            label: l.clearedTimeSemantics(formatClock(r.timeMs)),
-            excludeSemantics: true,
-            child: DecoratedBox(
-              decoration: jw.clay(ClayLevel.raised, radius: 23),
-              child: SizedBox(
-                height: 46,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      JwIcon(JwIcons.clock, size: 18, color: jw.accent),
-                      const SizedBox(width: 12),
-                      Text(formatClock(r.timeMs), style: jw.text.numM.copyWith(fontSize: 19)),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
         ],
@@ -359,124 +340,175 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     );
   }
 
-  Widget _medalAndStars(BuildContext context, ClearedResult r, double k) {
+  /// The purple hero (medal, title, stars, meta, confetti) with the time
+  /// pill overlapping its bottom edge.
+  Widget _heroAndTime(BuildContext context, ClearedResult r, double k) {
+    final pillH = 70 * k, overlap = 30 * k;
+    // Hero scales in from 0.94 (400 ms springSoft) at the medal beat.
+    final hp = _p(ClearedBeats.medal, 400);
+    final hs = 0.94 + 0.06 * JwMotion.springSoft.transform(hp);
+    final hero = Opacity(
+      opacity: (hp * 3).clamp(0.0, 1.0),
+      child: Transform.scale(
+        scale: hs,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            HeroCard(
+              radius: 32,
+              width: double.infinity,
+              // Room at the bottom for the half of the time pill that overlaps.
+              padding: EdgeInsets.fromLTRB(16, 24 * k, 16, overlap + 12 * k),
+              child: _heroContent(context, r, k),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _ConfettiBurst(progress: _p(ClearedBeats.medal, 900), originY: (24 + 60) * k),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        // The hero plus the part of the pill hanging below it (and its edge).
+        Padding(padding: EdgeInsets.only(bottom: pillH - overlap + 4), child: hero),
+        Positioned(bottom: 4, child: _timePill(context, r, k)),
+      ],
+    );
+  }
+
+  Widget _heroContent(BuildContext context, ClearedResult r, double k) {
     final jw = context.jw;
     final l = AppLocalizations.of(context);
-    // Medal: drops 200 pt with a landing squash, 900 ms springSoft.
+    final on = JwFill.purple.on;
+    final title = _p(ClearedBeats.title, 600);
+    return Column(
+      children: [
+        _medal(context, k),
+        SizedBox(height: 14 * k),
+        _fadeUp(
+          title,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              l.clearedBoardTitle,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: jw.text.h1.copyWith(fontSize: 30, height: 1.1, color: on),
+            ),
+          ),
+        ),
+        SizedBox(height: 6 * k),
+        Semantics(
+          label: l.clearedStarsSemantics(r.stars),
+          excludeSemantics: true,
+          child: SizedBox(
+            height: 40 * k,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (var i = 0; i < 3; i++) ...[
+                  if (i > 0) SizedBox(width: 8 * k),
+                  _star(i < r.stars, _p(_starStart(i), 500), k, lifted: i == 1),
+                ],
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 4 * k),
+        _fadeUp(
+          title,
+          Text(
+            l.clearedMeta(r.layoutName, r.tileCount),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            // Secondary text on purple: ≥ 13.5 pt semibold, full opacity.
+            style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: on),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The white medal holding a mint check: drops 200 pt with a landing
+  /// squash (900 ms springSoft); the check pops 500 ms later.
+  Widget _medal(BuildContext context, double k) {
+    final jw = context.jw;
     final p = _p(ClearedBeats.medal, 900);
     final drop = JwMotion.springSoft.transform(p);
     final land = p < 0.55 ? 0.0 : math.sin(((p - 0.55) / 0.45) * math.pi);
-    final medalOpacity = (p * 8).clamp(0.0, 1.0);
-    final bead = JwMotion.springPop.transform(_p(ClearedBeats.medal + 500, 500));
-    final medalW = 110 * k, medalH = 130 * k;
-    final medal = Opacity(
-      opacity: medalOpacity,
+    final check = JwMotion.springPop.transform(_p(ClearedBeats.medal + 500, 500));
+    final w = 96 * k, h = 112 * k, edge = 7 * k;
+    return Opacity(
+      opacity: (p * 8).clamp(0.0, 1.0),
       child: Transform.translate(
         offset: Offset(0, -200 * (1 - drop)),
         child: Transform(
           alignment: Alignment.bottomCenter,
           transform: Matrix4.diagonal3Values(1 + 0.05 * land, 1 - 0.07 * land, 1),
-          child: SizedBox(
-            width: medalW,
-            height: medalH + 10,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  width: medalW,
-                  height: medalH,
-                  child: DecoratedBox(
-                    decoration: ClayDecoration(
-                      level: ClayLevel.flat,
-                      colors: jw.colors,
-                      color: jw.tileFace,
-                      radius: 30 * k,
-                      extraShadows: [
-                        ClayShadow.inset(3, 3, 5, 0, jw.highlight),
-                        ClayShadow.inset(-5, -6, 10, 0, jw.inner),
-                        ClayShadow(0, 10 * k, 0, 0, jw.tileEdge),
-                        ClayShadow(0, 26, 36, -12, jw.shadow),
-                      ],
-                    ),
-                    child: Center(
-                      child: Transform.scale(
-                        scale: bead,
-                        child: SizedBox.square(
-                          dimension: 62 * k,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              JwBead(color: jw.accent, size: 62 * k),
-                              JwIcon(JwIcons.check, size: 26 * k, color: jw.onAccent),
-                            ],
-                          ),
-                        ),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: edge),
+            child: DecoratedBox(
+              decoration: ClayDecoration(
+                level: ClayLevel.flat,
+                colors: jw.colors,
+                color: jw.tileFace,
+                radius: 28 * k,
+                extraShadows: [
+                  ClayShadow.inset(3, 3, 5, 0, jw.highlight),
+                  ClayShadow.inset(-5, -6, 10, 0, jw.inner),
+                  ClayShadow(0, edge, 0, 0, JwTheme.light.tileEdge),
+                  ClayShadow(0, 22, 30, -12, jw.shadow),
+                ],
+              ),
+              child: SizedBox(
+                width: w,
+                height: h,
+                child: Center(
+                  child: Transform.scale(
+                    scale: check,
+                    child: FillBox(
+                      fill: JwFill.mint,
+                      radius: 28 * k,
+                      edge: 4,
+                      glow: false,
+                      width: 56 * k,
+                      height: 56 * k,
+                      child: Center(
+                        child: JwIcon(JwIcons.check, size: 28 * k, color: JwFill.mint.on, strokeWidth: JwIcon.badgeStroke),
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
-
-    final stars = Semantics(
-      label: l.clearedStarsSemantics(r.stars),
-      excludeSemantics: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < 3; i++) ...[
-            if (i > 0) SizedBox(width: 10 * k),
-            _starBead(context, i < r.stars, _p(_starStart(i), 500), k, lifted: i == 1),
-          ],
-        ],
-      ),
-    );
-
-    return SizedBox(
-      height: medalH + 10 + 22 * k,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          medal,
-          Positioned(bottom: 0, child: stars),
-        ],
-      ),
-    );
   }
 
-  Widget _starBead(BuildContext context, bool earned, double p, double k, {bool lifted = false}) {
-    final jw = context.jw;
+  /// A star on the hero: yellow fill when earned, a translucent white
+  /// outline when not; pops in (500 ms springPop, 120 ms stagger).
+  Widget _star(bool earned, double p, double k, {bool lifted = false}) {
     final c = JwMotion.springPop.transform(p);
-    final size = (lifted ? 40.0 : 34.0) * k;
-    final Widget bead = earned
-        ? Stack(
-            alignment: Alignment.center,
-            children: [
-              DecoratedBox(
-                decoration: jw.clay(ClayLevel.flat, color: JwBase.transparent, extraShadows: [ClayShadow(0, 4, 8, -2, jw.shadow)]),
-                child: JwBead(color: jw.accent, size: size),
-              ),
-              JwIcon(JwIcons.star, size: size * 0.5, color: jw.onAccent),
-            ],
-          )
-        : DecoratedBox(
-            decoration: jw.clay(ClayLevel.sunken),
-            child: SizedBox.square(
-              dimension: size,
-              child: Center(child: JwIcon(JwIcons.star, size: size * 0.46, color: jw.textMuted.withValues(alpha: 0.55))),
-            ),
-          );
+    final size = (lifted ? 38.0 : 32.0) * k;
     return Opacity(
-      opacity: p.clamp(0.0, 1.0) == 0 ? 0 : (p * 4).clamp(0.0, 1.0),
+      opacity: p == 0 ? 0 : (p * 4).clamp(0.0, 1.0),
       child: Transform.translate(
-        offset: Offset(0, (lifted ? -6 : 0) - 24 * (1 - c)),
-        child: Transform.scale(scale: 0.3 + 0.7 * c, child: SizedBox.square(dimension: size, child: bead)),
+        offset: Offset(0, (lifted ? -4 * k : 0) - 18 * (1 - c)),
+        child: Transform.scale(
+          scale: 0.3 + 0.7 * c,
+          child: RepaintBoundary(
+            child: CustomPaint(size: Size.square(size), painter: earned ? const ClearedStarPainter.earned() : const ClearedStarPainter.empty()),
+          ),
+        ),
       ),
     );
   }
@@ -487,6 +519,7 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     final appear = JwMotion.easeOutSoft.transform(_p(ClearedBeats.time, 300));
     final count = Curves.easeOutCubic.transform(_p(ClearedBeats.time, 1100));
     final shown = formatClock((r.timeMs * count).round());
+    final h = 70 * k, badge = 50 * k;
     return Semantics(
       label: l.clearedTimeSemantics(formatClock(r.timeMs)),
       excludeSemantics: true,
@@ -495,14 +528,31 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
         child: Transform.scale(
           scale: 0.92 + 0.08 * appear,
           child: DecoratedBox(
-            decoration: jw.clay(ClayLevel.raised, radius: 38 * k),
-            child: SizedBox(
-              height: 76 * k,
+            decoration: jw.clay(ClayLevel.floating, radius: h / 2),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: h),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32 * k),
-                child: Center(
-                  widthFactor: 1,
-                  child: Text(shown, style: jw.text.numXl.copyWith(fontSize: 56 * k, height: 1)),
+                padding: EdgeInsets.only(left: 10 * k, right: 30 * k, top: 4, bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.translate(
+                      offset: const Offset(0, -2),
+                      child: FillBox(
+                        fill: JwFill.yellow,
+                        radius: badge / 2,
+                        edge: 4,
+                        glow: false,
+                        width: badge,
+                        height: badge,
+                        child: Center(
+                          child: JwIcon(JwIcons.clock, size: badge * 0.52, color: JwFill.yellow.on, strokeWidth: JwIcon.badgeStroke),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16 * k),
+                    Text(shown, style: jw.text.numXl.copyWith(fontSize: 46 * k, height: 1)),
+                  ],
                 ),
               ),
             ),
@@ -512,63 +562,70 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     );
   }
 
-  Widget _bestChip(BuildContext context, ClearedResult r) {
+  Widget _bestChip(BuildContext context, ClearedResult r, double k) {
     final jw = context.jw;
     final l = AppLocalizations.of(context);
     final p = _p(ClearedBeats.best, 500);
     final c = JwMotion.springPop.transform(p);
     final improvement = r.improvementMs;
-    final List<Widget> parts;
+    const h = 34.0;
+    final String text;
     var accent = true;
     if (improvement != null) {
-      parts = [
-        Text('${l.clearedNewBest} · ', style: jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w500)),
-        Text(l.clearedFaster(formatClock(improvement)), style: jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w500)),
-      ];
+      text = '${l.clearedNewBest} · ${l.clearedFaster(formatClock(improvement))}';
     } else if (r.firstClear || r.isNewBest) {
-      parts = [Text(l.clearedFirstClear, style: jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w500))];
+      text = l.clearedFirstClear;
     } else if (r.previousBestMs != null) {
       accent = false;
-      parts = [
-        Text(
-          l.clearedBest(formatClock(r.previousBestMs!)),
-          style: jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w500, color: jw.textMuted),
-        ),
-      ];
+      text = l.clearedBest(formatClock(r.previousBestMs!));
     } else {
-      return const SizedBox(height: 30);
+      return const SizedBox(height: h + 3);
     }
-    return Opacity(
-      opacity: (p * 3).clamp(0.0, 1.0),
-      child: Transform.scale(
-        scale: 0.4 + 0.6 * c,
-        child: DecoratedBox(
-          decoration: accent ? jw.clay(ClayLevel.flat, color: jw.accentSoft, radius: 15) : jw.clay(ClayLevel.chip, radius: 15),
-          child: SizedBox(
-            height: 30,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8, right: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (accent) ...[JwBead(color: jw.accent, size: 17), const SizedBox(width: 8)] else const SizedBox(width: 6),
-                  ...parts,
-                ],
-              ),
-            ),
-          ),
+    final fg = accent ? JwFill.coral.on : jw.textMuted;
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CustomPaint(size: const Size.square(17), painter: ClearedStarPainter.solid(fg)),
+        const SizedBox(width: 9),
+        Flexible(
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.callout.copyWith(fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
         ),
+      ],
+    );
+    final chip = accent
+        ? FillBox(
+            fill: JwFill.coral,
+            radius: h / 2,
+            edge: 3,
+            glow: false,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+            child: row,
+          )
+        : DecoratedBox(
+            decoration: jw.clay(ClayLevel.chip, radius: h / 2),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7), child: row),
+          );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Opacity(
+        opacity: (p * 3).clamp(0.0, 1.0),
+        child: Transform.scale(scale: 0.4 + 0.6 * c, child: chip),
       ),
     );
   }
 
-  Widget _stats(BuildContext context, ClearedResult r) {
+  Widget _stats(BuildContext context, ClearedResult r, double k) {
     final jw = context.jw;
     final l = AppLocalizations.of(context);
     final count = JwMotion.easeOutSoft.transform(_p(ClearedBeats.stats, 600));
     final values = [r.stats.tilesMatched, r.stats.longestStreak, r.stats.hintsUsed];
     final labels = [l.clearedTilesMatched, l.clearedLongestStreak, l.clearedHintsUsed(r.stats.hintsUsed)];
-    return Row(
+    const icons = [JwIcons.tile, JwIcons.flame, JwIcons.hint];
+    const fills = [JwFill.mint, JwFill.pink, JwFill.sky];
+    // Cards size to their content; IntrinsicHeight keeps the three equal.
+    return IntrinsicHeight(
+      child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var i = 0; i < 3; i++) ...[
           if (i > 0) const SizedBox(width: 10),
@@ -579,19 +636,21 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
                 label: '${values[i]} ${labels[i]}',
                 excludeSemantics: true,
                 child: DecoratedBox(
-                  decoration: jw.clay(ClayLevel.raised, radius: 22),
-                  child: SizedBox(
-                    height: 70,
+                  decoration: jw.clay(ClayLevel.raised, radius: 24),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(12, 11 * k, 8, 10 * k),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${(values[i] * count).round()}', style: jw.text.numL.copyWith(fontSize: 22)),
-                        const SizedBox(height: 2),
+                        IconBadge(icon: icons[i], fill: fills[i]),
+                        SizedBox(height: 7 * k),
+                        Text('${(values[i] * count).round()}', maxLines: 1, style: jw.text.numL.copyWith(height: 1.05)),
                         Text(
                           labels[i],
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: jw.text.callout.copyWith(fontWeight: FontWeight.w400, color: jw.textMuted),
+                          style: jw.text.callout.copyWith(fontSize: 13.5, fontWeight: FontWeight.w500, color: jw.textMuted),
                         ),
                       ],
                     ),
@@ -602,57 +661,61 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
           ),
         ],
       ],
-    );
-  }
-
-  Widget _chapterProgress(
-    BuildContext context,
-    ClearedResult r,
-    String chapterName,
-    int cleared,
-    int total,
-    int? totalCleared,
-    int? totalLayouts,
-  ) {
-    final jw = context.jw;
-    final l = AppLocalizations.of(context);
-    final popped = _t >= ClearedBeats.progress;
-    final filled = popped || !r.firstClear ? cleared : math.max(0, cleared - 1);
-    final allBefore = popped || !r.firstClear || totalCleared == null ? totalCleared : math.max(0, totalCleared - 1);
-    return _fadeUp(
-      _p(ClearedBeats.stats + 160, 600),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(chapterName, style: jw.text.button.copyWith(fontSize: 16.5))),
-              Text(l.clearedChapterCount(filled, total), style: jw.text.numM.copyWith(fontSize: 16, color: jw.textMuted)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          JwSegmentedProgress(segments: total, filled: filled, semanticLabel: chapterName),
-          if (allBefore != null && totalLayouts != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              l.clearedLayoutsCleared(allBefore, totalLayouts),
-              style: jw.text.callout.copyWith(fontWeight: FontWeight.w400, color: jw.textMuted),
-            ),
-          ],
-        ],
       ),
     );
   }
 
-  Widget _actions(BuildContext context, ClearedResult r, LayoutInfo? next, bool nextOpen) {
+  Widget _chapterProgress(BuildContext context, ClearedResult r, String chapterName, int cleared, int total, double k) {
+    final jw = context.jw;
+    final l = AppLocalizations.of(context);
+    final popped = _t >= ClearedBeats.progress;
+    final filled = popped || !r.firstClear ? cleared : math.max(0, cleared - 1);
+    return _fadeUp(
+      _p(ClearedBeats.stats + 160, 600),
+      DecoratedBox(
+        decoration: jw.clay(ClayLevel.raised, radius: 26),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 14 * k, 18, 14 * k),
+          child: Row(
+            children: [
+              const IconBadge(icon: JwIcons.grid, fill: JwFill.purple, size: 40),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text(chapterName, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.button.copyWith(fontSize: 16.5))),
+                        Text(
+                          l.clearedChapterCount(filled, total),
+                          style: jw.text.numM.copyWith(fontSize: 16, fontWeight: FontWeight.w700, color: jw.purpleText),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8 * k),
+                    JwSegmentedProgress(segments: total, filled: filled, semanticLabel: chapterName),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _actions(BuildContext context, ClearedResult r, LayoutInfo? next, bool nextOpen, double k) {
     final l = AppLocalizations.of(context);
     void haptic() => ref.read(hapticsProvider).light();
+    final primaryH = (60 * k).clamp(54.0, 60.0);
     final Widget primary;
     final List<Widget> secondary;
     if (r.isDaily) {
-      primary = JwButton.primary(
+      primary = PrimaryButton(
         label: l.clearedLeaderboard,
         icon: JwIcons.trophy,
+        height: primaryH,
         expand: true,
         onHaptic: haptic,
         onPressed: () => context.go(AppRoutes.leaderboard),
@@ -662,22 +725,25 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
         JwButton.secondary(label: l.clearedHome, icon: JwIcons.grid, expand: true, onPressed: () => context.go(AppRoutes.home)),
       ];
     } else if (next != null && nextOpen) {
-      primary = _NextButton(
-        name: next.name,
-        tiles: next.tileCount,
-        onPressed: () {
-          haptic();
-          context.go(AppRoutes.game(next.id));
-        },
+      final label = l.clearedNext(next.name);
+      primary = PrimaryButton(
+        label: label,
+        trailingIcon: JwIcons.arrow,
+        height: primaryH,
+        expand: true,
+        semanticLabel: '$label ${l.clearedNextTiles(next.tileCount)}',
+        onHaptic: haptic,
+        onPressed: () => context.go(AppRoutes.game(next.id)),
       );
       secondary = [
         JwButton.secondary(label: l.clearedReplay, icon: JwIcons.replay, expand: true, onPressed: () => context.go(AppRoutes.game(r.layoutId))),
         JwButton.secondary(label: l.clearedCollection, icon: JwIcons.grid, expand: true, onPressed: () => context.go(AppRoutes.home)),
       ];
     } else {
-      primary = JwButton.primary(
+      primary = PrimaryButton(
         label: l.clearedCollection,
         icon: JwIcons.grid,
+        height: primaryH,
         expand: true,
         onHaptic: haptic,
         onPressed: () => context.go(AppRoutes.home),
@@ -690,8 +756,8 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
       _p(ClearedBeats.actions, 600),
       Column(
         children: [
-          SizedBox(height: 58, child: primary),
-          const SizedBox(height: 14),
+          primary,
+          SizedBox(height: 10 * k),
           Row(
             children: [
               for (var i = 0; i < secondary.length; i++) ...[
@@ -706,43 +772,177 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
   }
 }
 
-/// "Next: Bridge · 78 tiles →" primary button.
-class _NextButton extends StatelessWidget {
-  const _NextButton({required this.name, required this.tiles, required this.onPressed});
+/// Confetti burst on the cleared hero (MOTION_SPEC cleared beat sheet):
+/// small clay pieces in the six fills fly out from the medal and settle at
+/// fixed spots. Each piece is its own [RepaintBoundary]; frames only move
+/// them with transforms (no per-frame painting or blur).
+class _ConfettiBurst extends StatelessWidget {
+  const _ConfettiBurst({required this.progress, required this.originY});
 
-  final String name;
-  final int tiles;
-  final VoidCallback onPressed;
+  /// 0 → 1 over the burst.
+  final double progress;
+
+  /// Burst origin: horizontally centred, [originY] pt from the top (the
+  /// medal's centre).
+  final double originY;
+
+  // x, y (fractions of the hero), width, height (pt), rotation (rad), fill.
+  // None sit over the medal or the text column (x 0.15–0.85 below the
+  // medal).
+  static const _pieces = [
+    (0.13, 0.17, 14.0, 18.0, 0.30, JwFill.yellow),
+    (0.385, 0.065, 8.0, 12.0, 0.0, JwFill.mint),
+    (0.665, 0.055, 10.0, 14.0, 0.50, JwFill.yellow),
+    (0.865, 0.135, 12.0, 17.0, -0.60, JwFill.pink),
+    (0.08, 0.40, 8.0, 12.0, 0.0, JwFill.purple),
+    (0.925, 0.35, 15.0, 10.0, -0.45, JwFill.coral),
+    // Kept to the edges beside the title, stars and meta line.
+    (0.06, 0.66, 10.0, 14.0, 0.80, JwFill.mint),
+    (0.94, 0.62, 12.0, 17.0, 0.20, JwFill.sky),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final jw = context.jw;
-    final l = AppLocalizations.of(context);
-    final deco = jw.clay(ClayLevel.primary);
-    final label = l.clearedNext(name);
-    final meta = l.clearedNextTiles(tiles);
-    return ClayPressable(
-      decoration: deco,
-      pressedDecoration: deco.copyWith(level: ClayLevel.pressed),
-      onTap: onPressed,
-      semanticLabel: '$label $meta',
-      height: 58,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.button.copyWith(color: jw.onAccent, fontSize: 17)),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final size = c.biggest;
+        final o = Offset(size.width / 2, originY);
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (var i = 0; i < _pieces.length; i++) _piece(i, size, o),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _piece(int i, Size size, Offset o) {
+    final (x, y, w, h, rot, fill) = _pieces[i];
+    // A small stagger so the pieces don't move as one.
+    final p = ((progress - i * 0.025) / 0.8).clamp(0.0, 1.0);
+    final c = JwMotion.springSoft.transform(p);
+    final end = Offset(x * size.width, y * size.height);
+    final at = Offset.lerp(o, end, c)!;
+    return Positioned(
+      left: 0,
+      top: 0,
+      child: Opacity(
+        opacity: (p * 5).clamp(0.0, 1.0),
+        child: Transform(
+          transform: Matrix4.identity()
+            ..translateByDouble(at.dx - w / 2, at.dy - h / 2, 0, 1)
+            ..translateByDouble(w / 2, h / 2, 0, 1)
+            ..rotateZ(rot + (1 - c) * 2.4)
+            ..scaleByDouble(0.4 + 0.6 * c, 0.4 + 0.6 * c, 1, 1)
+            ..translateByDouble(-w / 2, -h / 2, 0, 1),
+          child: RepaintBoundary(
+            child: CustomPaint(size: Size(w, h + 2), painter: _ConfettiPiecePainter(fill)),
           ),
-          const SizedBox(width: 8),
-          Text(meta, style: jw.text.callout.copyWith(color: jw.onAccent.withValues(alpha: 0.75), fontWeight: FontWeight.w400)),
-          const SizedBox(width: 12),
-          JwIcon(JwIcons.arrow, size: 19, color: jw.onAccent),
-        ],
+        ),
       ),
     );
   }
+}
+
+/// One confetti piece: a rounded clay rect (fill gradient over a 2 pt edge).
+class _ConfettiPiecePainter extends CustomPainter {
+  const _ConfettiPiecePainter(this.fill);
+
+  final JwFill fill;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height - 2);
+    final r = Radius.circular(math.min(rect.width, rect.height) * 0.38);
+    canvas
+      ..drawRRect(RRect.fromRectAndRadius(rect.shift(const Offset(0, 2)), r), Paint()..color = fill.edge)
+      ..drawRRect(RRect.fromRectAndRadius(rect, r), Paint()..shader = JwFills.gradient(fill).createShader(rect));
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPiecePainter old) => !identical(old.fill, fill);
+}
+
+/// A rounded five-point star: [ClearedStarPainter.earned] is a yellow clay
+/// star (gradient over a 2.5 pt edge), [ClearedStarPainter.empty] a
+/// translucent white outline for the purple hero, and
+/// [ClearedStarPainter.solid] a flat glyph (the "New best" chip).
+class ClearedStarPainter extends CustomPainter {
+  const ClearedStarPainter.earned() : _mode = 0, _color = null;
+  const ClearedStarPainter.empty() : _mode = 1, _color = null;
+  const ClearedStarPainter.solid(Color color) : _mode = 2, _color = color;
+
+  final int _mode;
+  final Color? _color;
+
+  static Path _star(Size size, double inset) {
+    final c = Offset(size.width / 2, size.height * 0.53);
+    final outer = size.shortestSide / 2 - inset;
+    final inner = outer * 0.5;
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final r = i.isEven ? outer : inner;
+      final pt = c + Offset(math.cos(a) * r, math.sin(a) * r);
+      i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    return path..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final white = JwFill.purple.on;
+    switch (_mode) {
+      case 0:
+        final s = size.shortestSide;
+        final round = s * 0.09;
+        final path = _star(Size(size.width, size.height - s * 0.07), round);
+        final edge = Paint()
+          ..color = JwFill.yellow.edge
+          ..strokeWidth = round * 2
+          ..strokeJoin = StrokeJoin.round
+          ..style = PaintingStyle.fill;
+        final shifted = path.shift(Offset(0, s * 0.07));
+        canvas
+          ..drawPath(shifted, edge)
+          ..drawPath(shifted, Paint.from(edge)..style = PaintingStyle.stroke);
+        final face = Paint()
+          ..shader = JwFills.gradient(JwFill.yellow).createShader(Offset.zero & size)
+          ..strokeWidth = round * 2
+          ..strokeJoin = StrokeJoin.round;
+        canvas
+          ..drawPath(path, face..style = PaintingStyle.fill)
+          ..drawPath(path, face..style = PaintingStyle.stroke);
+      case 1:
+        final s = size.shortestSide;
+        final path = _star(size, s * 0.09);
+        canvas
+          ..drawPath(path, Paint()..color = white.withValues(alpha: 0.14))
+          ..drawPath(
+            path,
+            Paint()
+              ..color = white.withValues(alpha: 0.55)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = s * 0.07
+              ..strokeJoin = StrokeJoin.round,
+          );
+      default:
+        final s = size.shortestSide;
+        final round = s * 0.08;
+        final path = _star(size, round);
+        final paint = Paint()
+          ..color = _color!
+          ..strokeWidth = round * 2
+          ..strokeJoin = StrokeJoin.round;
+        canvas
+          ..drawPath(path, paint..style = PaintingStyle.fill)
+          ..drawPath(path, paint..style = PaintingStyle.stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(ClearedStarPainter old) => old._mode != _mode || old._color != _color;
 }
 
 /// "Head start" rewarded-interstitial intro: the reward is stated, a 5 s
