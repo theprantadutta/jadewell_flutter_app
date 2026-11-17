@@ -12,8 +12,6 @@ import 'package:jadewell_flutter_app/data/models/catalogue.dart';
 import 'package:jadewell_flutter_app/data/models/progress.dart';
 import 'package:jadewell_flutter_app/data/repositories/asset_catalogue_repository.dart';
 import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart';
-import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
-import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
 import 'package:jadewell_flutter_app/ui/screens/home/home_screen.dart';

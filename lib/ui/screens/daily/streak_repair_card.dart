@@ -8,9 +8,11 @@ import '../../../platform/ads/ad_service.dart';
 import '../../../platform/analytics/analytics_service.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 
 /// Non-null while yesterday's missed daily can be bridged with a rewarded ad.
@@ -87,7 +89,8 @@ class _StreakRepairCardState extends ConsumerState<StreakRepairCard> {
           padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
           child: Row(
             children: [
-              JwIconWell(icon: JwIcons.flame, color: jw.accent, size: 40),
+              // Coral = streaks, yellow = rewards (DESIGN_SYSTEM §4).
+              const JwIconWell(icon: JwIcons.flame, fill: JwFill.coral, size: 40),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -105,11 +108,12 @@ class _StreakRepairCardState extends ConsumerState<StreakRepairCard> {
                 ),
               ),
               const SizedBox(width: 10),
-              JwButton.primary(
+              PrimaryButton(
                 key: const ValueKey('streak-repair-watch'),
                 label: l.dailyRepairAction,
                 icon: JwIcons.video,
-                small: true,
+                fill: JwFill.yellow,
+                height: 42,
                 onHaptic: ref.read(hapticsProvider).selection,
                 onPressed: _busy ? null : () => _watch(offer),
               ),

@@ -217,7 +217,8 @@ class _TabBody extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: box.maxHeight - 48),
-            child: Center(child: Padding(padding: const EdgeInsets.only(bottom: 80), child: child)),
+            // Upper half, as in 17b.
+            child: Align(alignment: const Alignment(0, -0.5), child: child),
           ),
         ),
       );
