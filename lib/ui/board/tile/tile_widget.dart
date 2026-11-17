@@ -4,8 +4,8 @@ import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/reduce_motion.dart';
-import 'tile_face_painter.dart';
 import 'tile_face_spec.dart';
+import 'tile_paint.dart';
 
 /// Visual states of a tile (DESIGN_SYSTEM §8).
 enum TileVisualState {
@@ -43,12 +43,18 @@ enum TileFaceSize {
 }
 
 /// The painted tile (face clay + glyphs) at 1× in a [JwTile.face] box, with
-/// no transform. Cheap to cache: one clay picture per state and theme.
+/// no transform. Drawn from a cached texture ([TileRaster]): one per face,
+/// state and theme, rendered at the device pixel ratio × [rasterScale] (or
+/// the canvas scale, when larger).
 class TileVisual extends StatelessWidget {
-  const TileVisual({super.key, required this.face, required this.state});
+  const TileVisual({super.key, required this.face, required this.state, this.rasterScale = 1});
 
   final TileFaceSpec face;
   final TileVisualState state;
+
+  /// Scale the 1× tile is shown at (fitted boards, large previews), so the
+  /// texture stays sharp under a parent transform that is composited.
+  final double rasterScale;
 
   /// The clay decoration for [state] in theme [jw].
   static ClayDecoration decorationFor(TileVisualState state, JwTheme jw) {
@@ -83,34 +89,8 @@ class TileVisual extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final jw = context.jw;
-    final Widget glyphs;
-    if (state == TileVisualState.faceDown) {
-      glyphs = DecoratedBox(
-        decoration: jw.clay(ClayLevel.sunken, radius: 6, color: jw.tileFace),
-      );
-    } else {
-      final blocked = state.isBlockedLook;
-      glyphs = CustomPaint(
-        painter: TileFacePainter(
-          face,
-          glyphOpacity: blocked ? jw.blockedFaceOpacity : 1,
-          saturation: blocked ? 0.35 : 1,
-        ),
-      );
-    }
-    return SizedBox.fromSize(
-      size: JwTile.face,
-      child: DecoratedBox(
-        decoration: decorationFor(state, jw),
-        child: Padding(
-          padding: const EdgeInsets.all(JwTile.faceInset),
-          child: glyphs,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      SizedBox.fromSize(size: JwTile.face, child: TilePaint(face: face, state: state, rasterScale: rasterScale));
 }
 
 /// A board tile: [TileVisual] inside a footprint (32 × 39 × scale), lifted by
@@ -187,7 +167,7 @@ class _TileWidgetState extends State<TileWidget> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final reduce = JwReduceMotion.of(context, widget.reduceMotion);
     final s = widget.scale * widget.faceSize.multiplier;
-    final visual = RepaintBoundary(child: TileVisual(face: widget.face, state: widget.state));
+    final visual = RepaintBoundary(child: TileVisual(face: widget.face, state: widget.state, rasterScale: s));
 
     Widget lifted;
     if (widget.lift != null) {

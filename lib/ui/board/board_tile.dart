@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../theme/jw_theme.dart';
 import '../theme/jw_tokens.dart';
 import 'tile/tile_face_spec.dart';
+import 'tile/tile_paint.dart';
 import 'tile/tile_widget.dart';
 import 'tile_motion.dart';
 
@@ -69,7 +70,7 @@ class BoardTileState extends State<BoardTile> with SingleTickerProviderStateMixi
   late double _rest = _restFor(widget.visual);
 
   // Crossfade from the previous look (blocked ↔ playable, face swap).
-  Widget? _fadeFrom;
+  (TileFaceSpec, TileVisualState)? _fadeFrom;
   Duration _fadeStart = Duration.zero;
   Duration _fadeLength = Duration.zero;
   Curve _fadeCurve = Curves.linear;
@@ -160,7 +161,7 @@ class BoardTileState extends State<BoardTile> with SingleTickerProviderStateMixi
 
   void _crossfade(BoardTile old, Duration length, Curve curve) {
     if (length == Duration.zero) return;
-    _fadeFrom = _visualFor(old.face, old.visual);
+    _fadeFrom = (old.face, old.visual);
     _fadeLength = length;
     _fadeCurve = curve;
     _ensureTicking();
@@ -213,9 +214,6 @@ class BoardTileState extends State<BoardTile> with SingleTickerProviderStateMixi
     }
   }
 
-  static Widget _visualFor(TileFaceSpec face, TileVisualState visual) =>
-      RepaintBoundary(child: TileVisual(face: face, state: visual));
-
   @override
   void dispose() {
     _ticker.dispose();
@@ -226,62 +224,20 @@ class BoardTileState extends State<BoardTile> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
-    final current = _visualFor(widget.face, widget.visual);
-    final from = _fadeFrom;
-    final Widget face = from == null
-        ? current
-        : ValueListenableBuilder<double>(
-            valueListenable: _fade,
-            builder: (context, t, _) => Stack(
-              fit: StackFit.passthrough,
-              children: [
-                from,
-                Opacity(opacity: t, child: current),
-              ],
-            ),
-          );
     final jw = context.jw;
-    final flashColor = jw.textPrimary.withValues(alpha: 0.28);
     final edge = widget.visual.isBlockedLook ? 3.0 : JwTile.edge;
-    final outlinedFace = !widget.outlined
-        ? face
-        : Stack(
-            clipBehavior: Clip.none,
-            fit: StackFit.passthrough,
-            children: [
-              face,
-              Positioned(
-                left: -2,
-                top: -2,
-                right: -2,
-                bottom: -2 - edge,
-                child: IgnorePointer(child: CustomPaint(painter: _OutlinePainter(jw.textMuted))),
-              ),
-            ],
-          );
-    final moving = ValueListenableBuilder<TileXf>(
-      valueListenable: _xf,
-      child: outlinedFace,
-      builder: (context, xf, child) {
-        Widget w = child!;
-        if (xf.flash) {
-          w = Stack(
-            fit: StackFit.passthrough,
-            children: [
-              w,
-              DecoratedBox(
-                decoration: BoxDecoration(color: flashColor, borderRadius: BorderRadius.circular(JwTile.radius)),
-              ),
-            ],
-          );
-        }
-        final m = Matrix4.translationValues(xf.dx, xf.dy, 0);
-        if (xf.rot != 0) m.multiply(Matrix4.rotationZ(xf.rot));
-        if (xf.sx != 1 || xf.sy != 1) m.multiply(Matrix4.diagonal3Values(xf.sx, xf.sy, 1));
-        w = Transform(transform: m, alignment: Alignment.center, child: w);
-        if (xf.opacity < 1) w = Opacity(opacity: xf.opacity, child: w);
-        return w;
-      },
+    // One render box paints the tile texture under the per-frame transform
+    // and opacity; ticks only repaint it (no rebuild, no layers).
+    final moving = TilePaint(
+      face: widget.face,
+      state: widget.visual,
+      rasterScale: TileRasterScope.of(context),
+      xf: _xf,
+      fadeFrom: _fadeFrom,
+      fade: _fade,
+      outlineColor: widget.outlined ? jw.textMuted : null,
+      outlineEdge: edge,
+      flashColor: jw.textPrimary.withValues(alpha: 0.28),
     );
 
     final faceLeft = (JwTile.footprint.width - JwTile.face.width) / 2;
@@ -318,24 +274,16 @@ class BoardTileState extends State<BoardTile> with SingleTickerProviderStateMixi
   }
 }
 
-/// 2 pt outline around a blocker's face and edge.
-class _OutlinePainter extends CustomPainter {
-  _OutlinePainter(this.color);
+/// Scale the board's 1× tiles are shown at (board fit × face size, plus
+/// zoom headroom), so tile textures are rendered sharp for it.
+class TileRasterScope extends InheritedWidget {
+  const TileRasterScope({super.key, required this.scale, required super.child});
 
-  final Color color;
+  final double scale;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(1);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(JwTile.radius + 1)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = color,
-    );
-  }
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TileRasterScope>()?.scale ?? 1;
 
   @override
-  bool shouldRepaint(_OutlinePainter old) => old.color != color;
+  bool updateShouldNotify(TileRasterScope oldWidget) => oldWidget.scale != scale;
 }

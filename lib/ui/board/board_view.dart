@@ -12,6 +12,7 @@ import 'board_geometry.dart';
 import 'board_overlays.dart';
 import 'board_tile.dart';
 import 'tile/tile_face_spec.dart';
+import 'tile/tile_paint.dart';
 import 'tile/tile_widget.dart';
 import 'tile_motion.dart';
 
@@ -364,6 +365,21 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
     c.forward();
   }
 
+  double? _warmScale;
+  JwTheme? _warmTheme;
+
+  /// Renders the playable/blocked textures of every face before the first
+  /// tiles paint (each is one clay texture plus glyphs, so this is cheap).
+  void _warmTiles(BuildContext context, double rasterScale) {
+    final jw = context.jw;
+    final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+    final s = dpr * rasterScale;
+    if (s == _warmScale && identical(jw, _warmTheme)) return;
+    _warmScale = s;
+    _warmTheme = jw;
+    TileRaster.warm(widget.faces, jw, s);
+  }
+
   @override
   void dispose() {
     _cancelAll();
@@ -462,7 +478,11 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
           ),
           AbsorbPointer(
             absorbing: _inputLocked,
-            child: SizedBox.fromSize(size: _geo.size, child: Stack(clipBehavior: Clip.none, children: tiles)),
+            // Tiles paint cached textures; one boundary for the whole set
+            // keeps their motion from repainting the rest of the screen.
+            child: RepaintBoundary(
+              child: SizedBox.fromSize(size: _geo.size, child: Stack(clipBehavior: Clip.none, children: tiles)),
+            ),
           ),
           Positioned.fill(
             child: IgnorePointer(
@@ -494,10 +514,17 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final fit = BoardFit.compute(constraints.biggest, _geo.size, faceSize: widget.faceSize, padding: widget.padding);
+        // Zoomable boards get texture headroom for pinch-zoom.
+        final rasterScale = fit.scale * (fit.zoomable ? 1.5 : 1);
+        _warmTiles(context, rasterScale);
         final scaled = SizedBox(
           width: _geo.size.width * fit.scale,
           height: _geo.size.height * fit.scale,
-          child: FittedBox(fit: BoxFit.fill, alignment: Alignment.topLeft, child: board),
+          child: FittedBox(
+            fit: BoxFit.fill,
+            alignment: Alignment.topLeft,
+            child: TileRasterScope(scale: rasterScale, child: board),
+          ),
         );
         if (!fit.zoomable) return Center(child: scaled);
         return _ZoomableBoard(fit: fit, viewport: constraints.biggest, padding: widget.padding, child: scaled);
