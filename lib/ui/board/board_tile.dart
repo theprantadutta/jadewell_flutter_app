@@ -10,9 +10,10 @@ import 'tile_motion.dart';
 
 /// One tile on the board, at 1× inside its 32 × 39 footprint.
 ///
-/// The painted tile ([TileVisual]) sits in its own [RepaintBoundary]; motion
-/// only changes a transform and an opacity around it, driven by one [Ticker]
-/// that runs while an effect is active (MOTION_SPEC §6). Visual-state changes
+/// The tile is painted by one [TilePaint] box from cached textures; motion
+/// only changes the transform and opacity it paints with (a repaint, no
+/// rebuild or layer), driven by one [Ticker] that runs while an effect is
+/// active (MOTION_SPEC §6). Visual-state changes
 /// play their own transitions (select squash/lift, deselect, blocked ↔
 /// playable crossfade with the settle inflate, re-block); one-shot effects
 /// (entry, exit, shake, wobble, press, shuffle, undo) are started by the
