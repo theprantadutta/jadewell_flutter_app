@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../../theme/jw_tokens.dart';
-import '../../widgets/reduce_motion.dart';
+import '../../widgets/odometer_text.dart';
 
 /// Time left until the next UTC midnight (when the daily board rolls over).
 Duration untilNextUtcMidnight(DateTime now) {
@@ -59,9 +58,8 @@ class _DailyCountdownState extends State<DailyCountdown> {
   Widget build(BuildContext context) => widget.builder(context, untilNextUtcMidnight(widget.clock()));
 }
 
-/// Mono text whose changed characters roll in from −40% y with scale
-/// 0.8 → 1 over 400 ms springSoft (MOTION_SPEC §4 "Counter ticks").
-/// Reduce motion: instant change.
+/// Countdown text that rolls like an odometer (new digits drop in from
+/// above): see [OdometerText]. Reduce motion: instant change.
 class RollingText extends StatelessWidget {
   const RollingText(this.text, {super.key, required this.style});
 
@@ -69,40 +67,5 @@ class RollingText extends StatelessWidget {
   final TextStyle style;
 
   @override
-  Widget build(BuildContext context) {
-    final reduce = JwReduceMotion.of(context);
-    if (reduce) return Text(text, style: style, maxLines: 1);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < text.length; i++)
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            switchInCurve: JwMotion.springSoft,
-            switchOutCurve: JwMotion.exit,
-            layoutBuilder: (current, previous) => Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [...previous, ?current],
-            ),
-            transitionBuilder: (child, anim) {
-              final incoming = child.key == ValueKey('${text.length}-$i-${text[i]}');
-              if (!incoming) return FadeTransition(opacity: anim, child: child);
-              return AnimatedBuilder(
-                animation: anim,
-                child: child,
-                builder: (context, c) => Opacity(
-                  opacity: anim.value.clamp(0.0, 1.0),
-                  child: FractionalTranslation(
-                    translation: Offset(0, -0.4 * (1 - anim.value)),
-                    child: Transform.scale(scale: 0.8 + 0.2 * anim.value, child: c),
-                  ),
-                ),
-              );
-            },
-            child: Text(text[i], key: ValueKey('${text.length}-$i-${text[i]}'), style: style),
-          ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => OdometerText(text, style: style, direction: OdometerDirection.down);
 }

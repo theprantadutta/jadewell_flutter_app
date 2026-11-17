@@ -1,5 +1,7 @@
 {
   "@@locale": "en",
+  "leaderboardWeeklySubtitle": "This week · all daily boards",
+  "homeInProgress": "In progress",
   "accountEditProfile": "Edit profile",
   "accountUsernameLabel": "Username",
   "accountUsernameHint": "Your unique @handle. You can change it once a week.",

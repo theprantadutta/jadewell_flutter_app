@@ -15,12 +15,9 @@ String formatClock(int ms) {
   return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$ss' : '$m:$ss';
 }
 
-/// Text whose changed characters roll in (MOTION_SPEC §4 counter ticks):
-/// from −40 % y with scale 0.8 → 1, 400 ms springSoft. Unchanged characters
-/// stay still; nothing rolls on the first frame. Characters are aligned from
-/// the right so "10" → "9" only rolls what changed. Use a mono style so
-/// widths never shift.
-class RollingText extends StatefulWidget {
+/// Mono text that rolls like an odometer when it changes (game timer and
+/// counters): see [OdometerText]. Reduce motion: instant change.
+class RollingText extends StatelessWidget {
   const RollingText(this.text, {super.key, required this.style, this.reduceMotion});
 
   final String text;
@@ -28,102 +25,7 @@ class RollingText extends StatefulWidget {
   final bool? reduceMotion;
 
   @override
-  State<RollingText> createState() => _RollingTextState();
-}
-
-class _RollingTextState extends State<RollingText> {
-  /// Generation per right-aligned index; bumps when that character changes.
-  final List<int> _gen = [];
-
-  @override
-  void didUpdateWidget(RollingText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final a = oldWidget.text.characters.toList(), b = widget.text.characters.toList();
-    if (a.join() == b.join()) return;
-    while (_gen.length < b.length) {
-      _gen.add(0);
-    }
-    for (var r = 0; r < b.length; r++) {
-      final before = r < a.length ? a[a.length - 1 - r] : null;
-      if (before != b[b.length - 1 - r]) _gen[r]++;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (JwReduceMotion.of(context, widget.reduceMotion)) return Text(widget.text, style: widget.style);
-    final chars = widget.text.characters.toList();
-    while (_gen.length < chars.length) {
-      _gen.add(0);
-    }
-    return Semantics(
-      label: widget.text,
-      excludeSemantics: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < chars.length; i++)
-            _RollingChar(
-              key: ValueKey('${chars.length - 1 - i}:${_gen[chars.length - 1 - i]}'),
-              char: chars[i],
-              style: widget.style,
-              animate: _gen[chars.length - 1 - i] > 0,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RollingChar extends StatefulWidget {
-  const _RollingChar({super.key, required this.char, required this.style, required this.animate});
-
-  final String char;
-  final TextStyle style;
-  final bool animate;
-
-  @override
-  State<_RollingChar> createState() => _RollingCharState();
-}
-
-class _RollingCharState extends State<_RollingChar> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: JwMotion.gentle);
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.animate) {
-      _c.forward();
-    } else {
-      _c.value = 1;
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Text(widget.char, style: widget.style);
-    return AnimatedBuilder(
-      animation: _c,
-      child: text,
-      builder: (context, child) {
-        if (_c.value >= 1) return child!;
-        final t = JwMotion.springSoft.transform(_c.value);
-        return FractionalTranslation(
-          translation: Offset(0, -0.4 * (1 - t)),
-          child: Transform.scale(
-            scale: 0.8 + 0.2 * t,
-            child: Opacity(opacity: _c.value.clamp(0.0, 1.0), child: child),
-          ),
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => OdometerText(text, style: style, reduceMotion: reduceMotion);
 }
 
 /// Counter chip as [JwChip] (30 tall, e1, mono value + label) with a

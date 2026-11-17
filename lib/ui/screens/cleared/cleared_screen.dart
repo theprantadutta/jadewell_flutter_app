@@ -222,8 +222,22 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
       }
       totalCleared = Unlocks.totalClears(catalogue, progress);
       totalLayouts = catalogue.chapterLayouts.length;
-      next = catalogue.nextAfter(r.layoutId);
-      if (next != null) nextOpen = !Unlocks.layout(catalogue, next.id, progress).locked;
+      // "Next" = the next open layout in collection order that isn't cleared
+      // yet (skipping locked ones), else any open one; never this board.
+      final all = catalogue.chapterLayouts.toList();
+      final at = all.indexWhere((l) => l.id == r.layoutId);
+      LayoutInfo? pick({required bool uncleared}) {
+        for (var k = 1; k < all.length; k++) {
+          final cand = all[(at + k) % all.length];
+          if (Unlocks.layout(catalogue, cand.id, progress).locked) continue;
+          if (uncleared && (progress[cand.id]?.cleared ?? false)) continue;
+          return cand;
+        }
+        return null;
+      }
+
+      next = at < 0 ? null : (pick(uncleared: true) ?? pick(uncleared: false));
+      nextOpen = next != null;
     }
 
     return LayoutBuilder(

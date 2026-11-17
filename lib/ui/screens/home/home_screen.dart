@@ -443,8 +443,14 @@ class _LayoutCard extends ConsumerWidget {
           ),
         ],
       );
+    } else if (p != null && p.hasSavedGame && (p.savedFraction ?? 0) <= 0) {
+      // Saved after a hint/shuffle but no pair matched yet: a 0% bar reads
+      // as broken, so just say it's under way.
+      stateLabel = l.homeInProgress;
+      state = Text(l.homeInProgress, style: caption.copyWith(fontWeight: FontWeight.w600));
     } else if (p != null && p.hasSavedGame) {
-      final pct = '${((p.savedFraction ?? 0) * 100).round()}%';
+      // At least 1% once anything is matched (1 pair of 144 rounds to 1%).
+      final pct = '${((p.savedFraction ?? 0) * 100).ceil().clamp(1, 99)}%';
       stateLabel = '${l.homeResume} $pct';
       state = Row(
         children: [

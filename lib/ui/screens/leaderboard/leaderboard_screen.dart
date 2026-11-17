@@ -55,7 +55,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
     return JwPage(
       title: l.leaderboardTitle,
-      subtitle: layoutName == null ? l.leaderboardDaily : l.leaderboardDailyLayout(layoutName),
+      // The weekly tab sums the week's dailies, so it isn't "Daily · <layout>".
+      subtitle: _tab == LeaderboardKind.weekly
+          ? l.leaderboardWeeklySubtitle
+          : (layoutName == null ? l.leaderboardDaily : l.leaderboardDailyLayout(layoutName)),
       onHaptic: haptic,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
