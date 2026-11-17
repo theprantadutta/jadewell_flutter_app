@@ -6,6 +6,7 @@ import 'package:jadewell_flutter_app/ui/board/tile/tile_face_painter.dart';
 import 'package:jadewell_flutter_app/ui/board/tile/tile_face_spec.dart';
 import 'package:jadewell_flutter_app/ui/theme/jw_background.dart';
 import 'package:jadewell_flutter_app/ui/theme/jw_fonts.dart';
+import 'package:jadewell_flutter_app/ui/theme/jw_raster_cache.dart';
 import 'package:jadewell_flutter_app/ui/theme/jw_theme.dart';
 import 'package:jadewell_flutter_app/ui/widgets/reduce_motion.dart';
 import 'package:material_ui/material_ui.dart';
@@ -25,6 +26,8 @@ Future<void> loadJwFonts() async {
     await loader.load();
   }
   TileFacePainter.clearTextCache();
+  // Tile and clay textures rendered before the fonts loaded are stale.
+  JwRasterCache.instance.clear();
   _fontsLoaded = true;
 }
 

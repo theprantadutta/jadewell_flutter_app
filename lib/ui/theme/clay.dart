@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -5,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import 'jw_raster_cache.dart';
 import 'jw_tokens.dart';
 
 /// One CSS-style box shadow: `[inset] dx dy blur spread colour`.
@@ -235,7 +237,7 @@ class ClayDecoration extends Decoration {
   }
 
   @override
-  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _ClayPainter(this);
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _ClayPainter(this, onChanged);
 
   @override
   bool operator ==(Object other) =>
@@ -257,15 +259,73 @@ class ClayDecoration extends Decoration {
     Object.hashAll(extraShadows),
   );
 
-  /// Paints this decoration into [canvas] at [rect] (uses the cache).
-  void paintInto(Canvas canvas, Rect rect) {
+  /// Paints this decoration into [canvas] at [rect].
+  ///
+  /// With [devicePixelRatio] the surface is drawn from a cached texture
+  /// ([JwRasterCache]) rendered at that ratio times the canvas scale, so its
+  /// blurred shadows are not re-rendered every frame. [opacity] < 1 draws it
+  /// translucent (same result as a layer, since it is one texture). Without
+  /// a ratio (or with [allowRaster] false, or a surface too large to cache)
+  /// the recorded picture is replayed.
+  void paintInto(
+    Canvas canvas,
+    Rect rect, {
+    double? devicePixelRatio,
+    double opacity = 1,
+    bool allowRaster = true,
+  }) {
+    if (opacity <= 0) return;
+    final raster = devicePixelRatio == null ? null : rasterFor(canvas, rect.size, devicePixelRatio, create: allowRaster);
+    if (raster != null) {
+      raster.paint(canvas, rect.topLeft, opacity: opacity);
+      return;
+    }
     final picture = ClayPictureCache.instance.obtain(this, rect.size);
+    if (opacity < 1) {
+      canvas.saveLayer(rect.inflate(clayReach(resolvedShadows) + 4), Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
+    } else {
+      canvas.save();
+    }
     canvas
-      ..save()
       ..translate(rect.left, rect.top)
       ..drawPicture(picture)
       ..restore();
   }
+
+  /// The cached texture for this decoration at [size], rendered at
+  /// [devicePixelRatio] × the canvas scale (never below 1×). Null for
+  /// shadowless surfaces (a plain fill is cheaper to draw directly), for
+  /// surfaces too large to cache, and on a miss when [create] is false.
+  JwRaster? rasterFor(Canvas canvas, Size size, double devicePixelRatio, {bool create = true}) {
+    final shadows = resolvedShadows;
+    if (shadows.isEmpty) return null;
+    final scale = JwRasterCache.bucket(devicePixelRatio * math.max(1.0, canvasScale(canvas)));
+    final key = _ClayRasterKey(_ClayKey(size, radius, resolvedFill, gradient, shadows), scale);
+    final cache = JwRasterCache.instance;
+    if (!create) return cache.peek(key);
+    final reach = clayReach(shadows);
+    final bounds = (Offset.zero & size).inflate(reach > 0 ? reach + 4 : 1);
+    return cache.obtain(key, bounds, scale, (c) => c.drawPicture(ClayPictureCache.instance.obtain(this, size)));
+  }
+}
+
+/// How far (pt) outer [shadows] reach beyond the box (3 σ of the blur plus
+/// spread and offset).
+double clayReach(List<ClayShadow> shadows) => shadows
+    .where((s) => !s.inset)
+    .fold<double>(0, (m, s) => math.max(m, s.blur * 1.5 + s.spread.abs() + s.dx.abs() + s.dy.abs()));
+
+@immutable
+class _ClayRasterKey {
+  const _ClayRasterKey(this.clay, this.scale);
+  final _ClayKey clay;
+  final double scale;
+
+  @override
+  bool operator ==(Object other) => other is _ClayRasterKey && other.scale == scale && other.clay == clay;
+
+  @override
+  int get hashCode => Object.hash(clay, scale);
 }
 
 /// Cross-fade between two clay decorations (`t` = 0 shows [a], 1 shows [b]).
@@ -298,7 +358,7 @@ class ClayBlendDecoration extends Decoration {
   }
 
   @override
-  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _ClayBlendPainter(this);
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _ClayBlendPainter(this, onChanged);
 
   @override
   bool operator ==(Object other) =>
@@ -308,8 +368,48 @@ class ClayBlendDecoration extends Decoration {
   int get hashCode => Object.hash(a, b, t);
 }
 
-class _ClayPainter extends BoxPainter {
-  _ClayPainter(this.decoration);
+/// Shared by the clay box painters: decides whether a paint may render a new
+/// texture. A box whose size changes every frame (AnimatedSize, an animated
+/// container) would otherwise render and cache a texture per frame, so while
+/// its size is moving it replays the picture, and once the size has held
+/// still for [_settle] it asks for one more paint that rasterizes.
+mixin _RasterGuard on BoxPainter {
+  static const _settle = Duration(milliseconds: 250);
+
+  Size? _lastSize;
+  final Stopwatch _sinceResize = Stopwatch();
+  bool _moving = false;
+  Timer? _timer;
+
+  /// Whether this paint at [size] may create a texture.
+  bool allowRasterAt(Size size) {
+    if (_lastSize != null && size != _lastSize) {
+      if (_sinceResize.isRunning && _sinceResize.elapsed < _settle) _moving = true;
+      _sinceResize
+        ..reset()
+        ..start();
+    } else if (_lastSize == null) {
+      _sinceResize.start();
+    }
+    _lastSize = size;
+    if (!_moving) return true;
+    _timer?.cancel();
+    _timer = Timer(_settle, () {
+      _moving = false;
+      onChanged?.call();
+    });
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+}
+
+class _ClayPainter extends BoxPainter with _RasterGuard {
+  _ClayPainter(this.decoration, super.onChanged);
 
   final ClayDecoration decoration;
 
@@ -317,12 +417,17 @@ class _ClayPainter extends BoxPainter {
   void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
     final size = configuration.size;
     if (size == null || size.isEmpty) return;
-    decoration.paintInto(canvas, offset & size);
+    decoration.paintInto(
+      canvas,
+      offset & size,
+      devicePixelRatio: configuration.devicePixelRatio,
+      allowRaster: allowRasterAt(size),
+    );
   }
 }
 
-class _ClayBlendPainter extends BoxPainter {
-  _ClayBlendPainter(this.decoration);
+class _ClayBlendPainter extends BoxPainter with _RasterGuard {
+  _ClayBlendPainter(this.decoration, super.onChanged);
 
   final ClayBlendDecoration decoration;
 
@@ -331,20 +436,20 @@ class _ClayBlendPainter extends BoxPainter {
     final size = configuration.size;
     if (size == null || size.isEmpty) return;
     final rect = offset & size;
+    final dpr = configuration.devicePixelRatio;
+    final allow = allowRasterAt(size);
     final t = decoration.t.clamp(0.0, 1.0);
     if (t <= 0.001) {
-      decoration.a.paintInto(canvas, rect);
+      decoration.a.paintInto(canvas, rect, devicePixelRatio: dpr, allowRaster: allow);
       return;
     }
     if (t >= 0.999) {
-      decoration.b.paintInto(canvas, rect);
+      decoration.b.paintInto(canvas, rect, devicePixelRatio: dpr, allowRaster: allow);
       return;
     }
-    decoration.a.paintInto(canvas, rect);
-    final bounds = rect.inflate(60);
-    canvas.saveLayer(bounds, Paint()..color = Color.fromRGBO(0, 0, 0, t));
-    decoration.b.paintInto(canvas, rect);
-    canvas.restore();
+    // b over a at opacity t: one translucent texture, no layer.
+    decoration.a.paintInto(canvas, rect, devicePixelRatio: dpr, allowRaster: allow);
+    decoration.b.paintInto(canvas, rect, devicePixelRatio: dpr, allowRaster: allow, opacity: t);
   }
 }
 
