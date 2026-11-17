@@ -387,7 +387,7 @@
   "@unlockSheetDone": {"placeholders": {"name": {"type": "String"}}},
   "dailyTitle": "Daily",
   "dailyLeaderboard": "Leaderboard",
-  "dailyMeta": "{count} tiles · {difficulty} · everyone plays the same deal",
+  "dailyMeta": "{count} tiles · {difficulty} · same deal for everyone",
   "@dailyMeta": {"placeholders": {"count": {"type": "int"}, "difficulty": {"type": "String"}}},
   "dailyEndsIn": "Ends in",
   "dailyStreak": "Your streak",
