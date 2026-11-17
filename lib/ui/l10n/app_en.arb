@@ -288,7 +288,7 @@
   "@leaderboardYouFriends": {"placeholders": {"rank": {"type": "int"}, "total": {"type": "int"}}},
   "leaderboardEntrySemantics": "Rank {rank}, {name}, {stars} stars, {time}",
   "@leaderboardEntrySemantics": {"placeholders": {"rank": {"type": "int"}, "name": {"type": "String"}, "stars": {"type": "int"}, "time": {"type": "String"}}},
-  "leaderboardEmptyTitle": "No results yet today — be the first",
+  "leaderboardEmptyTitle": "No times yet today",
   "leaderboardEmptyWeekTitle": "No results yet this week",
   "leaderboardEmptyBody": "Clear {layout} and your result takes the top spot.",
   "@leaderboardEmptyBody": {"placeholders": {"layout": {"type": "String"}}},
