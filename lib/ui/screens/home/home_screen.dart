@@ -316,35 +316,44 @@ class _DailyHeroCard extends ConsumerWidget {
     void open() => context.push(AppRoutes.daily);
     return HeroCard(
       radius: 30,
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 18, 14, 18),
       onTap: open,
       onHaptic: ref.read(hapticsProvider).selection,
       semanticLabel: '${l.homeDailyEyebrow(dateLabel)}, ${info.name}, ${LayoutLabels.meta(l, info)}',
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 136),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        // The art sits top-right; the Play row runs under it, as in screen 11.
+        child: Stack(
           children: [
-            Expanded(
-              child: Column(
+            Positioned(right: -4, top: 0, child: const TwinTilesArt()),
+            Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    l.homeDailyEyebrow(dateLabel),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: on),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 104),
+                    child: Text(
+                      l.homeDailyEyebrow(dateLabel),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: on),
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    info.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: jw.text.h1.copyWith(fontSize: 30, height: 1.15, color: on),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 104),
+                    child: Text(
+                      info.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: jw.text.h1.copyWith(fontSize: 30, height: 1.15, color: on),
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  DailyCountdown(
+                  Padding(
+                    padding: const EdgeInsets.only(right: 96),
+                    child: DailyCountdown(
                     builder: (context, left) => Semantics(
                       label: l.homeDailyEndsIn(formatCountdown(left)),
                       excludeSemantics: true,
@@ -366,6 +375,7 @@ class _DailyHeroCard extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  ),
                   ),
                   const SizedBox(height: 16),
                   Wrap(
@@ -397,9 +407,6 @@ class _DailyHeroCard extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 6),
-            const TwinTilesArt(),
           ],
         ),
       ),
