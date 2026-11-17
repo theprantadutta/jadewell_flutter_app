@@ -259,9 +259,13 @@ class JwNoticeCard extends StatelessWidget {
     this.onAction,
     this.busy = false,
     this.onHaptic,
+    this.fill = JwFill.purple,
   });
 
   final String icon;
+
+  /// Badge fill of [icon].
+  final JwFill fill;
   final String title;
   final String body;
   final String? actionLabel;
@@ -282,7 +286,7 @@ class JwNoticeCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                JwIconWell(icon: icon),
+                JwIconWell(icon: icon, fill: fill),
                 const SizedBox(width: 14),
                 Expanded(child: Text(title, style: jw.text.h3.copyWith(fontSize: 17.5))),
               ],
@@ -604,12 +608,4 @@ JwFill avatarFill(String? hex, String name) {
     }
   }
   return best;
-}
-
-/// The pastel avatar fill for a profile colour (the backend stores
-/// saturated colours; avatars show them softened, as in the design).
-Color? avatarPastel(String? hex, JwTheme jw) {
-  final c = parseHexColor(hex);
-  if (c == null) return null;
-  return JwFaceInks.lighten(c, jw.isDark ? 0.42 : 0.58);
 }

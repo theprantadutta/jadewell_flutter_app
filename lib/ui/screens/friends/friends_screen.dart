@@ -13,6 +13,7 @@ import '../../../state/social_providers.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/skeleton/jw_skeleton.dart';
 import '../../widgets/widgets.dart';
 import '../account/account_screen.dart' show FriendCodeRow;
@@ -156,9 +157,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           skeleton: const JwSkeletonScope(
             child: Column(
               children: [
-                JwSkeletonBox(height: 56, radius: 20),
+                JwSkeletonBox(height: 62, radius: 24),
                 SizedBox(height: 10),
-                JwSkeletonBox(height: 56, radius: 20),
+                JwSkeletonBox(height: 62, radius: 24),
               ],
             ),
           ),
@@ -174,6 +175,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
         ..add(
           JwNoticeCard(
             icon: offline ? JwIcons.restore : JwIcons.info,
+            fill: JwFill.sky,
             title: offline ? l.commonOfflineTitle : l.friendsUnavailableTitle,
             body: offline ? l.friendsOfflineBody : l.friendsUnavailableBody,
             actionLabel: l.commonRetry,
@@ -220,7 +222,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 9, 10, 9),
         child: Row(
           children: [
-            JwAvatar(name: p.displayName, color: avatarPastel(p.avatarColor, jw)),
+            JwAvatar(name: p.displayName, fill: avatarFill(p.avatarColor, p.displayName)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
