@@ -12,6 +12,7 @@ import 'package:jadewell_flutter_app/platform/haptics/haptic_service.dart';
 import 'package:jadewell_flutter_app/state/session_controller.dart';
 import 'package:jadewell_flutter_app/ui/l10n/generated/app_localizations.dart';
 import 'package:jadewell_flutter_app/ui/router.dart';
+import 'package:jadewell_flutter_app/ui/screens/legal/legal_screen.dart';
 import 'package:jadewell_flutter_app/ui/theme/jw_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:material_ui/material_ui.dart' as material_ui show GlobalMaterialLocalizations;
@@ -38,6 +39,7 @@ Future<void> pumpScreen(
         AppRoutes.store,
         AppRoutes.dailyPlay,
         AppRoutes.settings,
+        for (final d in LegalDoc.values) AppRoutes.legal(d),
       ])
         GoRoute(path: p, builder: (_, _) => Scaffold(body: Center(child: Text('route:$p')))),
     ],

@@ -97,6 +97,7 @@ flutter:
     - assets/audio/music/
     - assets/audio/sfx/
     - assets/brand/
+    - assets/legal/
   fonts:
     - family: Outfit
       fonts:

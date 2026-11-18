@@ -69,6 +69,15 @@ void main() {
     expect(service.buys, 1);
   });
 
+  testWidgets('fine print links to the terms and refund policy', (tester) async {
+    await pump(tester, const StoreReady(r'$1.99'));
+    await tester.scrollUntilVisible(find.text('Refund policy'), 200);
+    expect(find.text('Terms of use'), findsOneWidget);
+    await tester.tap(find.text('Refund policy'));
+    await tester.pumpAndSettle();
+    expect(find.text('route:/legal/refund'), findsOneWidget);
+  });
+
   testWidgets('not available yet: calm card, no price, restore still offered', (tester) async {
     await pump(tester, const StoreProductMissing());
     expect(find.text('Not available yet'), findsOneWidget);

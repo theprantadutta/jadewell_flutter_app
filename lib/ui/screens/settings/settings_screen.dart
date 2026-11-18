@@ -1,10 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../data/models/settings.dart';
 import '../../../platform/analytics/analytics_service.dart';
@@ -16,16 +15,13 @@ import '../../../state/social_providers.dart';
 import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
-import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
+import '../legal/legal_screen.dart';
 import 'screen_chrome.dart';
 
-/// Privacy policy (opened in the browser once url_launcher is added).
-const kPrivacyPolicyUrl = 'https://jadewell.pranta.dev/privacy';
-
-/// Settings (screen 15): feedback, display and account groups. Every change
+/// Settings (screen 15): feedback, display, account and legal groups. Every change
 /// persists through [SettingsController.change] and logs `settings_changed`
 /// with the setting's name only.
 class SettingsScreen extends ConsumerWidget {
@@ -185,31 +181,52 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.push(AppRoutes.store),
               ),
               JwListRow(
-                icon: JwIcons.shield,
-                badgeFill: JwFill.sky,
-                title: l.settingsPrivacy,
-                chevron: true,
-                onHaptic: haptic,
-                onTap: () => _openPrivacy(context),
-              ),
-              // UMP decides whether a privacy options entry point is required
-              // (e.g. EEA/UK); elsewhere the row would open nothing.
-              if (ads.privacyOptionsRequired)
-                JwListRow(
-                  icon: JwIcons.eye,
-                badgeFill: JwFill.sky,
-                  title: l.settingsAdPrivacy,
-                  chevron: true,
-                  onHaptic: haptic,
-                  onTap: () => unawaited(ads.showPrivacyOptions()),
-                ),
-              JwListRow(
                 icon: JwIcons.trash,
                 title: l.settingsResetProgress,
                 destructive: true,
                 onHaptic: haptic,
                 onTap: () => _confirmReset(context, ref),
               ),
+            ],
+          ),
+          JwEyebrow(l.settingsGroupLegal),
+          JwListGroup(
+            children: [
+              JwListRow(
+                icon: JwIcons.shield,
+                badgeFill: JwFill.sky,
+                title: l.legalPrivacy,
+                chevron: true,
+                onHaptic: haptic,
+                onTap: () => context.push(AppRoutes.legal(LegalDoc.privacy)),
+              ),
+              JwListRow(
+                icon: JwIcons.text,
+                badgeFill: JwFill.purple,
+                title: l.legalTerms,
+                chevron: true,
+                onHaptic: haptic,
+                onTap: () => context.push(AppRoutes.legal(LegalDoc.terms)),
+              ),
+              JwListRow(
+                icon: JwIcons.bag,
+                badgeFill: JwFill.yellow,
+                title: l.legalRefund,
+                chevron: true,
+                onHaptic: haptic,
+                onTap: () => context.push(AppRoutes.legal(LegalDoc.refund)),
+              ),
+              // UMP decides whether a privacy options entry point is required
+              // (e.g. EEA/UK); elsewhere the row would open nothing.
+              if (ads.privacyOptionsRequired)
+                JwListRow(
+                  icon: JwIcons.eye,
+                  badgeFill: JwFill.sky,
+                  title: l.settingsAdPrivacy,
+                  chevron: true,
+                  onHaptic: haptic,
+                  onTap: () => unawaited(ads.showPrivacyOptions()),
+                ),
             ],
           ),
           const SizedBox(height: 26),
@@ -261,63 +278,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// Opens the policy in the browser; falls back to a sheet with the URL.
-  Future<void> _openPrivacy(BuildContext context) async {
-    var opened = false;
-    try {
-      opened = await launchUrl(Uri.parse(kPrivacyPolicyUrl), mode: LaunchMode.externalApplication);
-    } on Object {
-      opened = false;
-    }
-    if (!opened && context.mounted) await _showPrivacy(context);
-  }
-
-  Future<void> _showPrivacy(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return showJwSheet<void>(
-      context,
-      semanticLabel: l.privacyTitle,
-      builder: (ctx) {
-        final jw = ctx.jw;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Center(child: IconBadge(icon: JwIcons.shield, fill: JwFill.sky, size: 60)),
-            const SizedBox(height: 14),
-            Text(l.privacyTitle, style: jw.text.h3.copyWith(fontSize: 21), textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text(l.privacyBody, style: jw.text.body.copyWith(color: jw.textMuted), textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            DecoratedBox(
-              decoration: jw.clay(ClayLevel.sunken, radius: 18),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: SelectableText(
-                  kPrivacyPolicyUrl,
-                  textAlign: TextAlign.center,
-                  style: jw.text.numM.copyWith(fontSize: 14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            JwButton.primary(
-              label: l.commonCopyLink,
-              icon: JwIcons.check,
-              expand: true,
-              onPressed: () async {
-                await Clipboard.setData(const ClipboardData(text: kPrivacyPolicyUrl));
-                if (!ctx.mounted) return;
-                Navigator.of(ctx).pop();
-                showJwToast(context, l.commonLinkCopied);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
     final l = AppLocalizations.of(context);
     final ok = await showJwConfirm(
@@ -336,26 +296,69 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _Footer extends StatelessWidget {
+class _Footer extends StatefulWidget {
   const _Footer({required this.version});
 
   final String? version;
 
   @override
+  State<_Footer> createState() => _FooterState();
+}
+
+class _FooterState extends State<_Footer> {
+  late final _mail = TapGestureRecognizer()
+    ..onTap = () => openExternalLink(context, Uri(scheme: 'mailto', path: kContactEmail));
+
+  @override
+  void dispose() {
+    _mail.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final jw = context.jw;
+    final l = AppLocalizations.of(context);
     final muted = jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w400, color: jw.textMuted);
-    return Center(
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: '${AppLocalizations.of(context).appName} '),
-            if (version != null) TextSpan(text: version, style: jw.text.numM.copyWith(fontSize: 14.5, color: jw.textMuted)),
-            const TextSpan(text: ' · pranta.dev'),
-          ],
+    final version = widget.version;
+    final contact = l.legalContact(kContactEmail);
+    final at = contact.indexOf(kContactEmail);
+    return Column(
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: '${l.appName} '),
+              if (version != null) TextSpan(text: version, style: jw.text.numM.copyWith(fontSize: 14.5, color: jw.textMuted)),
+              const TextSpan(text: ' · pranta.dev'),
+            ],
+          ),
+          style: muted,
+          textAlign: TextAlign.center,
         ),
-        style: muted,
-      ),
+        const SizedBox(height: 6),
+        Text.rich(
+          TextSpan(
+            children: [
+              if (at > 0) TextSpan(text: contact.substring(0, at)),
+              TextSpan(
+                text: kContactEmail,
+                recognizer: _mail,
+                style: TextStyle(
+                  color: jw.purpleText,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                  decorationColor: jw.purpleText,
+                ),
+              ),
+              if (at >= 0 && at + kContactEmail.length < contact.length)
+                TextSpan(text: contact.substring(at + kContactEmail.length)),
+            ],
+          ),
+          style: muted,
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

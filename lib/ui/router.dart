@@ -10,6 +10,7 @@ import 'screens/friends/friends_screen.dart';
 import 'screens/game/game_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
+import 'screens/legal/legal_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/splash/splash_screen.dart';
@@ -32,6 +33,7 @@ abstract final class AppRoutes {
   static const store = '/store';
   static const account = '/account';
   static const friends = '/friends';
+  static String legal(LegalDoc doc) => '/legal/${doc.name}';
   static const devGallery = '/dev/gallery';
 }
 
@@ -71,6 +73,11 @@ GoRouter createAppRouter({List<NavigatorObserver> observers = const []}) => GoRo
         GoRoute(path: AppRoutes.store, name: 'store', builder: (_, _) => const StoreScreen()),
         GoRoute(path: AppRoutes.account, name: 'account', builder: (_, _) => const AccountScreen()),
         GoRoute(path: AppRoutes.friends, name: 'friends', builder: (_, _) => const FriendsScreen()),
+        GoRoute(
+          path: '/legal/:doc',
+          name: 'legal',
+          builder: (_, s) => LegalScreen(doc: LegalDoc.fromName(s.pathParameters['doc'])),
+        ),
         if (kDebugMode)
           GoRoute(path: AppRoutes.devGallery, name: 'devGallery', builder: (_, _) => const DevGalleryScreen()),
       ],

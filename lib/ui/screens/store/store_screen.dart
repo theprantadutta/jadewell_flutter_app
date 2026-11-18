@@ -14,6 +14,7 @@ import '../../theme/jw_background.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
+import '../legal/legal_screen.dart';
 import '../settings/screen_chrome.dart';
 import 'store_controller.dart';
 
@@ -178,6 +179,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                           textAlign: TextAlign.center,
                           style: jw.text.caption.copyWith(fontSize: 13.5, fontWeight: FontWeight.w400),
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: LegalLinks(docs: const [LegalDoc.terms, LegalDoc.refund], onHaptic: haptic),
                       ),
                     ],
                   ),

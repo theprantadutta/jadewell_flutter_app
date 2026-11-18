@@ -66,7 +66,27 @@ void main() {
     expect(find.text('Account'), findsWidgets);
     expect(find.text('Guest'), findsOneWidget);
     expect(find.text(r'$1.99'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Ad privacy choices'), 200);
+    expect(find.text('LEGAL'), findsOneWidget);
     expect(find.text('Ad privacy choices'), findsOneWidget);
+  });
+
+  for (final (label, route) in [
+    ('Privacy policy', '/legal/privacy'),
+    ('Terms of use', '/legal/terms'),
+    ('Refund policy', '/legal/refund'),
+  ]) {
+    testWidgets('legal: $label opens the in-app document', (tester) async {
+      await pump(tester, size: const Size(390, 1600));
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+      expect(find.text('route:$route'), findsOneWidget);
+    });
+  }
+
+  testWidgets('footer has the contact email', (tester) async {
+    await pump(tester, size: const Size(390, 1600));
+    expect(find.textContaining('Contact: prantadutta1997@gmail.com', findRichText: true), findsOneWidget);
   });
 
   testWidgets('toggles persist, reach the services and log the setting name', (tester) async {
