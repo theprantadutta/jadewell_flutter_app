@@ -256,7 +256,8 @@ class YouRow extends StatelessWidget {
                 dimension: 40,
                 child: Center(
                   child: Text(
-                    l.leaderboardYou.characters.first.toUpperCase(),
+                    // The player's own initial, not the "You" label's.
+                    (e.displayName.trim().isEmpty ? l.leaderboardYou : e.displayName.trim()).characters.first.toUpperCase(),
                     style: jw.text.callout.copyWith(fontSize: 16, fontWeight: FontWeight.w700, color: fill.edge),
                   ),
                 ),

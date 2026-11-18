@@ -111,6 +111,7 @@ class SettingsScreen extends ConsumerWidget {
                 badgeFill: JwFill.purple,
                 title: l.settingsTheme,
                 below: BadgeTabs<ThemePreference>(
+                  inset: true,
                   tabs: {
                     ThemePreference.light: BadgeTab(label: l.settingsThemeLight, icon: JwIcons.sun, fill: JwFill.yellow),
                     ThemePreference.dark: BadgeTab(label: l.settingsThemeDark, icon: JwIcons.moon, fill: JwFill.purple),

@@ -30,6 +30,7 @@ class BadgeTabs<T> extends StatelessWidget {
     this.onHaptic,
     this.reduceMotion,
     this.gap = 10,
+    this.inset = false,
   });
 
   /// Value → tab, in display order.
@@ -39,6 +40,11 @@ class BadgeTabs<T> extends StatelessWidget {
   final VoidCallback? onHaptic;
   final bool? reduceMotion;
   final double gap;
+
+  /// Unselected cards sit sunken instead of at chip elevation. Use it when
+  /// the tabs live inside a raised white card (Settings), where white chips
+  /// would vanish into the card.
+  final bool inset;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +57,7 @@ class BadgeTabs<T> extends StatelessWidget {
             child: _BadgeTabCard(
               tab: tabs[keys[i]]!,
               selected: keys[i] == selected,
+              inset: inset,
               reduceMotion: reduceMotion,
               onTap: onChanged == null ? null : () => _pick(keys[i]),
             ),
@@ -68,10 +75,11 @@ class BadgeTabs<T> extends StatelessWidget {
 }
 
 class _BadgeTabCard extends StatelessWidget {
-  const _BadgeTabCard({required this.tab, required this.selected, required this.onTap, this.reduceMotion});
+  const _BadgeTabCard({required this.tab, required this.selected, required this.onTap, required this.inset, this.reduceMotion});
 
   final BadgeTab tab;
   final bool selected;
+  final bool inset;
   final VoidCallback? onTap;
   final bool? reduceMotion;
 
@@ -108,7 +116,7 @@ class _BadgeTabCard extends StatelessWidget {
           duration: duration,
           curve: JwMotion.springPop,
           child: DecoratedBox(
-            decoration: jw.clay(selected ? ClayLevel.raised : ClayLevel.chip, radius: _radius),
+            decoration: jw.clay(selected ? ClayLevel.raised : (inset ? ClayLevel.sunken : ClayLevel.chip), radius: _radius),
             child: AnimatedContainer(
               duration: duration,
               curve: JwMotion.standard,
