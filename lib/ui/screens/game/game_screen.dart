@@ -495,7 +495,7 @@ class _CountersRow extends ConsumerWidget {
               const SizedBox(width: 10),
               GameCounterChip(
                 value: paused ? '–' : '$pairs',
-                label: l.gamePairsOpenLabel,
+                label: l.gamePairsOpenLabel(paused ? 0 : pairs),
                 icon: JwIcons.pairs,
                 fill: JwFill.pink,
               ),
