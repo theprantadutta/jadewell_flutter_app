@@ -186,7 +186,7 @@
   "accountProviderApple": "Apple",
   "accountProviderEmail": "Email",
   "accountKeepProgress": "Keep your progress",
-  "accountGuestExplainer": "Your progress is saved on this device. Link an account to keep it safe and play on other devices.",
+  "accountGuestExplainer": "Your progress is saved on this device. Link an account to keep your name, friends and leaderboard results.",
   "accountContinueGoogle": "Continue with Google",
   "accountContinueApple": "Continue with Apple",
   "accountContinueEmail": "Continue with email",
