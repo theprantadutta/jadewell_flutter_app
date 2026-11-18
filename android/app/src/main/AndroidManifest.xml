@@ -2,6 +2,11 @@
     <!-- Advertising ID for AdMob (Android 13+). Consent and Remove ads are
          enforced in AdServiceImpl, not here. -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    <!-- The activity is locked to portrait, which makes Play treat the portrait
+         screen as a required feature and hide the app from devices that don't
+         report it (some tablets, Chromebooks, Play Games on PC, Android XR).
+         The lock still applies; the feature just isn't required to install. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
     <application
         android:label="Jadewell"
         android:name="${applicationName}"
