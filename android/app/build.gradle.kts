@@ -18,6 +18,16 @@ val adsProperties = Properties().apply {
     val file = rootProject.file("ads.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
+// Release signing from the gitignored android/key.properties (storeFile points
+// at C:/android-keys/jadewell/upload-keystore.jks; docs/RELEASE_SIGNING.md).
+// Without it, release builds fall back to the debug key so `flutter run
+// --release` still works locally, and `requireReleaseKey` fails a store build.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val hasReleaseKey = keystoreProperties.getProperty("storeFile")?.let { file(it).exists() } == true
+
 val admobAppId: String = adsProperties.getProperty("admobAppId")?.takeIf { it.isNotBlank() }
     ?: "ca-app-pub-3940256099942544~3347511713"
 
@@ -34,7 +44,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.pranta.jadewell"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -49,11 +58,28 @@ android {
         manifestPlaceholders["admobAppId"] = admobAppId
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                // `-PrequireReleaseKey` (used for store builds) refuses to fall back.
+                if (project.hasProperty("requireReleaseKey")) {
+                    throw GradleException("android/key.properties is missing or its storeFile doesn't exist (docs/RELEASE_SIGNING.md)")
+                }
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
