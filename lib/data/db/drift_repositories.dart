@@ -199,6 +199,13 @@ class DriftProgressRepository implements ProgressRepository {
         await _db.dailyDao.wipe();
         await _db.outboxDao.enqueue(SyncKind.reset, SyncPayloads.reset(now), now: now);
       });
+
+  @override
+  Future<void> wipeForDeletedAccount() => _db.transaction(() async {
+        await _db.progressDao.wipe();
+        await _db.dailyDao.wipe();
+        await _db.outboxDao.wipe();
+      });
 }
 
 class DriftStatsRepository implements StatsRepository {

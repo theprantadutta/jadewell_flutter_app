@@ -144,6 +144,15 @@ class FakeSession extends SessionController {
   Future<void> signInWithEmail(String email, String password) async => calls.add('signInWithEmail');
   @override
   Future<void> signOut() async => calls.add('signOut');
+
+  /// What [deleteAccount] returns.
+  DeleteAccountOutcome deleteOutcome = DeleteAccountOutcome.deleted;
+
+  @override
+  Future<DeleteAccountOutcome> deleteAccount() async {
+    calls.add('deleteAccount');
+    return deleteOutcome;
+  }
 }
 
 /// In-memory social backend; a non-null [failWith] makes reads fail.

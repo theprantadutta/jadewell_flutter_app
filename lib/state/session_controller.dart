@@ -7,6 +7,8 @@ import '../data/api/api_result.dart';
 import '../data/api/auth_api.dart';
 import '../platform/auth/auth_service.dart';
 import 'app_providers.dart';
+import 'data_providers.dart';
+import 'entitlement_providers.dart';
 
 /// The player's backend session. Offline-first: the app works without it;
 /// it is established opportunistically and retried on demand.
@@ -24,6 +26,21 @@ class BackendSession {
   final ApiFailure? lastFailure;
 
   bool get isOnline => user != null && lastFailure == null;
+}
+
+/// How Settings > Account > Delete account ended.
+enum DeleteAccountOutcome {
+  /// Server account gone, device wiped, a fresh guest started.
+  deleted,
+
+  /// The player backed out (the Apple re-authentication sheet); nothing changed.
+  cancelled,
+
+  /// No connection; nothing changed.
+  offline,
+
+  /// The server refused or failed; nothing changed.
+  failed,
 }
 
 final sessionProvider = AsyncNotifierProvider<SessionController, BackendSession>(SessionController.new);
@@ -127,6 +144,61 @@ class SessionController extends AsyncNotifier<BackendSession> {
   Future<void> signInWithEmail(String email, String password) =>
       _afterAuth(() => _auth.signInWithEmailPassword(email: email, password: password));
   Future<void> signOut() => _afterAuth(_auth.signOutToGuest);
+
+  /// Settings > Account > Delete account (PRIVACY.md §9). Deletes the
+  /// server account first; only when that succeeded is the device wiped
+  /// (progress, saved games, results, daily entries, streak, the unsent
+  /// outbox, the local entitlement; device settings stay), the player signed
+  /// out of Google/Apple/Firebase and a fresh guest started, as on sign-out.
+  /// Any failure before the server confirms leaves everything as it was.
+  ///
+  /// Pending store verifications (SharedPreferences) are deliberately kept:
+  /// they belong to the store purchase, not to the account, and dropping one
+  /// could miss Google Play's 3-day acknowledgement (an automatic refund).
+  /// They verify again under the new guest.
+  Future<DeleteAccountOutcome> deleteAccount() async {
+    try {
+      await _auth.prepareAccountDeletion();
+    } on AuthException catch (e) {
+      debugPrint('session: delete account stopped before the server (${e.kind.name})');
+      return switch (e.kind) {
+        AuthErrorKind.cancelled => DeleteAccountOutcome.cancelled,
+        AuthErrorKind.network => DeleteAccountOutcome.offline,
+        _ => DeleteAccountOutcome.failed,
+      };
+    }
+
+    final api = ref.read(authApiProvider);
+    var result = await api.deleteAccount();
+    if (result.failure == ApiFailure.unauthorized) {
+      // The JWT expired: re-mint it once and retry.
+      await ensureBackendSession(force: true);
+      result = await api.deleteAccount();
+    }
+    if (!result.isSuccess && !AuthApi.isAccountGone(result)) {
+      debugPrint('session: delete account failed (${result.failure!.name}, ${result.statusCode})');
+      return switch (result.failure!) {
+        ApiFailure.offlineOrTransport || ApiFailure.timeout => DeleteAccountOutcome.offline,
+        _ => DeleteAccountOutcome.failed,
+      };
+    }
+
+    // The server account is gone. Wipe the device before the new guest gets
+    // a session, so nothing in the outbox can reach the new account.
+    await ref.read(progressRepositoryProvider).wipeForDeletedAccount();
+    await ref.read(entitlementRepositoryProvider).clear();
+    await ref.read(sessionStoreProvider).clear();
+    _exchangedUid = null;
+    try {
+      await _auth.signOutToGuest();
+      await ensureBackendSession(force: true);
+    } on Object catch (e) {
+      // Deleted all the same; the guest session is retried on the next launch
+      // or from the Account screen.
+      debugPrint('session: new guest after deletion failed ($e)');
+    }
+    return DeleteAccountOutcome.deleted;
+  }
 
   Future<void> _afterAuth(Future<AuthIdentity> Function() action) async {
     await action(); // AuthException propagates to the UI

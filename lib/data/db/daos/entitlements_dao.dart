@@ -24,4 +24,7 @@ class EntitlementsDao extends DatabaseAccessor<AppDatabase> with _$EntitlementsD
           verifiedAt: Value(verifiedAt),
         ),
       );
+
+  /// Account deletion: no local entitlement at all.
+  Future<void> clear() => delete(entitlementsTable).go();
 }

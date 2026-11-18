@@ -63,4 +63,15 @@ abstract interface class AuthService {
 
   /// Signs out and immediately starts a fresh guest session.
   Future<AuthIdentity> signOutToGuest();
+
+  /// Runs just before the account is deleted on the server. On iOS, when the
+  /// account is linked to Sign in with Apple, re-authenticates with Apple for
+  /// a fresh authorization code and revokes the user's Apple tokens (App
+  /// Store guideline 5.1.1(v)). A no-op everywhere else. Throws
+  /// [AuthException]; [AuthErrorKind.cancelled] when the player backs out of
+  /// the Apple sheet, in which case nothing may be deleted.
+  ///
+  /// The Firebase user itself is deleted by the backend (Admin SDK), so no
+  /// client-side `User.delete()` (and its recent-login requirement) is needed.
+  Future<void> prepareAccountDeletion();
 }

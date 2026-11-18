@@ -76,6 +76,9 @@ class OutboxDao extends DatabaseAccessor<AppDatabase> with _$OutboxDaoMixin {
         SyncOutboxTableCompanion(attempts: Value(row.attempts + 1), nextAttemptAt: Value(nextAttemptAt)),
       );
 
+  /// Account deletion: everything unsent belongs to the deleted account.
+  Future<void> wipe() => delete(syncOutboxTable).go();
+
   /// Postpones without counting an attempt (endpoint missing, signed out).
   Future<void> defer(Iterable<String> ids, DateTime nextAttemptAt) =>
       (update(syncOutboxTable)..where((t) => t.id.isIn(ids)))

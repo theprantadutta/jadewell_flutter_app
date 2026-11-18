@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../data/api/api_result.dart';
@@ -14,10 +15,12 @@ import '../../../state/platform_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../router.dart';
 import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
+import '../legal/legal_screen.dart';
 import '../settings/screen_chrome.dart';
 import 'email_sheet.dart';
 
@@ -80,6 +83,7 @@ class AccountScreen extends ConsumerStatefulWidget {
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   AccountMethod? _busy;
   bool _signingOut = false;
+  bool _deleting = false;
 
   /// Shown until the session's profile catches up after a rename.
   String? _nameOverride;
@@ -191,6 +195,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               onPressed: _signOut,
             ),
           ],
+          const SizedBox(height: 10),
+          LegalLinks(docs: const [LegalDoc.privacy], onHaptic: haptic),
+          const SizedBox(height: 16),
+          JwListGroup(
+            children: [
+              JwListRow(
+                key: const ValueKey('account-delete'),
+                icon: JwIcons.trash,
+                title: l.accountDelete,
+                destructive: true,
+                onHaptic: haptic,
+                onTap: _deleting ? null : () => _deleteAccount(isGuest: isGuest),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -296,6 +315,52 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     }
   }
 
+  /// Settings > Account > Delete account (PRIVACY.md §9): confirm, delete
+  /// on the server, then the device is wiped and a fresh guest starts.
+  Future<void> _deleteAccount({required bool isGuest}) async {
+    final l = AppLocalizations.of(context);
+    final jw = context.jw;
+    final ok = await showDeleteAccountConfirm(context, signedIn: !isGuest);
+    if (!ok || !mounted) return;
+    setState(() => _deleting = true);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    unawaited(showJwDialog<void>(
+      context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: JwDialog(
+          leading: SizedBox.square(
+            dimension: 40,
+            child: CircularProgressIndicator(strokeWidth: 3, color: ctx.jw.danger),
+          ),
+          title: l.accountDeleting,
+        ),
+      ),
+    ));
+    DeleteAccountOutcome outcome;
+    try {
+      outcome = await ref.read(sessionProvider.notifier).deleteAccount();
+    } on Object {
+      outcome = DeleteAccountOutcome.failed;
+    }
+    navigator.pop();
+    if (!mounted) return;
+    setState(() => _deleting = false);
+    switch (outcome) {
+      case DeleteAccountOutcome.deleted:
+        ref.read(hapticsProvider).success();
+        context.go(AppRoutes.home);
+        showJwToast(context, l.accountDeletedToast);
+      case DeleteAccountOutcome.cancelled:
+        break;
+      case DeleteAccountOutcome.offline:
+        showJwToast(context, l.commonOffline, beadColor: jw.danger);
+      case DeleteAccountOutcome.failed:
+        showJwToast(context, l.accountDeleteFailed, beadColor: jw.danger);
+    }
+  }
+
   Future<void> _editName(BackendUser user) async {
     final saved = await showJwSheet<BackendUser>(
       context,
@@ -309,6 +374,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     // picks the new name up.
     unawaited(ref.read(sessionProvider.notifier).refreshProfile());
   }
+}
+
+/// "Delete your account?" with a 64 pt danger badge; true only on Delete.
+/// [signedIn] adds the note that Remove ads comes back with Restore.
+Future<bool> showDeleteAccountConfirm(BuildContext context, {required bool signedIn}) {
+  final l = AppLocalizations.of(context);
+  return showJwConfirm(
+    context,
+    title: l.accountDeleteTitle,
+    body: signedIn ? '${l.accountDeleteBody}\n\n${l.accountDeleteRestoreNote}' : l.accountDeleteBody,
+    confirmLabel: l.accountDeleteConfirm,
+    cancelLabel: l.commonCancel,
+    destructive: true,
+    leading: JwIconWell(icon: JwIcons.trash, color: context.jw.danger, size: 64),
+  );
 }
 
 // ---- profile card ----

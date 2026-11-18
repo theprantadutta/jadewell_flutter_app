@@ -104,6 +104,63 @@ void main() {
     expect(fake.calls, contains('signOut'));
   });
 
+  testWidgets('privacy policy link opens the in-app document', (tester) async {
+    await pump(tester, const BackendSession(identity: guestIdentity, user: testUser));
+    await tester.scrollUntilVisible(find.text('Privacy policy'), 200);
+    await tester.tap(find.text('Privacy policy'));
+    await tester.pumpAndSettle();
+    expect(find.text('route:/legal/privacy'), findsOneWidget);
+  });
+
+  group('delete account', () {
+    Future<void> openDialog(WidgetTester tester) async {
+      await tester.scrollUntilVisible(find.text('Delete account'), 200);
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('guest: confirm explains what goes, no Restore note; Cancel keeps everything', (tester) async {
+      final fake = await pump(tester, const BackendSession(identity: guestIdentity, user: testUser));
+      await openDialog(tester);
+      expect(find.text('Delete your account?'), findsOneWidget);
+      expect(find.textContaining('profile, results, friends, leaderboard entries and sign-in'), findsOneWidget);
+      expect(find.textContaining("can't be undone"), findsOneWidget);
+      expect(find.textContaining('Restore'), findsNothing);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(fake.calls, isNot(contains('deleteAccount')));
+    });
+
+    testWidgets('signed in: mentions Restore; Delete deletes, goes home and confirms', (tester) async {
+      final fake = await pump(tester, const BackendSession(identity: googleIdentity, user: testUser));
+      await openDialog(tester);
+      expect(find.textContaining('use Restore on the Remove ads screen'), findsOneWidget);
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(fake.calls, contains('deleteAccount'));
+      expect(find.text('route:/home'), findsOneWidget);
+      expect(find.text('Your account was deleted'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    for (final (outcome, toast) in [
+      (DeleteAccountOutcome.offline, "You're offline. Check your connection and try again."),
+      (DeleteAccountOutcome.failed, "Your account couldn't be deleted. Please try again."),
+    ]) {
+      testWidgets('${outcome.name}: stays on the account screen with an error toast', (tester) async {
+        final fake = await pump(tester, const BackendSession(identity: guestIdentity, user: testUser));
+        fake.deleteOutcome = outcome;
+        await openDialog(tester);
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
+        expect(find.text('route:/home'), findsNothing);
+        expect(find.text('Account'), findsOneWidget);
+        expect(find.text(toast), findsOneWidget);
+        await tester.pump(const Duration(seconds: 3));
+      });
+    }
+  });
+
   testWidgets('offline without a backend profile still renders', (tester) async {
     await pump(tester, const BackendSession(identity: guestIdentity));
     expect(find.text('Guest'), findsOneWidget);
@@ -138,6 +195,15 @@ void main() {
         await tester.tap(find.bySemanticsLabel('Edit profile'));
         await tester.pumpAndSettle();
         await expectNoOverflow(tester);
+        // The delete confirmation, with the Restore note (signed in, the longest).
+        await resetApp(tester);
+        await pump(tester, sessions['linked']!, size: size.value);
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('Delete account'), 200);
+        await tester.tap(find.text('Delete account'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete your account?'), findsOneWidget);
+        expect(tester.takeException(), isNull);
       });
     }
   }
@@ -152,6 +218,13 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Edit profile'));
       await tester.pumpAndSettle();
       await maybeShot(tester, 'account_edit_${b.name}');
+      await resetApp(tester);
+      await pump(tester, sessions['linked']!, brightness: b, size: const Size(390, 1000));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Delete account'), 200);
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await maybeShot(tester, 'account_delete_${b.name}');
     });
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_service.dart';
@@ -92,6 +93,24 @@ class FirebaseAuthServiceImpl implements AuthService {
     }
     await _auth.signOut();
     return ensureSignedIn();
+  }
+
+  @override
+  Future<void> prepareAccountDeletion() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    // AdditionalUserInfo.authorizationCode is only filled by the native
+    // Apple flow on iOS; Android never offers Sign in with Apple.
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    if (!user.providerData.any((p) => p.providerId == 'apple.com')) return;
+    try {
+      final credential = await user.reauthenticateWithProvider(_appleProvider());
+      final code = credential.additionalUserInfo?.authorizationCode;
+      if (code == null || code.isEmpty) throw const AuthException(AuthErrorKind.unknown, 'no-authorization-code');
+      await _auth.revokeTokenWithAuthorizationCode(code);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_kind(e.code), e.code);
+    }
   }
 
   // ---- helpers ----

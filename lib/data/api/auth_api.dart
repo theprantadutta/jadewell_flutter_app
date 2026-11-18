@@ -95,6 +95,20 @@ class AuthApi {
         (j) => (available: j['available'] as bool, reason: j['reason'] as String?),
       );
 
+  /// `DELETE /auth/me`: permanently deletes the account and everything
+  /// linked to it on the server (204). A 404 [isAccountGone] means it was
+  /// already deleted (e.g. a retry after a lost response).
+  Future<ApiResult<void>> deleteAccount() async {
+    final r = await _client.delete('/auth/me');
+    return r.isSuccess
+        ? ApiResult<void>.success(null, statusCode: r.statusCode)
+        : ApiResult.failed(r.failure!, statusCode: r.statusCode, message: r.message);
+  }
+
+  /// The backend's "this account no longer exists" answer to an
+  /// authenticated call (its JWT outlived the account).
+  static bool isAccountGone(ApiResult<Object?> r) => r.statusCode == 404 && r.message == 'User not found';
+
   static ApiResult<T> _parse<T>(ApiResult<Map<String, dynamic>> r, T Function(Map<String, dynamic>) f) {
     if (!r.isSuccess) return ApiResult.failed(r.failure!, statusCode: r.statusCode, message: r.message);
     try {

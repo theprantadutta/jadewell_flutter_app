@@ -52,6 +52,10 @@ abstract interface class EntitlementRepository {
   /// only if the local grant was itself server-verified; a store-confirmed
   /// grant still waiting for verification is kept (it verifies later).
   Future<void> mergeServer({required bool removeAds, required DateTime at});
+
+  /// Account deletion: forgets the local entitlement. A store-owned Remove
+  /// ads comes back through Restore (or the next store reconcile).
+  Future<void> clear();
 }
 
 /// Shared merge rule for both implementations.
@@ -95,6 +99,9 @@ class DriftEntitlementRepository implements EntitlementRepository {
   @override
   Future<void> mergeServer({required bool removeAds, required DateTime at}) =>
       _merge(this, removeAds: removeAds, at: at);
+
+  @override
+  Future<void> clear() => _dao.clear();
 }
 
 /// In-memory (tests, previews).
@@ -132,4 +139,7 @@ class MemoryEntitlementRepository implements EntitlementRepository {
   @override
   Future<void> mergeServer({required bool removeAds, required DateTime at}) =>
       _merge(this, removeAds: removeAds, at: at);
+
+  @override
+  Future<void> clear() async => _set(Entitlement.none);
 }

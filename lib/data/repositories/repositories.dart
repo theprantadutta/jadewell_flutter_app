@@ -36,6 +36,13 @@ abstract interface class ProgressRepository {
 
   /// Settings → Reset progress.
   Future<void> resetAll();
+
+  /// Account deletion (PRIVACY.md §9): wipes everything this account left on
+  /// the device (progress, saved games, results, daily entries, streak) and
+  /// drops the unsent sync outbox so none of it reaches the next account.
+  /// Unlike [resetAll] nothing is queued for the server (it's already gone).
+  /// Device settings (theme, sound, …) are kept.
+  Future<void> wipeForDeletedAccount();
 }
 
 abstract interface class StatsRepository {

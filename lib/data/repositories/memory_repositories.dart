@@ -117,6 +117,9 @@ class MemoryProgressRepository implements ProgressRepository, StatsRepository {
   }
 
   @override
+  Future<void> wipeForDeletedAccount() => resetAll();
+
+  @override
   Stream<PlayerStats> watch() async* {
     PlayerStats compute() => PlayerStats(
           gamesPlayed: results.length,

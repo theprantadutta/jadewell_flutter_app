@@ -400,12 +400,13 @@ Future<T?> showJwSheet<T>(BuildContext context, {required WidgetBuilder builder,
 }
 
 /// Centred clay dialog with a fading scrim; [builder] returns a [JwDialog].
-Future<T?> showJwDialog<T>(BuildContext context, {required WidgetBuilder builder}) {
+/// [barrierDismissible] false keeps it up until the caller pops it (progress).
+Future<T?> showJwDialog<T>(BuildContext context, {required WidgetBuilder builder, bool barrierDismissible = true}) {
   final jw = context.jw;
   final reduce = JwReduceMotion.of(context);
   return showGeneralDialog<T>(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: barrierDismissible,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: jw.scrim,
     transitionDuration: reduce ? const Duration(milliseconds: 150) : JwMotion.base,

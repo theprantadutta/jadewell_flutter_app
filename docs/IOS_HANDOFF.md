@@ -35,6 +35,40 @@ All iOS code and config is written on Windows; building, signing and testing hap
 - [ ] Optional: a StoreKit configuration file (`Products.storekit`) with `com.pranta.jadewell.remove_ads` selected in the Run scheme to test purchases on the simulator without App Store Connect
 - [ ] Device test with a Sandbox account: Store shows the localized price; Buy → "Verifying…" → celebration; delete + reinstall → Restore (top right of the Remove ads screen) brings it back; with the product missing or StoreKit unavailable the screen shows "Not available yet" and nothing crashes
 
+## Account deletion: Sign in with Apple token revocation (App Store 5.1.1(v))
+
+Settings > Account > Delete account calls `AuthService.prepareAccountDeletion()`
+before `DELETE /api/v1/auth/me`. On iOS, when the Firebase user has the
+`apple.com` provider, `FirebaseAuthServiceImpl` re-authenticates with
+`AppleAuthProvider` (`user.reauthenticateWithProvider`), takes
+`credential.additionalUserInfo.authorizationCode` and calls
+`FirebaseAuth.instance.revokeTokenWithAuthorizationCode(code)`. Backing out of the
+Apple sheet cancels the whole deletion (nothing is deleted). Android and
+non-Apple accounts skip this. Firebase's own user is deleted server-side (Admin
+SDK), so there is no client `user.delete()`. Written blind (no iOS device on
+Windows); verify on the Mac:
+
+- [ ] Firebase console > Authentication > Sign-in method > Apple: the **Services ID,
+      Apple Team ID, Key ID and private key (.p8)** are filled in. Token revocation
+      needs them (without the key `revokeTokenWithAuthorizationCode` fails with
+      `invalid-credential` / "missing client secret"); the native iOS sign-in itself
+      works without them, so a working sign-in proves nothing here
+- [ ] On an iPhone with a Sandbox/real Apple ID: Settings > Account > Continue with
+      Apple (links the guest) → Delete account → confirm → the Apple sheet appears →
+      approve → "Your account was deleted", Home shows a fresh guest with empty
+      progress. Xcode console: no `session: delete account stopped` line
+- [ ] Revocation really happened: iOS Settings > [your name] > Sign-In & Security >
+      Sign in with Apple: **Jadewell is no longer listed** (may take a minute). Signing
+      in with Apple again asks for name/email sharing from scratch
+- [ ] Cancel the Apple sheet → nothing deleted (profile still on the Account screen,
+      progress intact, no toast)
+- [ ] Backend: the user row is gone (`GET /api/v1/admin/players?query=<username>`
+      or the dashboard), and the Firebase console no longer lists the uid
+- [ ] Edge case (known gap): an account created with Apple on iOS and deleted from an
+      Android device can't revoke Apple tokens there (the authorization code only
+      comes from the native iOS flow). The server data and Firebase user are still
+      deleted; the user can remove Jadewell in iOS Settings > Sign in with Apple
+
 ## Orientation (portrait only)
 
 - `Info.plist`: iPhone portrait only; iPad portrait + upside-down with `UIRequiresFullScreen = true` (required so iPad may restrict orientation; it also opts out of Split View/Slide Over, which suits a full-screen game). Verify on an iPad that rotation stays portrait and that App Store validation accepts it.
