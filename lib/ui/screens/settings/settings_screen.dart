@@ -110,11 +110,11 @@ class SettingsScreen extends ConsumerWidget {
                 icon: JwIcons.moon,
                 badgeFill: JwFill.purple,
                 title: l.settingsTheme,
-                below: JwSegmented<ThemePreference>(
-                  segments: {
-                    ThemePreference.light: l.settingsThemeLight,
-                    ThemePreference.dark: l.settingsThemeDark,
-                    ThemePreference.system: l.settingsThemeSystem,
+                below: BadgeTabs<ThemePreference>(
+                  tabs: {
+                    ThemePreference.light: BadgeTab(label: l.settingsThemeLight, icon: JwIcons.sun, fill: JwFill.yellow),
+                    ThemePreference.dark: BadgeTab(label: l.settingsThemeDark, icon: JwIcons.moon, fill: JwFill.purple),
+                    ThemePreference.system: BadgeTab(label: l.settingsThemeSystem, icon: JwIcons.tile, fill: JwFill.sky),
                   },
                   selected: s.theme,
                   onHaptic: haptic,

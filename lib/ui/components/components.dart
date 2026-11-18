@@ -3,6 +3,7 @@
 library;
 
 export '../theme/fill.dart' show FillDecoration;
+export 'badge_tabs.dart';
 export 'counter_chip.dart';
 export 'fill_box.dart';
 export 'fill_knob.dart';

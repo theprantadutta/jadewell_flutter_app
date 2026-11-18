@@ -9,9 +9,11 @@ import '../../../data/repositories/social_repository.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../../state/social_providers.dart';
+import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
 import '../../theme/jw_theme.dart';
+import '../../theme/jw_tokens.dart';
 import '../../widgets/empty_state/jw_empty_state.dart';
 import '../../widgets/skeleton/jw_skeleton.dart';
 import '../../widgets/widgets.dart';
@@ -65,11 +67,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-            child: JwSegmented<LeaderboardKind>(
-              segments: {
-                LeaderboardKind.daily: l.leaderboardToday,
-                LeaderboardKind.weekly: l.leaderboardThisWeek,
-                LeaderboardKind.friends: l.leaderboardFriends,
+            child: BadgeTabs<LeaderboardKind>(
+              tabs: {
+                LeaderboardKind.daily: BadgeTab(label: l.leaderboardToday, icon: JwIcons.sun, fill: JwFill.yellow),
+                LeaderboardKind.weekly: BadgeTab(label: l.leaderboardThisWeek, icon: JwIcons.cal, fill: JwFill.sky),
+                LeaderboardKind.friends: BadgeTab(label: l.leaderboardFriends, icon: JwIcons.heart, fill: JwFill.mint),
               },
               selected: _tab,
               onHaptic: haptic,
