@@ -193,7 +193,7 @@
   "accountSignedInWith": "Signed in with",
   "accountSignOut": "Sign out",
   "accountSignOutTitle": "Sign out?",
-  "accountSignOutBody": "You'll continue as a new guest. Your account's progress stays safe and comes back when you sign in again.",
+  "accountSignOutBody": "You'll continue as a new guest. Your account stays on our server. Progress on this device stays here.",
   "accountLinkedToast": "Account linked. Your progress is safe",
   "accountSignedInToast": "Signed in",
   "accountInUseTitle": "Already has an account",
