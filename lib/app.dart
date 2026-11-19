@@ -6,11 +6,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:material_ui/material_ui.dart' as material_ui show GlobalMaterialLocalizations;
 
 import 'data/models/settings.dart';
+import 'platform/store_listing/store_listing_service.dart';
 import 'state/data_providers.dart';
 import 'state/platform_bridge.dart';
+import 'state/store_listing_controller.dart';
 import 'ui/demo/demo_driver.dart';
 import 'ui/l10n/generated/app_localizations.dart';
 import 'ui/router.dart';
+import 'ui/screens/settings/screen_chrome.dart' show showJwToast;
 import 'ui/theme/jw_theme.dart';
 import 'ui/widgets/reduce_motion.dart';
 
@@ -34,6 +37,14 @@ class _JadewellAppState extends ConsumerState<JadewellApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider).value ?? const AppSettings();
+    // A background (flexible) update finished downloading: say so once.
+    // Installing restarts the app, so it waits for the player's tap in Settings.
+    ref.listen(appUpdateProvider, (prev, next) {
+      final ctx = rootNavigatorKey.currentContext;
+      if (prev == UpdateState.downloading && next == UpdateState.downloaded && ctx != null) {
+        showJwToast(ctx, AppLocalizations.of(ctx).updateReadyToast);
+      }
+    });
     return MaterialApp.router(
       routerConfig: _router,
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,

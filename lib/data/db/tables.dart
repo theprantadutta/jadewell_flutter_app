@@ -21,6 +21,9 @@ class SettingsTable extends Table {
   BoolColumn get showTimer => boolean().withDefault(const Constant(true))();
   TextColumn get tileSize => textEnum<TileSizePreference>().withDefault(Constant(TileSizePreference.medium.name))();
   BoolColumn get reduceMotion => boolean().withDefault(const Constant(false))();
+
+  /// Added in schema 2.
+  BoolColumn get highRefreshRate => boolean().withDefault(const Constant(false))();
   BoolColumn get onboardingDone => boolean().withDefault(const Constant(false))();
 
   @override

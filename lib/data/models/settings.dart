@@ -12,6 +12,7 @@ class AppSettings {
     this.showTimer = true,
     this.tileSize = TileSizePreference.medium,
     this.reduceMotion = false,
+    this.highRefreshRate = false,
     this.onboardingDone = false,
   });
 
@@ -24,6 +25,11 @@ class AppSettings {
 
   /// In-app switch; the OS flag also applies (either one reduces motion).
   final bool reduceMotion;
+
+  /// Ask the display for its fastest rate (90/120 Hz) instead of the OS
+  /// default. Off by default: Jadewell is built for 60 Hz and faster costs
+  /// battery, so it is the player's choice (docs/PERFORMANCE.md).
+  final bool highRefreshRate;
   final bool onboardingDone;
 
   AppSettings copyWith({
@@ -34,6 +40,7 @@ class AppSettings {
     bool? showTimer,
     TileSizePreference? tileSize,
     bool? reduceMotion,
+    bool? highRefreshRate,
     bool? onboardingDone,
   }) =>
       AppSettings(
@@ -44,6 +51,7 @@ class AppSettings {
         showTimer: showTimer ?? this.showTimer,
         tileSize: tileSize ?? this.tileSize,
         reduceMotion: reduceMotion ?? this.reduceMotion,
+        highRefreshRate: highRefreshRate ?? this.highRefreshRate,
         onboardingDone: onboardingDone ?? this.onboardingDone,
       );
 }

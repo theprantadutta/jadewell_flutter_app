@@ -20,10 +20,12 @@ import 'platform/audio/audio_service_impl.dart';
 import 'platform/audio/soloud_engine_impl.dart';
 import 'platform/auth/auth_service_impl.dart';
 import 'platform/crash/crashlytics_impl.dart';
+import 'platform/display/display_service_impl.dart';
 import 'platform/haptics/haptic_service_impl.dart';
 import 'platform/iap/openiap_store_adapter_impl.dart';
 import 'platform/iap/pending_verifications.dart';
 import 'platform/iap/purchase_service_impl.dart';
+import 'platform/store_listing/store_listing_service_impl.dart';
 import 'state/app_providers.dart';
 import 'state/data_providers.dart';
 import 'state/entitlement_providers.dart';
@@ -75,6 +77,10 @@ Future<void> main() async {
       analyticsProvider.overrideWithValue(kReleaseMode ? FirebaseAnalyticsImpl() : DebugPrintAnalytics()),
       audioProvider.overrideWithValue(AudioServiceImpl(SoLoudAudioEngine())),
       hapticsProvider.overrideWithValue(HapticServiceImpl()),
+      displayServiceProvider.overrideWithValue(RefreshRateDisplayService()),
+      // Play in-app updates and reviews. The iOS App Store id goes here once
+      // the iOS app is listed (Rate Jadewell is hidden on iOS until then).
+      if (!kDemoMode) storeListingProvider.overrideWithValue(PlayStoreListingService(packageName: 'com.pranta.jadewell')),
       // Demo mode (profile runs, docs/PERFORMANCE.md): no ads, and progress,
       // stats and dailies stay in memory, so the self-playing app never
       // touches the player's data, the outbox or the leaderboards.

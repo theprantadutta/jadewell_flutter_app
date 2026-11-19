@@ -63,13 +63,14 @@ void main() {
         showTimer: false,
         tileSize: TileSizePreference.large,
         reduceMotion: true,
+        highRefreshRate: true,
         onboardingDone: true,
       );
       await repo.write(s);
       final back = await repo.read();
       expect(
-        [back.theme, back.music, back.soundEffects, back.haptics, back.showTimer, back.tileSize, back.reduceMotion, back.onboardingDone],
-        [ThemePreference.dark, false, false, false, false, TileSizePreference.large, true, true],
+        [back.theme, back.music, back.soundEffects, back.haptics, back.showTimer, back.tileSize, back.reduceMotion, back.highRefreshRate, back.onboardingDone],
+        [ThemePreference.dark, false, false, false, false, TileSizePreference.large, true, true, true],
       );
       expect((await repo.watch().first).tileSize, TileSizePreference.large);
     });

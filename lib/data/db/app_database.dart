@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -44,8 +44,9 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('CREATE INDEX IF NOT EXISTS idx_sync_outbox_due ON sync_outbox (next_attempt_at)');
         },
         onUpgrade: (m, from, to) async {
-          // schemaVersion 1 is the first shipped schema. Future versions add
-          // explicit, step-by-step migrations here (never drop user data).
+          // Step by step from the installed version; never drop user data.
+          // 1 → 2: Settings → High refresh rate.
+          if (from < 2) await m.addColumn(settingsTable, settingsTable.highRefreshRate);
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');

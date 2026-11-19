@@ -3,6 +3,8 @@ import 'package:jadewell_flutter_app/data/models/settings.dart';
 import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart';
 import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
+import 'package:jadewell_flutter_app/platform/display/display_service.dart';
+import 'package:jadewell_flutter_app/platform/store_listing/store_listing_service.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/entitlement_providers.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
@@ -13,6 +15,7 @@ import 'package:jadewell_flutter_app/ui/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../iap/fakes.dart' show FakePurchaseService;
+import '../../state/store_listing_controller_test.dart' show FakeStore;
 import '../../ui/golden_helpers.dart' show loadJwFonts;
 import '../meta_checks.dart';
 import 'harness.dart';
@@ -37,6 +40,8 @@ void main() {
     bool adsRemoved = false,
     Brightness brightness = Brightness.light,
     Size size = const Size(390, 844),
+    DisplayService display = const NoOpDisplay(),
+    StoreListingService store = const NoOpStoreListing(),
   }) =>
       pumpScreen(
         tester,
@@ -52,6 +57,8 @@ void main() {
           purchaseServiceProvider.overrideWithValue(FakePurchaseService()), // store price $1.99
           sessionProvider.overrideWith(() => FakeSession(const BackendSession(identity: guestIdentity, user: testUser))),
           appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
+          displayServiceProvider.overrideWithValue(display),
+          storeListingProvider.overrideWithValue(store),
         ],
       );
 
@@ -83,6 +90,47 @@ void main() {
       expect(find.text('route:$route'), findsOneWidget);
     });
   }
+
+  testWidgets('high refresh rate: shown on a 120 Hz screen, off by default, persists', (tester) async {
+    final display = _FakeDisplay(const DisplayRates(current: 60, max: 120, supported: [60, 120]));
+    await pump(tester, display: display);
+    expect(find.text('High refresh rate'), findsOneWidget);
+    expect(find.textContaining('Up to 120 Hz'), findsOneWidget);
+    final t = tester.widget<JwToggle>(toggleFor('High refresh rate'));
+    expect(t.value, isFalse);
+    t.onChanged!(true);
+    await tester.pump(const Duration(seconds: 1));
+    expect((await repo.read()).highRefreshRate, isTrue);
+    expect(analytics.events.last.$2, {'setting': 'high_refresh_rate'});
+  });
+
+  testWidgets('high refresh rate: hidden on a 60 Hz screen and where it cannot be controlled', (tester) async {
+    await pump(tester, display: _FakeDisplay(const DisplayRates(current: 60, max: 60, supported: [60])));
+    expect(find.text('High refresh rate'), findsNothing);
+    await pump(tester); // NoOpDisplay: iOS, web, tests
+    expect(find.text('High refresh rate'), findsNothing);
+  });
+
+  testWidgets('support: Rate Jadewell opens the store page; App updates checks Play', (tester) async {
+    final store = FakeStore(const UpdateCheck(state: UpdateState.upToDate));
+    await pump(tester, store: store, size: const Size(390, 1600));
+    await tester.scrollUntilVisible(find.text('App updates'), 200);
+    await tester.tap(find.text('Rate Jadewell'));
+    await tester.pump();
+    expect(store.calls, ['listing']);
+    await tester.tap(find.text('App updates'));
+    await tester.pump();
+    expect(store.calls.last, 'check');
+    expect(find.text('You have the latest version.'), findsOneWidget);
+    expect(find.text('Up to date'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('support: no Rate or App updates rows without a store', (tester) async {
+    await pump(tester, size: const Size(390, 1600));
+    expect(find.text('Rate Jadewell'), findsNothing);
+    expect(find.text('App updates'), findsNothing);
+  });
 
   testWidgets('support has a Contact us row and the email is not shown', (tester) async {
     await pump(tester, size: const Size(390, 1600));
@@ -188,4 +236,18 @@ void main() {
       await maybeShot(tester, 'settings_tile_size_${b.name}');
     });
   }
+}
+
+class _FakeDisplay implements DisplayService {
+  _FakeDisplay(this.rates);
+
+  final DisplayRates rates;
+  final requests = <bool>[];
+
+  @override
+  bool get canControl => true;
+  @override
+  Future<DisplayRates?> read() async => rates;
+  @override
+  Future<void> setHighRefreshRate(bool enabled) async => requests.add(enabled);
 }

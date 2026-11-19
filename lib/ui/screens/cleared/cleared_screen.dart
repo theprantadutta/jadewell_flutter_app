@@ -16,6 +16,7 @@ import '../../../state/game/game_controller.dart' show kHeadStartHints;
 import '../../../state/game/game_providers.dart';
 import '../../../state/game/game_view_state.dart';
 import '../../../state/platform_providers.dart';
+import '../../../state/store_listing_controller.dart';
 import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
@@ -137,6 +138,13 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     if (_headStartChecked || !mounted) return;
     _headStartChecked = true;
     final ads = ref.read(adServiceProvider);
+    // A good clear may ask for a review (rare: ReviewPolicy). Never right
+    // after an interstitial, and the head-start offer waits for another board.
+    if (!ref.read(clearInterstitialShownProvider) &&
+        await ref.read(reviewPrompterProvider).maybeAskAfterClear(stars: _result?.stars ?? 0)) {
+      return;
+    }
+    if (!mounted) return;
     // Never stack a rewarded interstitial on top of an interstitial.
     if (ads.adsRemoved || ref.read(headStartBonusProvider) > 0 || ref.read(clearInterstitialShownProvider)) return;
     final granted = await showGameModal<bool>(

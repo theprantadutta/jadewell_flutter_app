@@ -6,11 +6,14 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../data/models/settings.dart';
 import '../../../platform/analytics/analytics_service.dart';
+import '../../../platform/display/display_service.dart';
+import '../../../platform/store_listing/store_listing_service.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/entitlement_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../../state/session_controller.dart';
 import '../../../state/social_providers.dart';
+import '../../../state/store_listing_controller.dart';
 import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../router.dart';
@@ -36,6 +39,10 @@ class SettingsScreen extends ConsumerWidget {
     final removeAdsPrice = ref.watch(removeAdsPriceProvider); // null while the store has nothing to sell
     final ads = ref.watch(adServiceProvider);
     final version = ref.watch(appVersionProvider).value;
+    final display = ref.watch(displayServiceProvider);
+    final rates = ref.watch(displayRatesProvider).value;
+    final store = ref.watch(storeListingProvider);
+    final update = ref.watch(appUpdateProvider);
     final haptic = ref.watch(hapticsProvider).selection;
     final jw = context.jw;
 
@@ -137,6 +144,20 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
+              // Android only (iOS keeps its own cadence), and only on a
+              // screen that can go faster than 60 Hz.
+              if (display.canControl && rates != null && rates.supportsHighRefresh)
+                JwListRow(
+                  icon: JwIcons.gauge,
+                  badgeFill: JwFill.sky,
+                  title: l.settingsHighRefresh,
+                  trailing: toggle(l.settingsHighRefresh, s.highRefreshRate, (v) {
+                    change('high_refresh_rate', (x) => x.copyWith(highRefreshRate: v));
+                    // The display switches a moment after the request.
+                    Future<void>.delayed(const Duration(milliseconds: 600), () => ref.invalidate(displayRatesProvider));
+                  }),
+                  below: _RefreshCaption(rates: rates, enabled: s.highRefreshRate),
+                ),
               JwListRow(
                 icon: JwIcons.motion,
                 badgeFill: JwFill.coral,
@@ -199,6 +220,45 @@ class SettingsScreen extends ConsumerWidget {
                 onHaptic: haptic,
                 onTap: () => openContactEmail(context, version: version),
               ),
+              if (store.canOpenStoreListing)
+                JwListRow(
+                  icon: JwIcons.star,
+                  badgeFill: JwFill.yellow,
+                  title: l.settingsRateApp,
+                  chevron: true,
+                  onHaptic: haptic,
+                  onTap: () async {
+                    final ok = await store.openStoreListing();
+                    if (!ok && context.mounted) showJwToast(context, l.settingsRateAppFailed);
+                  },
+                ),
+              if (store.supportsUpdates)
+                JwListRow(
+                  icon: JwIcons.download,
+                  badgeFill: JwFill.mint,
+                  title: l.settingsUpdates,
+                  value: switch (update) {
+                    UpdateState.unknown => null,
+                    UpdateState.upToDate => l.settingsUpdateUpToDate,
+                    UpdateState.available => l.settingsUpdateAvailable,
+                    UpdateState.downloading => l.settingsUpdateDownloading,
+                    UpdateState.downloaded => l.settingsUpdateReady,
+                  },
+                  chevron: true,
+                  onHaptic: haptic,
+                  onTap: () async {
+                    final r = await ref.read(appUpdateProvider.notifier).checkFromSettings();
+                    if (!context.mounted) return;
+                    final msg = switch (r) {
+                      ManualUpdateResult.upToDate => l.settingsUpdateLatestToast,
+                      ManualUpdateResult.unavailable => l.settingsUpdateUnavailableToast,
+                      ManualUpdateResult.started when ref.read(appUpdateProvider) == UpdateState.downloading =>
+                        l.settingsUpdateDownloadingToast,
+                      ManualUpdateResult.started || ManualUpdateResult.declined => null,
+                    };
+                    if (msg != null) showJwToast(context, msg);
+                  },
+                ),
             ],
           ),
           JwEyebrow(l.settingsGroupLegal),
@@ -305,6 +365,32 @@ class SettingsScreen extends ConsumerWidget {
     await ref.read(progressRepositoryProvider).resetAll();
     unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.settingsChanged, {'setting': 'reset_progress'}));
     if (context.mounted) showJwToast(context, l.resetDone);
+  }
+}
+
+/// Under the High refresh rate toggle: what the screen can do, what it is
+/// doing, and battery saver when it holds the rate down.
+class _RefreshCaption extends StatelessWidget {
+  const _RefreshCaption({required this.rates, required this.enabled});
+
+  final DisplayRates rates;
+  final bool enabled;
+
+  static String _hz(double v) => v.round().toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
+    final l = AppLocalizations.of(context);
+    final text = [
+      l.settingsHighRefreshHint(_hz(rates.max)),
+      if (enabled && rates.current > 0) l.settingsHighRefreshNow(_hz(rates.current)),
+      if (enabled && rates.lowPower) l.settingsHighRefreshBatterySaver,
+    ].join(' ');
+    return Padding(
+      padding: const EdgeInsets.only(left: 52),
+      child: Text(text, style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w400, color: jw.textMuted)),
+    );
   }
 }
 

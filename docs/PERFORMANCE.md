@@ -180,6 +180,22 @@ tiles it affects (it used to rebuild all 144; worst gameplay build went from
 19 ms to 13 ms on the A24). Whole-board rebuilds now only happen on a deal and
 a shuffle, by design.
 
+### High refresh rate (Settings, Android)
+
+Flutter never asks Android for more than the default rate. Settings → High
+refresh rate (off by default, saved in the Drift `settings` table, schema 2)
+calls `package:refresh_rate`. That votes for the display's top rate on the
+Flutter surface, and the plugin re-applies the vote when the surface comes
+back after backgrounding. The row only shows on Android, and only when the
+screen reports a rate above 60 Hz. iOS keeps its own cadence (no
+`CADisableMinimumFrameDurationOnPhone`).
+
+The vote is a request, and the phone's own setting wins. On Samsung, Motion
+smoothness *High* pins every app to 90/120 Hz (SurfaceFlinger
+`primaryRanges=[90, 90]` on the A24), and *Standard* caps every app at 60,
+whatever the app asks. The budget stays at 16.7 ms either way: frame stats
+and the rules below are judged at 60 Hz.
+
 ## Rules for future UI work
 
 1. **No blur at frame time.** No `MaskFilter.blur`, `ImageFilter.blur`,
