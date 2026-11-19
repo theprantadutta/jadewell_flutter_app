@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:isolate';
+import 'dart:typed_data' show Int8List;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleListener, AppLifecycleState;
@@ -255,36 +257,95 @@ class GameController extends Notifier<GameViewState> {
     return true;
   }
 
-  // ------------------------------------------------- debug autoplay (QA)
+  // ------------------------------------------------- autoplay (QA, demo mode)
 
   bool _autoplaying = false;
 
-  /// DEBUG AND PROFILE BUILDS ONLY (never release): plays the solver's solution from the current board
-  /// through the normal [tap] path (real move log, real timing), so a full
-  /// board — including the daily and its server verification — can be
-  /// checked on a device. Compiled out of release builds.
-  Future<void> debugAutoplay({Duration perTap = const Duration(milliseconds: 220)}) async {
-    if (kReleaseMode || _autoplaying) return; // debug + profile (QA, perf runs); never in release
+  /// DEBUG AND PROFILE BUILDS ONLY (never release): plays the board to the
+  /// end through the normal [tap] path (real move log, timing, animations,
+  /// audio and haptics), so a full board can be checked on a device and its
+  /// frame rate measured (docs/PERFORMANCE.md).
+  ///
+  /// The solver runs on a background isolate, once per board and again only
+  /// after a shuffle, so the autoplay itself never costs a UI frame. With
+  /// [extras], it also uses a hint every 7th pair, undoes and replays every
+  /// 11th pair and shuffles once a third of the way in, so those animations
+  /// are measured too.
+  Future<void> demoPlay({
+    Duration perTap = const Duration(milliseconds: 260),
+    bool extras = true,
+  }) async {
+    if (kReleaseMode || _autoplaying) return;
     _autoplaying = true;
     try {
-      while (ref.mounted && _canPlay && state.game!.remaining.length > 0) {
-        final g = state.game!;
-        final r = solve(g.layout, g.faces, remaining: g.remaining);
-        if (r is! SolveSolvable || r.solution.isEmpty) {
-          debugPrint('game: autoplay stopped ($r)');
-          return;
+      var plan = await _solveInBackground();
+      var played = 0;
+      var shuffled = false;
+      while (plan != null && plan.isNotEmpty) {
+        if (!await _waitPlayable()) return;
+        final total = state.game!.remaining.length ~/ 2 + played;
+        if (extras && !shuffled && played >= total ~/ 3 && state.shuffleAvailability == ShuffleAvailability.free) {
+          shuffled = true;
+          if (shuffleWithCredit()) {
+            await Future<void>.delayed(perTap * 4); // shuffle animation
+            plan = await _solveInBackground();
+            continue;
+          }
         }
-        final (a, b) = r.solution.first;
-        if (g.selected != null) tap(g.selected!); // clear any selection
+        final (a, b) = plan.removeAt(0);
+        if (extras && played > 0 && played % 7 == 0 && state.hintAvailability == HintAvailability.free) {
+          useHint();
+          await Future<void>.delayed(perTap * 3); // hint glow
+          if (!await _waitPlayable()) return;
+        }
+        final g = state.game!;
+        if (g.selected != null) tap(g.selected!); // clear a stray selection
         tap(a);
         await Future<void>.delayed(perTap);
-        if (!ref.mounted || !_canPlay) return;
+        if (!await _waitPlayable()) return;
         tap(b);
+        played++;
         await Future<void>.delayed(perTap * 2);
+        if (extras && played % 11 == 0 && state.game!.remaining.length > 0 && _canPlay) {
+          undo(); // the pair comes back; play it again
+          await Future<void>.delayed(perTap * 2);
+          if (!await _waitPlayable()) return;
+          tap(a);
+          await Future<void>.delayed(perTap);
+          if (!await _waitPlayable()) return;
+          tap(b);
+          await Future<void>.delayed(perTap * 2);
+        }
       }
     } finally {
       _autoplaying = false;
     }
+  }
+
+  /// Back-compat name for the long-press-the-timer QA autoplay.
+  Future<void> debugAutoplay() => demoPlay(extras: false, perTap: const Duration(milliseconds: 220));
+
+  /// Waits (up to 5 s) for a board that takes taps, e.g. after a modal.
+  Future<bool> _waitPlayable() async {
+    for (var i = 0; i < 50; i++) {
+      if (!ref.mounted) return false;
+      if (_canPlay) return true;
+      if (state.phase != GamePhase.playing) return false;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    return false;
+  }
+
+  Future<List<(int, int)>?> _solveInBackground() async {
+    final g = state.game;
+    if (g == null) return null;
+    final layout = g.layout, faces = Int8List.fromList(g.faces), remaining = g.remaining;
+    final r = await Isolate.run(() => solve(layout, faces, remaining: remaining));
+    if (r is! SolveSolvable || r.solution.isEmpty) {
+      debugPrint('game: autoplay stopped ($r)');
+      return null;
+    }
+    return [...r.solution];
   }
 
   // ------------------------------------------------------ second chance

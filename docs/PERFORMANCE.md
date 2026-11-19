@@ -4,6 +4,9 @@ Target: every scenario at 60 fps (16.7 ms per frame) on a mid-range phone
 (Galaxy A24, Mali GPU, 1080 × 2340) and the Galaxy Tab A9, with Impeller
 (Android/Vulkan).
 
+The 60 fps target applies at a 60 Hz display rate; players running 90/120 Hz
+get whatever their device gives them.
+
 ## Running the harness
 
 ```sh
@@ -117,6 +120,66 @@ from content that changed between runs and sub-pixel antialiasing at edges.
 The goldens were regenerated for the same reason: the test renders textures
 at the test view's 3× ratio and captures at 1×, so edges resample slightly.
 
+## Demo mode (Nov 2026): the app plays itself
+
+```sh
+tool/perf/profile.sh <adb-serial> [seconds=420] [--no-build]
+```
+
+The script builds a profile APK with `--dart-define=JW_DEMO=true`, installs it,
+launches it and collects the `JWPERF` log lines into `build/perf/`.
+
+The demo (`lib/ui/demo/demo_driver.dart`) loops: home (scroll) → a full board
+(turtle, fortress, pyramid, butterfly; with hints, an undo and a shuffle) →
+the cleared screen → leaderboard, stats, settings, daily (scrolling each).
+`FrameStats` (`lib/ui/demo/frame_stats.dart`) prints one line per segment
+(p50/p90/p99/max build and raster, frames over 16.7 ms, frames over 33 ms)
+and a total per kind after each loop.
+
+- In demo mode progress, stats and dailies stay in memory, sync is off and
+  ads are off, so a demo never touches the player's data or the leaderboards.
+- `kDemoMode` is a compile-time `false` in release builds.
+- The long-press-the-timer QA autoplay uses the same player
+  (`GameController.demoPlay`); the solver runs on a background isolate.
+
+### Finding the cause of a slow frame
+
+Build with `--dart-define=JW_TRACE=true` as well; every widget build is then
+named in the timeline (this slows builds down; don't read absolute numbers
+from a trace build). Then:
+
+```sh
+flutter run --profile -d <serial> --use-application-binary build/app/outputs/flutter-apk/app-profile.apk
+python tool/perf/trace.py <vm-service-uri> 300 build/perf/trace.json
+python tool/perf/top_widgets.py build/perf/trace.json 12
+```
+
+`top_widgets.py` ranks the app's own widgets by self build time inside slow
+build phases.
+
+### Demo results (Galaxy A24, 2026-11-19, 7-minute run, ~30,000 frames)
+
+| Part | Frames | Build p99 | Raster p99 | Over 16.7 ms |
+|---|---|---|---|---|
+| Gameplay (4 full boards) | 21,752 | 8.0 ms | 11.8 ms | 3 (0.01%) |
+| Home | 1,340 | 7.2 ms | 11.2 ms | 3 (0.2%) |
+| Cleared screen | 1,577 | 7.9 ms | 12.2 ms | 10 (0.6%) |
+| Other screens (open + scroll) | 4,655 | 10.2 ms | 11.8 ms | 29 (0.6%) |
+| Board deal | 497 | 26.9 ms | 13.6 ms | 10 (2.0%) |
+
+What's left is one or two frames when a screen first opens: building a whole
+screen (20–35 ms on the A24) and the Android page transition's one-time
+snapshot. Turning the snapshot off was measured and was worse (drawing the
+pages live cost ~17–18 ms per transition frame on Stats and Daily).
+
+### Board tile rebuilds
+
+`BoardView` caches each tile's widget together with its inputs and hands
+Flutter the identical widget when nothing changed, so a tap rebuilds only the
+tiles it affects (it used to rebuild all 144; worst gameplay build went from
+19 ms to 13 ms on the A24). Whole-board rebuilds now only happen on a deal and
+a shuffle, by design.
+
 ## Rules for future UI work
 
 1. **No blur at frame time.** No `MaskFilter.blur`, `ImageFilter.blur`,
@@ -145,3 +208,5 @@ at the test view's 3× ratio and captures at 1×, so edges resample slightly.
    cards or sheets and keep raster p90 under 16.7 ms. Look for
    `Canvas::saveLayer` counts and long `SurfaceFrame::Submit` /
    `SurfaceFrame::Encode` events in `build/<key>.timeline.json`.
+7. **Use the demo for whole-app checks.** `tool/perf/profile.sh <serial>` plays
+   every screen unattended and lists each frame over 16.7 ms.

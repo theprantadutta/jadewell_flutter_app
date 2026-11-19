@@ -12,6 +12,7 @@ import 'app.dart';
 import 'data/api/install_identity.dart';
 import 'firebase_options.dart';
 import 'platform/ads/ad_gate_store_impl.dart';
+import 'platform/ads/ad_service.dart' show FakeAdService;
 import 'platform/ads/ad_service_impl.dart';
 import 'platform/analytics/debug_print_analytics_impl.dart';
 import 'platform/analytics/firebase_analytics_impl.dart';
@@ -29,6 +30,7 @@ import 'state/entitlement_providers.dart';
 import 'state/platform_bridge.dart';
 import 'state/platform_providers.dart';
 import 'state/session_controller.dart';
+import 'ui/demo/demo_driver.dart' show kDemoMode;
 import 'ui/theme/jw_fonts.dart';
 
 Future<void> main() async {
@@ -36,6 +38,11 @@ Future<void> main() async {
   // Portrait only, phones and tablets (docs/ARCHITECTURE.md §0).
   unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]));
   registerFontLicenses();
+  // Profiling (tool/perf/trace.py): name every widget build in the timeline.
+  if (kDemoMode && const bool.fromEnvironment('JW_TRACE')) {
+    debugProfileBuildsEnabled = true;
+    debugProfileBuildsEnabledUserWidgets = true;
+  }
 
   // Everything here is local (asset, disk, Firebase config); nothing waits on
   // the network. The backend session starts in the background below.
@@ -68,15 +75,23 @@ Future<void> main() async {
       analyticsProvider.overrideWithValue(kReleaseMode ? FirebaseAnalyticsImpl() : DebugPrintAnalytics()),
       audioProvider.overrideWithValue(AudioServiceImpl(SoLoudAudioEngine())),
       hapticsProvider.overrideWithValue(HapticServiceImpl()),
-      adServiceProvider.overrideWith((ref) {
-        final ads = AdServiceImpl(store: SharedPrefsAdGateStore(prefs), analytics: ref.watch(analyticsProvider));
-        ref.onDispose(ads.dispose);
-        return ads;
-      }),
+      // Demo mode (profile runs, docs/PERFORMANCE.md): no ads, and progress,
+      // stats and dailies stay in memory, so the self-playing app never
+      // touches the player's data, the outbox or the leaderboards.
+      if (kDemoMode)
+        adServiceProvider.overrideWith((ref) => FakeAdService(adsRemoved: true, privacyOptionsRequired: false))
+      else
+        adServiceProvider.overrideWith((ref) {
+          final ads = AdServiceImpl(store: SharedPrefsAdGateStore(prefs), analytics: ref.watch(analyticsProvider));
+          ref.onDispose(ads.dispose);
+          return ads;
+        }),
       settingsRepositoryProvider.overrideWith((ref) => ref.watch(driftSettingsRepositoryProvider)),
-      progressRepositoryProvider.overrideWith((ref) => ref.watch(driftProgressRepositoryProvider)),
-      statsRepositoryProvider.overrideWith((ref) => ref.watch(driftStatsRepositoryProvider)),
-      dailyRepositoryProvider.overrideWith((ref) => ref.watch(driftDailyRepositoryProvider.future)),
+      if (!kDemoMode) ...[
+        progressRepositoryProvider.overrideWith((ref) => ref.watch(driftProgressRepositoryProvider)),
+        statsRepositoryProvider.overrideWith((ref) => ref.watch(driftStatsRepositoryProvider)),
+        dailyRepositoryProvider.overrideWith((ref) => ref.watch(driftDailyRepositoryProvider.future)),
+      ],
       entitlementRepositoryProvider.overrideWith((ref) => ref.watch(driftEntitlementRepositoryProvider)),
       purchaseServiceProvider.overrideWith((ref) {
         final store = ref.watch(sessionStoreProvider);
@@ -94,7 +109,7 @@ Future<void> main() async {
       }),
     ],
   );
-  startBackgroundSync(container); // outbox → backend; never blocks
+  if (!kDemoMode) startBackgroundSync(container); // outbox → backend; never blocks
 
   // Guest sign-in + backend exchange, fire-and-forget.
   unawaited(container.read(sessionProvider.future).then((_) {}, onError: (Object e) {
@@ -106,7 +121,7 @@ Future<void> main() async {
   PlatformBridge.start(container); // settings + lifecycle → audio/haptics; audio starts after first frame
 
   // Ads: consent (UMP/ATT), SDK and preloads start after the first frame, never blocking start-up.
-  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(container.read(adServiceProvider).init()));
+  if (!kDemoMode) WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(container.read(adServiceProvider).init()));
 
   runApp(UncontrolledProviderScope(container: container, child: const JadewellApp()));
 }

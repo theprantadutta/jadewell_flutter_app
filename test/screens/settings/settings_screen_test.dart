@@ -84,9 +84,10 @@ void main() {
     });
   }
 
-  testWidgets('footer has the contact email', (tester) async {
+  testWidgets('support has a Contact us row and the email is not shown', (tester) async {
     await pump(tester, size: const Size(390, 1600));
-    expect(find.textContaining('Contact: prantadutta1997@gmail.com', findRichText: true), findsOneWidget);
+    expect(find.text('Contact us'), findsOneWidget);
+    expect(find.textContaining('prantadutta1997@gmail.com', findRichText: true), findsNothing);
   });
 
   testWidgets('toggles persist, reach the services and log the setting name', (tester) async {

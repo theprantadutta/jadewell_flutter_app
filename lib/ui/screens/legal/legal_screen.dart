@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,6 +53,41 @@ Future<void> openExternalLink(BuildContext context, Uri uri) async {
   if (opened || !context.mounted) return;
   await Clipboard.setData(ClipboardData(text: uri.scheme == 'mailto' ? uri.path : uri.toString()));
   if (context.mounted) showJwToast(context, AppLocalizations.of(context).commonLinkCopied);
+}
+
+const _mailChannel = MethodChannel('jadewell/mail');
+
+/// "Contact us": opens a new email to [kContactEmail] in Gmail (any mail app
+/// when Gmail isn't installed). The address is never shown in the UI; when
+/// nothing can send mail it is copied and a toast says so.
+Future<void> openContactEmail(BuildContext context, {String? version}) async {
+  final subject = 'Jadewell feedback';
+  final platform = switch (defaultTargetPlatform) {
+    TargetPlatform.iOS => 'iOS',
+    TargetPlatform.android => 'Android',
+    final p => p.name,
+  };
+  final body = '\n\n\n---\nJadewell ${version ?? ''} · $platform'.replaceAll('  ', ' ');
+  var opened = false;
+  try {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      opened = await _mailChannel.invokeMethod<bool>('compose', {'to': kContactEmail, 'subject': subject, 'body': body}) ?? false;
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final gmail = Uri.parse('googlegmail:///co').replace(
+        queryParameters: {'to': kContactEmail, 'subject': subject, 'body': body},
+      );
+      opened = await canLaunchUrl(gmail) && await launchUrl(gmail, mode: LaunchMode.externalApplication);
+    }
+  } on Object {
+    opened = false;
+  }
+  if (opened || !context.mounted) return;
+  final mailto = Uri(
+    scheme: 'mailto',
+    path: kContactEmail,
+    query: 'subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}',
+  );
+  await openExternalLink(context, mailto);
 }
 
 /// Reads a bundled legal document offline, in the Clay Pop page frame.

@@ -11,9 +11,12 @@
         android:label="Jadewell"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round">
-        <!-- Android 16 ignores orientation locks on large screens for apps targeting API 36
-             unless they opt out. Jadewell is portrait-only by design; revisit when targeting 37. -->
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:appCategory="game">
+        <!-- Android 16+ ignores orientation locks on large screens (sw >= 600dp) for apps
+             targeting API 36, except games (android:appCategory="game" above, which is
+             permanent). The property below is the API 36 opt-out; Android 17 (API 37)
+             drops it, so the game category is what keeps Jadewell portrait from then on. -->
         <property android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY" android:value="true" />
         <activity
             android:name=".MainActivity"
@@ -60,6 +63,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
+        </intent>
+        <!-- "Contact us": the mailto fallback when the channel can't open a mail app -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
         </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>

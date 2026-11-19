@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -189,6 +188,19 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+          JwEyebrow(l.settingsGroupSupport),
+          JwListGroup(
+            children: [
+              JwListRow(
+                icon: JwIcons.mail,
+                badgeFill: JwFill.coral,
+                title: l.settingsContactUs,
+                chevron: true,
+                onHaptic: haptic,
+                onTap: () => openContactEmail(context, version: version),
+              ),
+            ],
+          ),
           JwEyebrow(l.settingsGroupLegal),
           JwListGroup(
             children: [
@@ -296,69 +308,27 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _Footer extends StatefulWidget {
+class _Footer extends StatelessWidget {
   const _Footer({required this.version});
 
   final String? version;
-
-  @override
-  State<_Footer> createState() => _FooterState();
-}
-
-class _FooterState extends State<_Footer> {
-  late final _mail = TapGestureRecognizer()
-    ..onTap = () => openExternalLink(context, Uri(scheme: 'mailto', path: kContactEmail));
-
-  @override
-  void dispose() {
-    _mail.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
     final l = AppLocalizations.of(context);
     final muted = jw.text.callout.copyWith(fontSize: 14.5, fontWeight: FontWeight.w400, color: jw.textMuted);
-    final version = widget.version;
-    final contact = l.legalContact(kContactEmail);
-    final at = contact.indexOf(kContactEmail);
-    return Column(
-      children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(text: '${l.appName} '),
-              if (version != null) TextSpan(text: version, style: jw.text.numM.copyWith(fontSize: 14.5, color: jw.textMuted)),
-              const TextSpan(text: ' · pranta.dev'),
-            ],
-          ),
-          style: muted,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 6),
-        Text.rich(
-          TextSpan(
-            children: [
-              if (at > 0) TextSpan(text: contact.substring(0, at)),
-              TextSpan(
-                text: kContactEmail,
-                recognizer: _mail,
-                style: TextStyle(
-                  color: jw.purpleText,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
-                  decorationColor: jw.purpleText,
-                ),
-              ),
-              if (at >= 0 && at + kContactEmail.length < contact.length)
-                TextSpan(text: contact.substring(at + kContactEmail.length)),
-            ],
-          ),
-          style: muted,
-          textAlign: TextAlign.center,
-        ),
-      ],
+    final version = this.version;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: '${l.appName} '),
+          if (version != null) TextSpan(text: version, style: jw.text.numM.copyWith(fontSize: 14.5, color: jw.textMuted)),
+          const TextSpan(text: ' · pranta.dev'),
+        ],
+      ),
+      style: muted,
+      textAlign: TextAlign.center,
     );
   }
 }

@@ -31,6 +31,11 @@
 		     `dart run tool/gen_ad_ids.dart` writes from ADMOB-NOTE.txt (docs/ADS.md). -->
 		<key>GADApplicationIdentifier</key>
 		<string>$(ADMOB_APP_ID)</string>
+		<!-- "Contact us" opens Gmail when installed (googlegmail://), else Mail. -->
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>googlegmail</string>
+		</array>
 		<!-- App Tracking Transparency prompt (iOS 14+), asked after the UMP consent form. -->
 		<key>NSUserTrackingUsageDescription</key>
 		<string>Jadewell is free thanks to ads. Allowing tracking lets those ads be more relevant to you. You can say no and still play everything.</string>

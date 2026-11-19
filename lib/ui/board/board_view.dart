@@ -71,6 +71,17 @@ class BoardView extends StatefulWidget {
   State<BoardView> createState() => BoardViewState();
 }
 
+typedef _TileInputs = ({
+  List<TileFaceSpec> faces,
+  int face,
+  TileVisualState visual,
+  bool reduce,
+  bool exiting,
+  bool outlined,
+  Duration? faceFade,
+  bool tappable,
+});
+
 class _Exit {
   _Exit(this.face, this.visual);
   final int face;
@@ -104,6 +115,15 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
   Offset? _waveOrigin;
   Set<int>? _freeCache;
   GameState? _freeCacheFor;
+
+  /// The last tile widget built per position, with the inputs it was built
+  /// from. Handing Flutter the identical widget again skips that tile's
+  /// rebuild, so a tap rebuilds the two or three tiles it changed instead of
+  /// all of them (docs/PERFORMANCE.md).
+  final Map<int, (_TileInputs, Widget)> _tileCache = {};
+
+  /// One tap callback per position, so the callback is stable across builds.
+  final Map<int, VoidCallback> _tapHandlers = {};
 
   bool get _reduce => JwReduceMotion.of(context, widget.reduceMotion);
 
@@ -155,6 +175,7 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
     _lastVisual = List.filled(_layout.length, null);
     _shownFaces = Int8List.fromList(widget.game.faces);
     _pending.clear();
+    _tileCache.clear();
     _exiting.clear();
     _lagBlocked.clear();
     _outlined.clear();
@@ -426,31 +447,53 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
       final exit = _exiting[i];
       if (g.removed.contains(i) && exit == null) {
         _lastVisual[i] = null;
+        _tileCache.remove(i);
         continue;
       }
       final visual = exit?.visual ?? _visualOf(i, g, free);
       final faceId = exit?.face ?? _shownFaces[i];
       _lastVisual[i] = visual;
+      final effects = _pending.remove(i);
+      final inputs = (
+        faces: widget.faces,
+        face: faceId,
+        visual: visual,
+        reduce: reduce,
+        exiting: exit != null,
+        outlined: _outlined.containsKey(i) && exit == null,
+        faceFade: _faceFade,
+        tappable: exit == null && widget.onTileTap != null,
+      );
+      final cached = _tileCache[i];
+      if (effects == null && cached != null && cached.$1 == inputs) {
+        tiles.add(cached.$2);
+        continue;
+      }
       final origin = _geo.origins[i];
-      tiles.add(
-        Positioned(
-          left: origin.dx,
-          top: origin.dy,
-          width: JwTile.footprint.width,
-          height: JwTile.footprint.height,
-          child: BoardTile(
-            key: _keys[i],
-            face: widget.faces[faceId],
-            visual: visual,
-            reduceMotion: reduce,
-            exiting: exit != null,
-            outlined: _outlined.containsKey(i) && exit == null,
-            faceFade: _faceFade,
-            initialEffects: _pending.remove(i) ?? const [],
-            onTap: exit != null || widget.onTileTap == null ? null : () => widget.onTileTap!(i),
-          ),
+      final tile = Positioned(
+        left: origin.dx,
+        top: origin.dy,
+        width: JwTile.footprint.width,
+        height: JwTile.footprint.height,
+        child: BoardTile(
+          key: _keys[i],
+          face: widget.faces[faceId],
+          visual: visual,
+          reduceMotion: reduce,
+          exiting: inputs.exiting,
+          outlined: inputs.outlined,
+          faceFade: _faceFade,
+          initialEffects: effects ?? const [],
+          onTap: inputs.tappable ? _tapHandlers.putIfAbsent(i, () => () => widget.onTileTap?.call(i)) : null,
         ),
       );
+      // A tile built with one-shot effects must not be reused as is.
+      if (effects == null) {
+        _tileCache[i] = (inputs, tile);
+      } else {
+        _tileCache.remove(i);
+      }
+      tiles.add(tile);
     }
 
     final tilesLeft = g.layout.length - g.tilesMatched;

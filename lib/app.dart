@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart' as material_ui show GlobalMaterial
 import 'data/models/settings.dart';
 import 'state/data_providers.dart';
 import 'state/platform_bridge.dart';
+import 'ui/demo/demo_driver.dart';
 import 'ui/l10n/generated/app_localizations.dart';
 import 'ui/router.dart';
 import 'ui/theme/jw_theme.dart';
@@ -61,7 +62,10 @@ class _JadewellAppState extends ConsumerState<JadewellApp> {
           // falls back to the yellow-underlined "no Material" debug style.
           child: Material(
             type: MaterialType.transparency,
-            child: JwReduceMotion(enabled: settings.reduceMotion, child: child!),
+            child: JwReduceMotion(
+              enabled: settings.reduceMotion,
+              child: kDemoMode ? DemoDriver(child: child!) : child!,
+            ),
           ),
         );
       },
