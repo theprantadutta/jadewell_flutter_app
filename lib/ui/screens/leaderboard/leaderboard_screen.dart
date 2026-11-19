@@ -62,6 +62,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           ? l.leaderboardWeeklySubtitle
           : (layoutName == null ? l.leaderboardDaily : l.leaderboardDailyLayout(layoutName)),
       onHaptic: haptic,
+      // The list fades under the tabs itself (below), not under the header.
+      scrollFade: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -174,7 +176,11 @@ class _TabBody extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: RefreshIndicator(
+              // Fades under the tabs, and above the pinned "You" row.
+              child: JwScrollFade(
+                top: 22,
+                bottom: me == null ? 0 : 28,
+                child: RefreshIndicator(
                 color: context.jw.accent,
                 backgroundColor: context.jw.surfaceRaised,
                 onRefresh: refresh,
@@ -192,6 +198,7 @@ class _TabBody extends ConsumerWidget {
                     ],
                   ],
                 ),
+              ),
               ),
             ),
             if (me != null)

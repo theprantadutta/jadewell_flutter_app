@@ -219,7 +219,9 @@ void main() {
         await pump(tester, size: size.value);
         await tester.pumpAndSettle();
         await expectNoOverflow(tester);
-        // The tile face size sheet.
+        // The tile face size sheet (the overflow scan left the list scrolled).
+        await tester.ensureVisible(find.text('Tile face size', skipOffstage: false));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Tile face size'));
         await tester.pumpAndSettle();
         await expectNoOverflow(tester);

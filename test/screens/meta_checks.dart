@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 ///
 /// [layoutSizes]: the phone frame of the reference screens (390 × 844) and
 /// the Galaxy Tab A9 (800 × 1340 px at 1.33 dpr ≈ 600 × 1005).
-const layoutSizes = {'phone': Size(390, 844), 'tablet': Size(600, 1005)};
+const layoutSizes = {'narrow': Size(360, 780), 'phone': Size(390, 844), 'tablet': Size(600, 1005)};
 
 /// OS text scales every screen must survive without overflowing.
 const textScales = [1.0, 1.3];

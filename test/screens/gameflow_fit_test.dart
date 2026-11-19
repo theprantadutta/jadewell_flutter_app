@@ -23,7 +23,7 @@ import 'home/screen_harness.dart';
 /// out without overflow on the phone frame (390 × 844) and the tablet
 /// (Tab A9, ≈ 600 × 1005), at text scale 1.0 and 1.3, in both themes. Any
 /// overflow is a FlutterError, which fails the test.
-const _sizes = [Size(390, 844), Size(600, 1005)];
+const _sizes = [Size(360, 780), Size(390, 844), Size(600, 1005)];
 const _scales = [1.0, 1.3];
 
 void _forEachConfig(void Function(String name, Size size, double scale, Brightness b) body) {

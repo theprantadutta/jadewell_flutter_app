@@ -80,7 +80,7 @@ void main() {
     _catalogue = await AssetCatalogueRepository().load();
   });
 
-  const sizes = {'phone': Size(390, 844), 'tablet': Size(600, 1005)};
+  const sizes = {'narrow': Size(360, 780), 'phone': Size(390, 844), 'tablet': Size(600, 1005)};
   for (final size in sizes.entries) {
     for (final scale in const [1.0, 1.3]) {
       for (final populated in const [true, false]) {

@@ -44,7 +44,10 @@ class HomeScreen extends ConsumerWidget {
       child: Scaffold(
         body: JwBackground(
           blobs: HomeScreen.blobs,
+          // No top inset: the list runs under the status bar and fades out
+          // there (JwScrollFade in _HomeContent) instead of being cut off.
           child: SafeArea(
+            top: false,
             bottom: false,
             child: JwContentWidth(
               maxWidth: 720,
@@ -53,7 +56,10 @@ class HomeScreen extends ConsumerWidget {
                   final columns = _columnsFor(box.maxWidth);
                   return JwSkeletonSwitcher(
                     loading: loading,
-                    skeleton: JwSkeletonHome(columns: columns, semanticLabel: l.commonLoading),
+                    skeleton: Padding(
+                      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+                      child: JwSkeletonHome(columns: columns, semanticLabel: l.commonLoading),
+                    ),
                     builder: (context) => _HomeContent(catalogue: catalogue!, progress: progress!, columns: columns),
                   );
                 },
@@ -144,14 +150,18 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     var slot = 0;
     Widget fade(Widget child) => JwFadeUp(index: slot++, child: child);
 
-    return CustomScrollView(
+    final top = MediaQuery.paddingOf(context).top;
+    return JwScrollFade(
+      topClear: top,
+      top: 26,
+      child: CustomScrollView(
       controller: _scroll,
       // Keep the chapter sections built so the collection cards can scroll
       // to them; cards paint from cached textures, so this stays cheap.
       scrollCacheExtent: const ScrollCacheExtent.pixels(1600),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 40),
+          padding: EdgeInsets.fromLTRB(16, top + 18, 16, 40),
           sliver: SliverList.list(
             children: [
               fade(_HomeHeader(firstRun: firstRun, earned: earned, total: layouts.length * 3)),
@@ -207,6 +217,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           ),
         ),
       ],
+      ),
     );
   }
 }
@@ -324,7 +335,10 @@ class _DailyHeroCard extends ConsumerWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 136),
         // The art sits top-right; the Play row runs under it, as in screen 11.
+        // No clip: the Play button's base edge paints below its box, and it
+        // is the Stack's bottom-most child (it was cut off flat).
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
             Positioned(right: -4, top: 0, child: const TwinTilesArt()),
             Column(

@@ -99,6 +99,8 @@ void main() {
   final configs = <(Brightness, Size, double)>[
     for (final b in Brightness.values) (b, const Size(390, 844), 1.0),
     (Brightness.light, const Size(390, 844), 1.3),
+    (Brightness.dark, const Size(360, 780), 1.0),
+    (Brightness.light, const Size(360, 780), 1.3),
     (Brightness.dark, const Size(600, 1005), 1.0),
     (Brightness.light, const Size(600, 1005), 1.3),
   ];

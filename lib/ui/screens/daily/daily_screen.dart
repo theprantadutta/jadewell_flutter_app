@@ -75,7 +75,12 @@ class DailyScreen extends ConsumerWidget {
                               ),
                             ),
                           )
-                        : ListView(
+                        // Fades under the top bar and above the fixed Play
+                        // button instead of cutting off at their edges.
+                        : JwScrollFade(
+                            top: 22,
+                            bottom: 28,
+                            child: ListView(
                             padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
                             children: [
                               JwFadeUp(child: _BoardCard(daily: daily, name: info.name, meta: l.dailyMeta(info.tileCount, LayoutLabels.difficulty(l, info.difficulty)), tiles: LayoutLabels.tiles(info))),
@@ -85,6 +90,7 @@ class DailyScreen extends ConsumerWidget {
                               const SizedBox(height: 24),
                               const JwFadeUp(index: 2, child: _TopThree()),
                             ],
+                          ),
                           ),
                   ),
                   Padding(
@@ -273,7 +279,15 @@ class _StreakWeek extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Row(
+        // Beads shrink on narrow phones (360 pt) so the week keeps real
+        // gaps and the same 6 pt inset as the header, instead of running
+        // edge to edge.
+        LayoutBuilder(
+          builder: (context, box) {
+            final bead = ((box.maxWidth - 12 - 6 * 14) / 7).clamp(30.0, 38.0);
+            return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (var i = 0; i < 7; i++)
@@ -288,20 +302,20 @@ class _StreakWeek extends StatelessWidget {
                   return Semantics(
                     label: label,
                     excludeSemantics: true,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Column(
+                    child: Column(
                         children: [
-                          _DayBead(done: done, today: isToday, day: day.day),
+                          _DayBead(done: done, today: isToday, day: day.day, size: bead),
                           const SizedBox(height: 10),
                           Text(narrow.format(day), style: jw.text.callout.copyWith(fontSize: 15, color: jw.textMuted, fontWeight: FontWeight.w400)),
                         ],
                       ),
-                    ),
                   );
                 },
               ),
           ],
+        ),
+            );
+          },
         ),
       ],
     );
@@ -311,19 +325,19 @@ class _StreakWeek extends StatelessWidget {
 /// A streak day dot: mint check when done, a raised dot with the date for
 /// today, a sunken dot otherwise.
 class _DayBead extends StatelessWidget {
-  const _DayBead({required this.done, required this.today, required this.day});
+  const _DayBead({required this.done, required this.today, required this.day, this.size = 38});
 
   final bool done;
   final bool today;
   final int day;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     final jw = context.jw;
-    const size = 38.0;
     final Widget dot;
     if (done) {
-      dot = const CheckDisc(size: size, round: true);
+      dot = CheckDisc(size: size, round: true);
     } else {
       dot = DecoratedBox(
         decoration: today ? jw.clay(ClayLevel.chip, gradient: jw.knobGradient) : jw.clay(ClayLevel.sunken),

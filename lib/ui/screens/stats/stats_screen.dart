@@ -124,7 +124,7 @@ class StatsScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Expanded(child: body),
+                  Expanded(child: JwScrollFade(top: 22, child: body)),
                 ],
               ),
             ),

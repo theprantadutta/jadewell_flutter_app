@@ -231,7 +231,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 children: [
                   Text(p.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.body.copyWith(fontSize: 16.5)),
                   if (sub != null)
-                    Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: jw.text.caption.copyWith(fontSize: 13.5)),
+                    // Two lines on narrow phones, where the request buttons
+                    // leave little room ("Wants to be friends" at 360 pt).
+                    Text(sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: jw.text.caption.copyWith(fontSize: 13.5)),
                 ],
               ),
             ),

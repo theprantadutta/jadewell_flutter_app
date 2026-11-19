@@ -32,6 +32,7 @@ class JwPage extends StatelessWidget {
     this.trailing,
     this.onBack,
     this.onHaptic,
+    this.scrollFade = true,
   });
 
   final String? title;
@@ -43,6 +44,10 @@ class JwPage extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onBack;
   final VoidCallback? onHaptic;
+
+  /// Fade [child]'s scrollable under the header. Off for pages whose list
+  /// sits below other fixed content (tabs) and fades there itself.
+  final bool scrollFade;
 
   static void defaultBack(BuildContext context) {
     if (context.canPop()) {
@@ -110,7 +115,9 @@ class JwPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Expanded(child: child),
+                  // Content scrolling up fades under the header instead of
+                  // being cut off at its edge.
+                  Expanded(child: scrollFade ? JwScrollFade(top: 22, child: child) : child),
                 ],
               ),
             ),

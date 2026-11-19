@@ -451,7 +451,9 @@ class _ProfileCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (onEdit != null)
+                if (onEdit != null) ...[
+                  // Keeps a long name (it scales down to fit) off the button.
+                  const SizedBox(width: 10),
                   JwIconButton(
                     icon: JwIcons.text,
                     semanticLabel: l.accountEditProfile,
@@ -460,6 +462,7 @@ class _ProfileCard extends StatelessWidget {
                     onHaptic: onHaptic,
                     onPressed: onEdit,
                   ),
+                ],
               ],
             ),
             if (code != null) ...[

@@ -270,11 +270,16 @@ class YouRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(l.leaderboardYou, style: jw.text.button.copyWith(fontSize: 16.5, color: on)),
-                  Text(
-                    caption,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: on),
+                  // Shrinks a little on narrow phones ("Top 24% this week" at
+                  // 360 pt) rather than cutting the sentence off or wrapping.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      caption,
+                      maxLines: 1,
+                      style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: on),
+                    ),
                   ),
                 ],
               ),
