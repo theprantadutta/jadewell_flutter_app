@@ -30,6 +30,10 @@ To keep both stores consistent:
 
 ## App Store Connect listing (set up 2026-11-21)
 
+**Submitted for review 2026-11-21:** version 1.0.6 (build 8) together with the Remove ads in-app purchase.
+Build 8 makes Apple token revocation best effort on account deletion, so no Services ID or private key is
+needed in Firebase for deletion to work.
+
 - Subtitle: `Mahjong Solitaire Tile Match`. Category: Games › Puzzle + Board, secondary Entertainment.
 - Age rating 4+ (only "Advertising: yes"). Content rights: no third-party content.
 - Free; available in 174 regions (all except China mainland, which needs an ICP filing and security assessment).
@@ -48,8 +52,9 @@ To keep both stores consistent:
 ## Firebase (iOS)
 
 - iOS app: App Store ID 6837629101 and Team ID set.
-- Auth > Apple: Team ID and Key ID `JKXMPGAMAY` filled; **the private key still has to be pasted by hand**.
-- Cloud Messaging: **upload the APNs key** `D3QR552KKZ` (team-wide) by hand.
+- Auth > Apple: OAuth code flow config left empty (needs a Services ID). Optional: account deletion still works
+  without it since build 8; filling it in only makes the Apple token revocation succeed.
+- Cloud Messaging: upload the team-wide APNs key `D3QR552KKZ` when push notifications are added (not used today).
 
 ## Signing and keys
 
