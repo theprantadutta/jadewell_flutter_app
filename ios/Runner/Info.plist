@@ -24,6 +24,23 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<!-- Google Sign-In: the SDK requires its REVERSED_CLIENT_ID (from
+		     GoogleService-Info.plist) as a URL scheme, or authenticate() throws. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.959264351129-jphrj4vq05e8hrs9forngsq9l54nj781</string>
+				</array>
+			</dict>
+		</array>
+		<key>GIDClientID</key>
+		<string>959264351129-jphrj4vq05e8hrs9forngsq9l54nj781.apps.googleusercontent.com</string>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<!-- AdMob app id. ADMOB_APP_ID is set in Flutter/Debug.xcconfig and
 		     Flutter/Release.xcconfig to Google's sample iOS app id
 		     (ca-app-pub-3940256099942544~1458002511, test ads only) and overridden
