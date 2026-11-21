@@ -69,7 +69,8 @@ abstract interface class AuthService {
   /// a fresh authorization code and revokes the user's Apple tokens (App
   /// Store guideline 5.1.1(v)). A no-op everywhere else. Throws
   /// [AuthException]; [AuthErrorKind.cancelled] when the player backs out of
-  /// the Apple sheet, in which case nothing may be deleted.
+  /// the Apple sheet, in which case nothing may be deleted. A failed token
+  /// revocation is logged and does not stop the deletion.
   ///
   /// The Firebase user itself is deleted by the backend (Admin SDK), so no
   /// client-side `User.delete()` (and its recent-login requirement) is needed.

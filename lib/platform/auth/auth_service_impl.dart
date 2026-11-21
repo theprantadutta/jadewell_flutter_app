@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show TargetPlatform, debugPrint, defaultTargetPlatform;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_service.dart';
@@ -103,13 +103,25 @@ class FirebaseAuthServiceImpl implements AuthService {
     // Apple flow on iOS; Android never offers Sign in with Apple.
     if (defaultTargetPlatform != TargetPlatform.iOS) return;
     if (!user.providerData.any((p) => p.providerId == 'apple.com')) return;
+    final UserCredential credential;
     try {
-      final credential = await user.reauthenticateWithProvider(_appleProvider());
-      final code = credential.additionalUserInfo?.authorizationCode;
-      if (code == null || code.isEmpty) throw const AuthException(AuthErrorKind.unknown, 'no-authorization-code');
-      await _auth.revokeTokenWithAuthorizationCode(code);
+      credential = await user.reauthenticateWithProvider(_appleProvider());
     } on FirebaseAuthException catch (e) {
+      // Backing out of the Apple sheet cancels the whole deletion.
       throw AuthException(_kind(e.code), e.code);
+    }
+    // Revocation is best effort, as in the owner's other apps: it needs the
+    // Apple provider's OAuth code flow config in Firebase, and Firebase
+    // refusing must never block the player from deleting their account.
+    final code = credential.additionalUserInfo?.authorizationCode;
+    if (code == null || code.isEmpty) {
+      debugPrint('auth: no Apple authorization code to revoke (continuing)');
+      return;
+    }
+    try {
+      await _auth.revokeTokenWithAuthorizationCode(code);
+    } on Object catch (e) {
+      debugPrint('auth: Apple token revocation failed (continuing): $e');
     }
   }
 

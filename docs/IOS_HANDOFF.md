@@ -43,7 +43,9 @@ before `DELETE /api/v1/auth/me`. On iOS, when the Firebase user has the
 `AppleAuthProvider` (`user.reauthenticateWithProvider`), takes
 `credential.additionalUserInfo.authorizationCode` and calls
 `FirebaseAuth.instance.revokeTokenWithAuthorizationCode(code)`. Backing out of the
-Apple sheet cancels the whole deletion (nothing is deleted). Android and
+Apple sheet cancels the whole deletion (nothing is deleted). Revocation itself is best
+effort, as in the owner's other apps: if Firebase refuses (for example the Apple provider's
+OAuth code flow config is incomplete), it is logged and the account is still deleted. Android and
 non-Apple accounts skip this. Firebase's own user is deleted server-side (Admin
 SDK), so there is no client `user.delete()`. Written blind (no iOS device on
 Windows); verify on the Mac:
