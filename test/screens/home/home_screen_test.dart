@@ -155,11 +155,15 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 3));
   });
 
-  testWidgets('tablet width uses three columns', (tester) async {
+  testWidgets('tablet width uses a 2×2 grid, never three columns', (tester) async {
     await _pump(tester, seed: (_) async {}, size: const Size(800, 1280));
     final a = tester.getTopLeft(find.byKey(const ValueKey('layout-card-pyramid')));
+    final b = tester.getTopLeft(find.byKey(const ValueKey('layout-card-turtle')));
     final c = tester.getTopLeft(find.byKey(const ValueKey('layout-card-fortress')));
-    expect(c.dy, a.dy);
+    // Four layouts per chapter: two rows of two, no card left alone on a row.
+    expect(b.dy, a.dy);
+    expect(c.dx, a.dx);
+    expect(c.dy, greaterThan(a.dy));
   });
 
   testWidgets('a collection card scrolls to its chapter', (tester) async {

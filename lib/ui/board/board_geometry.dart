@@ -64,18 +64,32 @@ class BoardFit {
   /// 0.8× (below that the board stays at 0.8× and pinch-zoom up to 2× is
   /// enabled instead). [faceSize] multiplies the footprint and the board
   /// re-fits around the resized tiles, so the clamp applies to that unit.
-  factory BoardFit.compute(Size area, Size content, {TileFaceSize faceSize = TileFaceSize.medium, double padding = 12}) {
+  /// [maxScale] defaults to the phone cap; tablets pass [tabletMaxScale] so
+  /// the board fills the larger screen instead of floating small in the middle.
+  factory BoardFit.compute(
+    Size area,
+    Size content, {
+    TileFaceSize faceSize = TileFaceSize.medium,
+    double padding = 12,
+    double maxScale = BoardFit.maxScale,
+  }) {
     final m = faceSize.multiplier;
     final availW = math.max(0.0, area.width - 2 * padding);
     final availH = math.max(0.0, area.height - 2 * padding);
     if (content.isEmpty || availW == 0 || availH == 0) return BoardFit(scale: m, fitScale: m, zoomable: false);
     final fit = math.min(availW / (content.width * m), availH / (content.height * m));
-    final rel = fit.clamp(minScale, maxScale);
+    final rel = fit.clamp(minScale, math.max(minScale, maxScale));
     return BoardFit(scale: rel * m, fitScale: fit * m, zoomable: fit < minScale);
   }
 
   static const double minScale = 0.8;
   static const double maxScale = 1.25;
+
+  /// Upper bound on tablets (shortest screen side >= [tabletBreakpoint]).
+  static const double tabletMaxScale = 2.2;
+
+  /// Smallest iPad short side is 744 pt, largest phones ~440 pt.
+  static const double tabletBreakpoint = 700;
 
   /// Pinch-zoom limit, as an absolute scale.
   static const double maxZoom = 2;

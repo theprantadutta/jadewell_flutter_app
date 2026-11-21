@@ -87,6 +87,16 @@ void main() {
       expect(fit.zoomable, isFalse);
     });
 
+    test('tablets raise the cap so the board fills the screen', () {
+      const area = Size(1200, 2000);
+      final fit = BoardFit.compute(area, geo.size, maxScale: BoardFit.tabletMaxScale);
+      expect(fit.scale, BoardFit.tabletMaxScale);
+      expect(fit.zoomable, isFalse);
+      // Still fits exactly when the area is the limit.
+      final tight = Size(geo.size.width * 1.8 + 24, geo.size.height * 1.8 + 24);
+      expect(BoardFit.compute(tight, geo.size, maxScale: BoardFit.tabletMaxScale).scale, closeTo(1.8, 1e-9));
+    });
+
     test('never below 0.8×: pinch-zoom instead', () {
       final fit = BoardFit.compute(const Size(200, 300), geo.size);
       expect(fit.scale, 0.8);
@@ -95,17 +105,30 @@ void main() {
     });
   });
 
-  testWidgets('BoardView scales the board to fit and centres it', (tester) async {
+  testWidgets('BoardView caps at 1.25× on a phone-sized screen', (tester) async {
     final game = GameState.newGame(turtle, 42);
     final geo = BoardGeometry(turtle);
-    await tester.binding.setSurfaceSize(const Size(1000, 1400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      _app(BoardView(game: game, faces: faces, animateEntry: false), size: const Size(430, 932)),
+    );
+    expect(tester.getSize(find.byType(FittedBox)).width, closeTo(geo.size.width * 1.25, 0.01));
+  });
+
+  testWidgets('BoardView scales the board to fit and centres it (tablet cap)', (tester) async {
+    final game = GameState.newGame(turtle, 42);
+    final geo = BoardGeometry(turtle);
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       _app(BoardView(game: game, faces: faces, animateEntry: false), size: const Size(1000, 1400)),
     );
     final box = tester.getSize(find.byType(FittedBox));
-    expect(box.width, closeTo(geo.size.width * 1.25, 0.01));
-    expect(box.height, closeTo(geo.size.height * 1.25, 0.01));
+    expect(box.width, closeTo(geo.size.width * BoardFit.tabletMaxScale, 0.01));
+    expect(box.height, closeTo(geo.size.height * BoardFit.tabletMaxScale, 0.01));
     final center = tester.getCenter(find.byType(FittedBox));
     expect(center.dx, closeTo(500, 0.5));
     expect(center.dy, closeTo(700, 0.5));

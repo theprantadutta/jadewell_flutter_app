@@ -14,6 +14,7 @@ import 'ui/demo/demo_driver.dart';
 import 'ui/l10n/generated/app_localizations.dart';
 import 'ui/router.dart';
 import 'ui/screens/settings/screen_chrome.dart' show showJwToast;
+import 'ui/theme/jw_tablet_scale.dart';
 import 'ui/theme/jw_theme.dart';
 import 'ui/widgets/reduce_motion.dart';
 
@@ -71,11 +72,14 @@ class _JadewellAppState extends ConsumerState<JadewellApp> {
           // A transparent Material above every route gives all text (splash,
           // custom-painted screens, overlays) a DefaultTextStyle, so nothing
           // falls back to the yellow-underlined "no Material" debug style.
-          child: Material(
-            type: MaterialType.transparency,
-            child: JwReduceMotion(
-              enabled: settings.reduceMotion,
-              child: kDemoMode ? DemoDriver(child: child!) : child!,
+          // Large tablets lay out at a 768 pt short side and scale up.
+          child: JwTabletScale(
+            child: Material(
+              type: MaterialType.transparency,
+              child: JwReduceMotion(
+                enabled: settings.reduceMotion,
+                child: kDemoMode ? DemoDriver(child: child!) : child!,
+              ),
             ),
           ),
         );

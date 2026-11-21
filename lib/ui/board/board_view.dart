@@ -556,7 +556,14 @@ class BoardViewState extends State<BoardView> with TickerProviderStateMixin {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final fit = BoardFit.compute(constraints.biggest, _geo.size, faceSize: widget.faceSize, padding: widget.padding);
+        final tablet = MediaQuery.sizeOf(context).shortestSide >= BoardFit.tabletBreakpoint;
+        final fit = BoardFit.compute(
+          constraints.biggest,
+          _geo.size,
+          faceSize: widget.faceSize,
+          padding: widget.padding,
+          maxScale: tablet ? BoardFit.tabletMaxScale : BoardFit.maxScale,
+        );
         // Zoomable boards get texture headroom for pinch-zoom.
         final rasterScale = fit.scale * (fit.zoomable ? 1.5 : 1);
         _warmTiles(context, rasterScale);

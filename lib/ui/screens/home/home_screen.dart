@@ -79,7 +79,8 @@ class HomeScreen extends ConsumerWidget {
     PopBlob(JwFill.mint, Offset(1.01, 0.72), 0.06),
   ];
 
-  static int _columnsFor(double width) => ((width - 32 + 14) / (172 + 14)).floor().clamp(2, 3);
+  // Chapters hold 4 layouts: 2 or 4 columns, never 3 (which strands one card).
+  static int _columnsFor(double width) => ((width - 32 + 14) / (172 + 14)).floor() >= 4 ? 4 : 2;
 }
 
 /// Badge fill and icon of a chapter, by chapter index (Classics purple grid,

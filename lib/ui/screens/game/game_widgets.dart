@@ -7,6 +7,7 @@ import '../../theme/clay.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
+import '../settings/screen_chrome.dart' show kJwCardMaxWidth, kJwSheetMaxWidth;
 
 /// `m:ss` (or `h:mm:ss` from one hour) for board times.
 String formatClock(int ms) {
@@ -225,10 +226,19 @@ class _GameModalRoute<T> extends PopupRoute<T> {
       type: MaterialType.transparency,
       child: DefaultTextStyle(style: context.jw.text.body, child: Builder(builder: builder)),
     );
+    // Cards and sheets keep phone proportions on tablets instead of
+    // stretching edge to edge (the caps are wider than any phone).
     return SafeArea(
       child: bottom
-          ? Align(alignment: Alignment.bottomCenter, child: content)
-          : Center(child: SingleChildScrollView(child: content)),
+          ? Align(
+              alignment: Alignment.bottomCenter,
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: kJwSheetMaxWidth), child: content),
+            )
+          : Center(
+              child: SingleChildScrollView(
+                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: kJwCardMaxWidth), child: content),
+              ),
+            ),
     );
   }
 

@@ -11,6 +11,7 @@ import '../../theme/jw_background.dart';
 import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
+import '../home/layout_labels.dart';
 
 // Shared chrome for the settings / store / account / friends / leaderboard
 // screens: page frame with the round back button, eyebrow headings, clay
@@ -19,6 +20,13 @@ import '../../widgets/widgets.dart';
 /// Blobs of the meta screens (12–17): purple top-right, yellow and mint on
 /// the left edge, pink bottom-right, as in the reference screens.
 const kMetaBlobs = PopBlobs.board;
+
+/// Widest a centred card / dialog gets (incl. its 28 pt side margins), so it
+/// keeps phone proportions on tablets. Wider than any phone: no-op there.
+const double kJwCardMaxWidth = 460;
+
+/// Widest a bottom sheet gets on tablets.
+const double kJwSheetMaxWidth = 560;
 
 /// Screen frame: background with orbs, safe area, 46 pt back (or close)
 /// button with a 32/700 title and optional subtitle, then [child].
@@ -71,54 +79,58 @@ class JwPage extends StatelessWidget {
             style: jw.text.body,
             child: SafeArea(
               bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Row(
-                      children: [
-                        JwIconButton(
-                          icon: close ? JwIcons.x : JwIcons.back,
-                          semanticLabel: close ? l.closeButtonTooltip : l.backButtonTooltip,
-                          onHaptic: onHaptic,
-                          onPressed: onBack ?? () => defaultBack(context),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: title == null
-                              ? const SizedBox.shrink()
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Semantics(
-                                      header: true,
-                                      child: Text(
-                                        title!,
-                                        style: jw.text.h1.copyWith(fontSize: subtitle == null ? 28 : 26, height: 1.15),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+              // Centred column on tablets, like home and the legal pages.
+              child: JwContentWidth(
+                maxWidth: 720,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Row(
+                        children: [
+                          JwIconButton(
+                            icon: close ? JwIcons.x : JwIcons.back,
+                            semanticLabel: close ? l.closeButtonTooltip : l.backButtonTooltip,
+                            onHaptic: onHaptic,
+                            onPressed: onBack ?? () => defaultBack(context),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: title == null
+                                ? const SizedBox.shrink()
+                                : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Semantics(
+                                        header: true,
+                                        child: Text(
+                                          title!,
+                                          style: jw.text.h1.copyWith(fontSize: subtitle == null ? 28 : 26, height: 1.15),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                    if (subtitle != null)
-                                      Text(
-                                        subtitle!,
-                                        style: jw.text.body.copyWith(fontSize: 15.5, color: jw.textMuted),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                  ],
-                                ),
-                        ),
-                        ?trailing,
-                      ],
+                                      if (subtitle != null)
+                                        Text(
+                                          subtitle!,
+                                          style: jw.text.body.copyWith(fontSize: 15.5, color: jw.textMuted),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                          ),
+                          ?trailing,
+                        ],
+                      ),
                     ),
-                  ),
-                  // Content scrolling up fades under the header instead of
-                  // being cut off at its edge.
-                  Expanded(child: scrollFade ? JwScrollFade(top: 22, child: child) : child),
-                ],
+                    // Content scrolling up fades under the header instead of
+                    // being cut off at its edge.
+                    Expanded(child: scrollFade ? JwScrollFade(top: 22, child: child) : child),
+                  ],
+                ),
               ),
             ),
           ),
@@ -394,6 +406,7 @@ Future<T?> showJwSheet<T>(BuildContext context, {required WidgetBuilder builder,
             curve: JwMotion.easeOutSoft,
             reverseCurve: JwMotion.exit,
           ),
+    constraints: const BoxConstraints(maxWidth: kJwSheetMaxWidth),
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
       child: SafeArea(
@@ -418,7 +431,10 @@ Future<T?> showJwDialog<T>(BuildContext context, {required WidgetBuilder builder
     barrierColor: jw.scrim,
     transitionDuration: reduce ? const Duration(milliseconds: 150) : JwMotion.base,
     pageBuilder: (ctx, _, _) => Center(
-      child: Material(type: MaterialType.transparency, child: Builder(builder: builder)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: kJwCardMaxWidth),
+        child: Material(type: MaterialType.transparency, child: Builder(builder: builder)),
+      ),
     ),
     transitionBuilder: (ctx, a, _, child) {
       final fade = CurvedAnimation(parent: a, curve: JwMotion.standard);

@@ -27,6 +27,7 @@ import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import '../game/game_modals.dart';
 import '../game/game_widgets.dart';
+import '../home/layout_labels.dart' show JwContentWidth;
 
 /// Beat-sheet time (MOTION_SPEC §3, t0 = last pair gone) at which the game
 /// screen hands over to this screen; the timeline continues from here.
@@ -273,7 +274,10 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
         // Shorter screens shrink the scalable part (to 0.7×); every block
         // still sizes to its content, and the page scrolls when even that
         // isn't enough (large text).
-        final k = ((constraints.maxHeight - 375) / 450).clamp(0.7, 1.0);
+        // Tablets have room to spare: let the scalable part grow (to 1.3×)
+        // so the page fills the screen instead of ending two-thirds down.
+        final tablet = constraints.maxWidth >= 600;
+        final k = ((constraints.maxHeight - 375) / 450).clamp(0.7, tablet ? 1.3 : 1.0);
         double v(double x) => x * k;
         return SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
@@ -281,25 +285,28 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  SizedBox(height: v(16)),
-                  _topBar(context, r, chapterName),
-                  SizedBox(height: v(14)),
-                  _heroAndTime(context, r, k),
-                  SizedBox(height: v(12)),
-                  _bestChip(context, r, k),
-                  SizedBox(height: v(16)),
-                  _stats(context, r, k),
-                  if (chapterCleared != null && chapterTotal != null) ...[
+              child: JwContentWidth(
+                maxWidth: 680,
+                child: Column(
+                  children: [
                     SizedBox(height: v(16)),
-                    _chapterProgress(context, r, chapterName, chapterCleared, chapterTotal, k),
+                    _topBar(context, r, chapterName),
+                    SizedBox(height: v(14)),
+                    _heroAndTime(context, r, k),
+                    SizedBox(height: v(12)),
+                    _bestChip(context, r, k),
+                    SizedBox(height: v(16)),
+                    _stats(context, r, k),
+                    if (chapterCleared != null && chapterTotal != null) ...[
+                      SizedBox(height: v(16)),
+                      _chapterProgress(context, r, chapterName, chapterCleared, chapterTotal, k),
+                    ],
+                    SizedBox(height: v(20)),
+                    _actions(context, r, next, nextOpen, k),
+                    // Clear of the gesture bar (SafeArea adds the inset).
+                    const SizedBox(height: 16),
                   ],
-                  SizedBox(height: v(20)),
-                  _actions(context, r, next, nextOpen, k),
-                  // Clear of the gesture bar (SafeArea adds the inset).
-                  const SizedBox(height: 16),
-                ],
+                ),
               ),
             ),
           ),
