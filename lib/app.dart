@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cupertino_ui/cupertino_ui.dart' as cupertino_ui show GlobalCupertinoLocalizations;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,8 @@ import 'data/models/settings.dart';
 import 'platform/store_listing/store_listing_service.dart';
 import 'state/data_providers.dart';
 import 'state/platform_bridge.dart';
+import 'state/reminder_controller.dart';
+import 'state/reminder_policy.dart';
 import 'state/store_listing_controller.dart';
 import 'ui/demo/demo_driver.dart';
 import 'ui/l10n/generated/app_localizations.dart';
@@ -28,9 +32,24 @@ class JadewellApp extends ConsumerStatefulWidget {
 
 class _JadewellAppState extends ConsumerState<JadewellApp> {
   late final GoRouter _router = createAppRouter(observers: [ref.read(analyticsRouteObserverProvider)]);
+  StreamSubscription<ReminderPayload>? _reminderTaps;
+
+  @override
+  void initState() {
+    super.initState();
+    // A reminder tapped while Jadewell was in the background: from Home, open
+    // the daily board's screen; anywhere else (a board in play) stay put. A
+    // cold launch from a reminder goes through the splash to Home as usual.
+    _reminderTaps = ref.read(reminderControllerProvider).taps.listen((_) {
+      if (_router.routerDelegate.currentConfiguration.uri.path == AppRoutes.home) {
+        unawaited(_router.push(AppRoutes.daily));
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _reminderTaps?.cancel();
     _router.dispose();
     super.dispose();
   }

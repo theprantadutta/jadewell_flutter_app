@@ -4,17 +4,21 @@ import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart'
 import 'package:jadewell_flutter_app/platform/ads/ad_service.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
 import 'package:jadewell_flutter_app/platform/display/display_service.dart';
+import 'package:jadewell_flutter_app/platform/notifications/notification_service.dart';
 import 'package:jadewell_flutter_app/platform/store_listing/store_listing_service.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/entitlement_providers.dart';
+import 'package:jadewell_flutter_app/state/app_providers.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
 import 'package:jadewell_flutter_app/state/session_controller.dart';
 import 'package:jadewell_flutter_app/state/social_providers.dart';
 import 'package:jadewell_flutter_app/ui/screens/settings/settings_screen.dart';
 import 'package:jadewell_flutter_app/ui/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../iap/fakes.dart' show FakePurchaseService;
+import '../../state/fake_notifications.dart';
 import '../../state/store_listing_controller_test.dart' show FakeStore;
 import '../../ui/golden_helpers.dart' show loadJwFonts;
 import '../meta_checks.dart';
@@ -42,6 +46,8 @@ void main() {
     Size size = const Size(390, 844),
     DisplayService display = const NoOpDisplay(),
     StoreListingService store = const NoOpStoreListing(),
+    NotificationService notifications = const NoOpNotifications(),
+    SharedPreferences? prefs,
   }) =>
       pumpScreen(
         tester,
@@ -59,6 +65,8 @@ void main() {
           appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
           displayServiceProvider.overrideWithValue(display),
           storeListingProvider.overrideWithValue(store),
+          notificationServiceProvider.overrideWithValue(notifications),
+          if (prefs != null) sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
 
@@ -109,6 +117,46 @@ void main() {
     expect(find.text('High refresh rate'), findsNothing);
     await pump(tester); // NoOpDisplay: iOS, web, tests
     expect(find.text('High refresh rate'), findsNothing);
+  });
+
+  testWidgets('daily reminder: on only with permission; switching on asks the OS; off persists', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final notifications = FakeNotifications();
+    await pump(tester, notifications: notifications, prefs: prefs);
+    expect(find.text('Daily reminder'), findsOneWidget);
+    expect(find.textContaining('Never at night'), findsOneWidget);
+    // On in the database, but the OS hasn't allowed it yet: shown off.
+    expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
+
+    tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(notifications.requests, 1);
+    expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isTrue);
+    expect((await repo.read()).dailyReminder, isTrue);
+
+    tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(false);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect((await repo.read()).dailyReminder, isFalse);
+    expect(notifications.cancelled, isNotEmpty);
+    expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
+    expect(analytics.events.where((e) => e.$1 == 'settings_changed').last.$2, {'setting': 'daily_reminder'});
+  });
+
+  testWidgets('daily reminder: the OS refusing leaves it off and says where to turn it on', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await pump(tester, notifications: FakeNotifications(grantOnRequest: false), prefs: prefs);
+    tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
+    expect(find.textContaining('Notifications are off for Jadewell'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('daily reminder: hidden where notifications are not supported', (tester) async {
+    await pump(tester);
+    expect(find.text('Daily reminder'), findsNothing);
   });
 
   testWidgets('support: Rate Jadewell opens the store page; App updates checks Play', (tester) async {
@@ -216,7 +264,8 @@ void main() {
     for (final scale in textScales) {
       testWidgets('settings layout · ${size.key} · text ${scale}x: no overflow', (tester) async {
         setTextScale(tester, scale);
-        await pump(tester, size: size.value);
+        // With the Daily reminder row and its caption (Android/iOS).
+        await pump(tester, size: size.value, notifications: FakeNotifications());
         await tester.pumpAndSettle();
         await expectNoOverflow(tester);
         // The tile face size sheet (the overflow scan left the list scrolled).

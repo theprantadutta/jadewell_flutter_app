@@ -11,6 +11,7 @@ import '../../../platform/store_listing/store_listing_service.dart';
 import '../../../state/data_providers.dart';
 import '../../../state/entitlement_providers.dart';
 import '../../../state/platform_providers.dart';
+import '../../../state/reminder_controller.dart';
 import '../../../state/session_controller.dart';
 import '../../../state/social_providers.dart';
 import '../../../state/store_listing_controller.dart';
@@ -44,6 +45,8 @@ class SettingsScreen extends ConsumerWidget {
     final store = ref.watch(storeListingProvider);
     final update = ref.watch(appUpdateProvider);
     final haptic = ref.watch(hapticsProvider).selection;
+    final notifications = ref.watch(notificationServiceProvider);
+    final reminderPermitted = ref.watch(reminderPermissionProvider).value ?? false;
     final jw = context.jw;
 
     void change(String name, AppSettings Function(AppSettings) edit) {
@@ -103,6 +106,21 @@ class SettingsScreen extends ConsumerWidget {
                   change('haptics', (x) => x.copyWith(haptics: v));
                 }),
               ),
+              // On only when the setting and the OS permission both are:
+              // switching it on asks the OS when needed.
+              if (notifications.isSupported)
+                JwListRow(
+                  icon: JwIcons.cal,
+                  badgeFill: JwFill.mint,
+                  title: l.settingsDailyReminder,
+                  trailing: toggle(l.settingsDailyReminder, s.dailyReminder && reminderPermitted, (v) async {
+                    unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.settingsChanged, {'setting': 'daily_reminder'}));
+                    final on = await ref.read(reminderControllerProvider).setEnabled(v);
+                    ref.invalidate(reminderPermissionProvider);
+                    if (v && !on && context.mounted) showJwToast(context, l.settingsDailyReminderBlocked);
+                  }),
+                  below: _RowCaption(l.settingsDailyReminderHint),
+                ),
             ],
           ),
           JwEyebrow(l.settingsGroupDisplay),
@@ -387,6 +405,22 @@ class _RefreshCaption extends StatelessWidget {
       if (enabled && rates.current > 0) l.settingsHighRefreshNow(_hz(rates.current)),
       if (enabled && rates.lowPower) l.settingsHighRefreshBatterySaver,
     ].join(' ');
+    return Padding(
+      padding: const EdgeInsets.only(left: 52),
+      child: Text(text, style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w400, color: jw.textMuted)),
+    );
+  }
+}
+
+/// A muted line under a settings row, aligned with its title.
+class _RowCaption extends StatelessWidget {
+  const _RowCaption(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final jw = context.jw;
     return Padding(
       padding: const EdgeInsets.only(left: 52),
       child: Text(text, style: jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w400, color: jw.textMuted)),
