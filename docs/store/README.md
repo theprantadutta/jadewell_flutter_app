@@ -5,4 +5,4 @@
 
 Screenshots must be recaptured from the reskinned app.
 
-See `APP_STORE.md` for the iOS setup (App Store name `Jadewell: Mahjong Tiles`, IDs, signing) and the TODO to rename the Play listing to match.
+See `APP_STORE.md` for the store names (Play `Mahjong Solitaire: Jadewell`, App Store `Jadewell: Mahjong Tiles`) and the iOS setup (IDs, signing).

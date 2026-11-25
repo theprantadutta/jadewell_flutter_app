@@ -2,20 +2,15 @@
 
 Set up 2026-11-21.
 
-## TODO: rename the Play Store listing
+## Store names
 
-**The app's name is now `Jadewell: Mahjong Tiles`.** The App Store wouldn't accept
-`Jadewell: Mahjong Solitaire`: another developer already uses that name there.
-To keep both stores consistent:
-
-- [ ] Play Console > Jadewell > Grow > Store presence > Main store listing > **App name**:
-      `Jadewell: Mahjong Solitaire` → `Jadewell: Mahjong Tiles`
-- [ ] Optionally update in-app/legal mentions of the old name (not changed yet):
-  - `assets/legal/PRIVACY.md`, `assets/legal/TERMS.md`, `assets/legal/REFUND.md` (titles and the Terms intro)
-  - `pubspec.yaml` `description`
-  - `lib/ui/l10n/app_en.arb` `splashSubtitle` ("Mahjong Solitaire") is a tagline, fine to keep
-- [ ] Suggested App Store subtitle (30 chars max): `Mahjong Solitaire Tile Match`, so the old
-      name stays searchable.
+- **App Store:** `Jadewell: Mahjong Tiles` (Apple wouldn't accept `Jadewell: Mahjong Solitaire`, another developer
+  uses it). Subtitle `Mahjong Solitaire Tile Match` keeps the search term.
+- **Google Play:** `Mahjong Solitaire: Jadewell`, short description `Mahjong solitaire tile matching: clear relaxing
+  boards and a daily puzzle` (sent for review 2026-11-25). The names differ on purpose: almost all of Snake Classic's
+  installs come from Play search on its lead keyword, so the Play title leads with "Mahjong Solitaire". Avoid
+  "new", "free", "best" or prices in the short description: Play flags them as store-status/promotion keywords
+  and may stop promoting the app.
 
 ## Identifiers
 
