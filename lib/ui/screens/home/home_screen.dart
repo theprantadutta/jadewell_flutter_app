@@ -27,8 +27,9 @@ import 'layout_labels.dart';
 import 'unlock_sheet.dart';
 
 /// Layout select: header with the star chip, daily hero, collection cards
-/// and chapters (screen 11); the first-run "start here" variant (17a);
-/// skeleton (18).
+/// and chapters (screen 11); the first-run "start here" variant (17a),
+/// pointing at the starter board; the starter as a "Warm-up" row under the
+/// chapters once first run is over; skeleton (18).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -138,7 +139,12 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     final catalogue = widget.catalogue;
     final progress = widget.progress;
     final layouts = catalogue.chapterLayouts.toList();
-    final firstRun = progress.values.every((p) => !p.cleared && !p.hasSavedGame && p.lastPlayedAt == null);
+    final starter = catalogue.starterLayout;
+    // First run: nothing played but (maybe) an unfinished starter board. A
+    // new player starts on the starter board straight from the splash; one
+    // who left it comes back here to "Start here" on it.
+    final firstRun = !(progress[starter?.id]?.cleared ?? false) &&
+        progress.entries.every((e) => e.key == starter?.id || (!e.value.cleared && !e.value.hasSavedGame && e.value.lastPlayedAt == null));
     final earned = layouts.fold<int>(0, (a, i) => a + (progress[i.id]?.bestStars ?? 0));
     final plateIndex = {for (var i = 0; i < layouts.length; i++) layouts[i].id: i};
 
@@ -167,7 +173,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
             children: [
               fade(_HomeHeader(firstRun: firstRun, earned: earned, total: layouts.length * 3)),
               const SizedBox(height: 22),
-              fade(firstRun ? _StartHereCard(info: layouts.first) : const _DailyHeroCard()),
+              fade(firstRun ? _StartHereCard(info: starter ?? layouts.first) : const _DailyHeroCard()),
               const SizedBox(height: 30),
               fade(
                 Padding(
@@ -213,6 +219,10 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                     ),
                   ),
                 ),
+              ],
+              if (starter != null && !firstRun) ...[
+                const SizedBox(height: 30),
+                fade(_WarmUpRow(name: catalogue.starter!.name, info: starter, progress: progress[starter.id])),
               ],
             ],
           ),
@@ -932,6 +942,78 @@ class _LayoutCard extends ConsumerWidget {
       onTap: access.locked
           ? () => showUnlockLayoutSheet(context, ref, info)
           : () => context.push(AppRoutes.game(info.id)),
+    );
+  }
+}
+
+/// The starter board after first run (always open, outside the chapters):
+/// a raised row with its silhouette, "Warm-up", "Sprout · 40 tiles" or the
+/// best time and stars, and a play / replay badge.
+class _WarmUpRow extends ConsumerWidget {
+  const _WarmUpRow({required this.name, required this.info, required this.progress});
+
+  final String name;
+  final LayoutInfo info;
+  final LayoutProgress? progress;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final jw = context.jw;
+    final l = AppLocalizations.of(context);
+    final p = progress;
+    final cleared = p?.cleared ?? false;
+    final best = cleared && p!.bestTimeMs != null ? formatClock(p.bestTimeMs!) : null;
+    final meta = l.homeWarmUpMeta(info.name, info.tileCount);
+    final caption = jw.text.callout.copyWith(fontSize: 14, fontWeight: FontWeight.w400, color: jw.textMuted);
+    final deco = jw.clay(ClayLevel.raised, radius: 26);
+    return ClayPressable(
+      key: const ValueKey('warmup-row'),
+      decoration: deco,
+      pressedDecoration: deco.copyWith(level: ClayLevel.pressed),
+      pressedScale: 0.98,
+      onHaptic: ref.read(hapticsProvider).selection,
+      onTap: () => context.push(AppRoutes.game(info.id)),
+      semanticLabel: [
+        name,
+        meta,
+        if (best != null) '${l.homeBest} $best, ${l.homeStarsSemantics(p!.bestStars)}',
+      ].join(', '),
+      padding: const EdgeInsets.fromLTRB(14, 14, 20, 14),
+      child: Row(
+        children: [
+          SizedBox(width: 48, height: 52, child: JwSilhouette(tiles: LayoutLabels.tiles(info))),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(name, style: jw.text.button.copyWith(fontSize: 17)),
+                const SizedBox(height: 2),
+                if (best == null)
+                  Text(meta, style: caption)
+                else
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${info.name} · ${l.homeBest} $best',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: caption,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      StarRow(earned: p!.bestStars, size: 11, gap: 1),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          IconBadge(icon: cleared ? JwIcons.replay : JwIcons.play, fill: JwFill.mint, size: 36),
+        ],
+      ),
     );
   }
 }

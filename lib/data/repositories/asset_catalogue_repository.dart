@@ -51,10 +51,16 @@ class AssetCatalogueRepository implements CatalogueRepository {
       ));
     }
     chapters.sort((a, b) => a.order.compareTo(b.order));
+    ChapterInfo? starter;
+    if (index['starter'] case final Map<String, dynamic> s) {
+      final id = s['layout'] as String;
+      layouts[id] ??= await loadLayout(id, 0);
+      starter = ChapterInfo(id: s['id'] as String, name: s['name'] as String, order: 0, unlock: const UnlockAlways(), layoutIds: [id]);
+    }
     final daily = (index['dailyPool'] as List).cast<String>();
     for (final id in daily) {
       layouts[id] ??= await loadLayout(id, 0);
     }
-    return Catalogue(chapters: chapters, layouts: layouts, dailyPool: daily);
+    return Catalogue(chapters: chapters, layouts: layouts, dailyPool: daily, starter: starter);
   }
 }

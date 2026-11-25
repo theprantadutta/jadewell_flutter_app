@@ -21,7 +21,9 @@ import 'screens/store/store_screen.dart';
 /// `context.push(AppRoutes.game('turtle'))`.
 abstract final class AppRoutes {
   static const splash = '/';
-  static const onboarding = '/onboarding';
+
+  /// The old onboarding pages, now Settings → How to play.
+  static const howToPlay = '/how-to-play';
   static const home = '/home';
   static String game(String layoutId) => '/game/$layoutId';
   static const dailyPlay = '/daily/play';
@@ -45,11 +47,7 @@ GoRouter createAppRouter({List<NavigatorObserver> observers = const []}) => GoRo
       observers: observers,
       routes: [
         GoRoute(path: AppRoutes.splash, name: 'splash', pageBuilder: (_, s) => _fade(s, const SplashScreen())),
-        GoRoute(
-          path: AppRoutes.onboarding,
-          name: 'onboarding',
-          pageBuilder: (_, s) => _fade(s, const OnboardingScreen()),
-        ),
+        GoRoute(path: AppRoutes.howToPlay, name: 'howToPlay', builder: (_, _) => const OnboardingScreen()),
         GoRoute(path: AppRoutes.home, name: 'home', pageBuilder: (_, s) => _fade(s, const HomeScreen())),
         GoRoute(
           path: '/game/:layoutId',
@@ -83,7 +81,7 @@ GoRouter createAppRouter({List<NavigatorObserver> observers = const []}) => GoRo
       ],
     );
 
-/// 200 ms cross-fade (SPLASH.md handoff: splash → onboarding/home).
+/// 200 ms cross-fade (SPLASH.md handoff: splash → home).
 CustomTransitionPage<void> _fade(GoRouterState state, Widget child) => CustomTransitionPage<void>(
       key: state.pageKey,
       name: state.name,

@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../platform/analytics/analytics_service.dart';
-import '../../../state/data_providers.dart';
 import '../../../state/platform_providers.dart';
 import '../../board/tile/tile_face_spec.dart';
 import '../../components/components.dart';
@@ -23,7 +22,12 @@ import 'onboarding_illustrations.dart';
 /// The 42 tile faces (asset, loads in a few ms).
 final onboardingFacesProvider = FutureProvider<List<TileFaceSpec>>((ref) => TileFaceSpec.load());
 
-/// Onboarding x3: match, free rule, solvable (screens 02a-02c).
+/// How to play x3: match, free rule, solvable (the onboarding screens
+/// 02a-02c). Opened from Settings → How to play; Close or the last page's
+/// button goes back.
+///
+/// No longer part of first run: a new player goes from the splash straight
+/// into the starter board, coached in-game (docs/ANALYTICS.md, "First run").
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -36,12 +40,12 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pages = PageController();
   int _page = 0;
-  bool _finishing = false;
+  bool _closing = false;
 
   @override
   void initState() {
     super.initState();
-    _logStep(0);
+    unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.howToPlayOpen, {'source': 'settings'}));
   }
 
   @override
@@ -50,17 +54,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  void _logStep(int index) =>
-      unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.onboardingStep, {'step': index + 1}));
-
-  void _onPageChanged(int index) {
-    setState(() => _page = index);
-    _logStep(index);
-  }
+  void _onPageChanged(int index) => setState(() => _page = index);
 
   void _next() {
     if (_page >= OnboardingScreen.pageCount - 1) {
-      unawaited(_finish(skipped: false));
+      _close();
       return;
     }
     final reduce = JwReduceMotion.of(context);
@@ -71,15 +69,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  Future<void> _finish({required bool skipped}) async {
-    if (_finishing) return;
-    _finishing = true;
-    unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.onboardingComplete, {
-      'skipped': skipped,
-      'step': _page + 1,
-    }));
-    await ref.read(settingsProvider.notifier).change((s) => s.copyWith(onboardingDone: true));
-    if (mounted) context.go(AppRoutes.home);
+  void _close() {
+    if (_closing) return;
+    _closing = true;
+    context.canPop() ? context.pop() : context.go(AppRoutes.home);
   }
 
   @override
@@ -116,9 +109,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           ),
                           JwButton.tertiary(
                             key: const ValueKey('onboarding-skip'),
-                            label: l.onboardingSkip,
+                            label: l.onboardingClose,
                             onHaptic: haptics.selection,
-                            onPressed: () => _finish(skipped: true),
+                            onPressed: _close,
                           ),
                         ],
                       ),
@@ -182,7 +175,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                       child: PrimaryButton(
                         key: const ValueKey('onboarding-next'),
-                        label: last ? l.onboardingStart : l.onboardingNext,
+                        label: last ? l.onboardingDone : l.onboardingNext,
                         trailingIcon: JwIcons.arrow,
                         height: 60,
                         expand: true,

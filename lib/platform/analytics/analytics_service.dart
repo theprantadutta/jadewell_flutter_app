@@ -23,7 +23,9 @@ abstract final class AnalyticsUserProperties {
 abstract final class AnalyticsEvents {
   static const appOpen = 'app_open';
   static const onboardingStep = 'onboarding_step';
-  static const onboardingComplete = 'onboarding_complete';
+  static const onboardingComplete = 'onboarding_complete'; // flow, skipped, step
+  static const coachComplete = 'coach_complete'; // layout_id, time_ms: first match on the starter board
+  static const howToPlayOpen = 'how_to_play_open'; // source
   static const layoutStart = 'layout_start';
   static const boardCleared = 'board_cleared';
   static const boardAbandon = 'board_abandon';

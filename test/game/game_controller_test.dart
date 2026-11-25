@@ -104,6 +104,9 @@ final deadlockFaces = Int8List.fromList([1, 0, 0, 1]);
 
 final turtleLayout = Layout.parse(File('assets/layouts/turtle.json').readAsStringSync());
 
+/// The real starter board (40 tiles).
+final sproutLayout = Layout.parse(File('assets/layouts/sprout.json').readAsStringSync());
+
 GameState stateWithFaces(Layout layout, Int8List faces, {int seed = 1}) => GameState(
   layout: layout,
   seed: seed,
@@ -146,13 +149,22 @@ class Harness {
               'pair': info(pairLayout, parMs: 10000),
               'stacks': info(stacksLayout),
               'turtle': info(turtleLayout, parMs: 360000),
+              'sprout': info(sproutLayout, chapter: 'warmup', parMs: 75000),
             },
             dailyPool: const ['pair'],
+            starter: const ChapterInfo(
+              id: 'warmup',
+              name: 'Warm-up',
+              order: 0,
+              unlock: UnlockAlways(),
+              layoutIds: ['sprout'],
+            ),
           ),
         ),
         if (daily != null) dailyProvider.overrideWith((ref) => Stream.value(daily!)),
         if (prefs != null) sharedPreferencesProvider.overrideWithValue(prefs!),
         progressRepositoryProvider.overrideWithValue(repo),
+        statsRepositoryProvider.overrideWithValue(repo),
         analyticsProvider.overrideWithValue(analytics),
         adServiceProvider.overrideWithValue(ads),
         gameClockFactoryProvider.overrideWithValue(() => clock),
@@ -565,6 +577,97 @@ void main() {
       addTearDown(h.dispose);
       final c = await h.open(launch);
       expect(c.canOfferSecondChance, isFalse);
+    });
+  });
+
+  group('starter board coach', () {
+    const launch = GameLaunch.layout('sprout');
+
+    test('a new player gets the first matching pair highlighted until the first match', () async {
+      final h = Harness();
+      addTearDown(h.dispose);
+      final c = await h.open(launch);
+      final s = h.state(launch);
+      expect(s.chapterName, 'Warm-up');
+      final coach = s.coach!;
+      expect(s.game!.availableMoves, contains(coach));
+      final start = h.analytics.named(AnalyticsEvents.layoutStart).single;
+      expect(start['layout_id'], 'sprout');
+      expect(start['tiles'], 40);
+      expect(start['lifetime_clears'], 0);
+
+      // A tap alone keeps the coach; the first match ends it for good.
+      c.tap(coach.$1);
+      expect(h.state(launch).coach, coach);
+      h.clock.advance(4200);
+      c.tap(coach.$2);
+      expect(h.state(launch).coach, isNull);
+      final done = h.analytics.named(AnalyticsEvents.coachComplete).single;
+      expect(done['layout_id'], 'sprout');
+      expect(done['time_ms'], 4200);
+
+      playMove(c, h.state(launch));
+      expect(h.state(launch).coach, isNull);
+      expect(h.analytics.named(AnalyticsEvents.coachComplete), hasLength(1));
+    });
+
+    test('a hint takes over while it shows and the coach stays for the first match', () async {
+      final h = Harness();
+      addTearDown(h.dispose);
+      final c = await h.open(launch);
+      expect(c.useHint(), HintAvailability.free);
+      expect(h.state(launch).hint, isNotNull);
+      expect(h.state(launch).coach, isNotNull);
+    });
+
+    test('no coach for a player who has cleared a board before', () async {
+      final h = Harness();
+      addTearDown(h.dispose);
+      await h.repo.recordResult(
+        GameResult(
+          layoutId: 'turtle',
+          seed: 1,
+          generatorVersion: 1,
+          outcome: GameOutcome.cleared,
+          timeMs: 1000,
+          stars: 1,
+          hintsUsed: 0,
+          undos: 0,
+          shufflesUsed: 0,
+          tilesMatched: 144,
+          longestStreak: 1,
+          playedAt: DateTime(2026, 11, 20),
+        ),
+      );
+      await h.open(launch);
+      expect(h.state(launch).coach, isNull);
+      expect(h.analytics.named(AnalyticsEvents.layoutStart).single['lifetime_clears'], 1);
+    });
+
+    test('no coach on a regular board', () async {
+      final h = Harness();
+      addTearDown(h.dispose);
+      await h.open(const GameLaunch.layout('turtle'));
+      expect(h.state(const GameLaunch.layout('turtle')).coach, isNull);
+    });
+
+    test('clearing the starter logs board_cleared with its layout id and never offers a second chance', () async {
+      SharedPreferences.setMockInitialValues({});
+      final h = Harness(prefs: await SharedPreferences.getInstance());
+      addTearDown(h.dispose);
+      final c = await h.open(launch);
+      expect(c.canOfferSecondChance, isFalse);
+      while (h.state(launch).phase == GamePhase.playing) {
+        playMove(c, h.state(launch));
+      }
+      for (var i = 0; i < 20 && h.state(launch).result == null; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final cleared = h.analytics.named(AnalyticsEvents.boardCleared).single;
+      expect(cleared['layout_id'], 'sprout');
+      expect(cleared['tiles'], 40);
+      expect(cleared['lifetime_clears'], 1);
+      expect(h.state(launch).coach, isNull);
     });
   });
 }

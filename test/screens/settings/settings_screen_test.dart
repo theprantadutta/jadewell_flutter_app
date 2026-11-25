@@ -180,6 +180,13 @@ void main() {
     expect(find.text('App updates'), findsNothing);
   });
 
+  testWidgets('support: How to play opens the old onboarding pages', (tester) async {
+    await pump(tester, size: const Size(390, 1600));
+    await tester.tap(find.text('How to play'));
+    await tester.pumpAndSettle();
+    expect(find.text('route:/how-to-play'), findsOneWidget);
+  });
+
   testWidgets('support has a Contact us row and the email is not shown', (tester) async {
     await pump(tester, size: const Size(390, 1600));
     expect(find.text('Contact us'), findsOneWidget);

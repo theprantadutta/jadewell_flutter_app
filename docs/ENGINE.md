@@ -53,6 +53,10 @@ extra keys ignored. `x`, `y` are half-tile units (a tile covers `[x, x+2) × [y,
 Faces, solutions, fixtures and move logs all use position indices. (Files may list tiles in any order; the
 generated `turtle.json` is already canonical.)
 
+**Bundled layouts** (`tool/validate_layouts.dart`) have 72–144 tiles, except index.json's `starter` board (`sprout`,
+40 tiles, 2 layers, par 75 s), a short first board for new players, which may have 36–144. The starter sits outside
+`chapters` and `dailyPool`, so it never changes chapter counts, unlocks, the star total or the daily choice.
+
 **Validation** (errors): tile count even and 2…144; no negative coordinate; no two tiles on the same layer overlap
 (`|dx| < 2 && |dy| < 2`, duplicates included); every tile on `z > 0` overlaps at least one tile on `z − 1`.
 *Warning* (not an error): a tile on `z ≥ p.z + 2` overhangs `p` while nothing on `p.z + 1` covers `p`.

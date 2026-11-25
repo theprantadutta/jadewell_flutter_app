@@ -155,8 +155,11 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
     // interstitial, and the head-start offer waits for another board.
     if (!ref.read(clearInterstitialShownProvider) && await _maybeOfferReminder()) return;
     if (!mounted) return;
-    // Never stack a rewarded interstitial on top of an interstitial.
+    // Never stack a rewarded interstitial on top of an interstitial, and
+    // never offer a video right after the starter board (a new player's
+    // first clear).
     if (ads.adsRemoved || ref.read(headStartBonusProvider) > 0 || ref.read(clearInterstitialShownProvider)) return;
+    if (ref.read(catalogueProvider).value?.isStarter(widget.layoutId) ?? true) return;
     final granted = await showGameModal<bool>(
       context,
       bottom: true,
@@ -279,11 +282,14 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
       }
       // "Next" = the next open layout in collection order that isn't cleared
       // yet (skipping locked ones), else any open one; never this board.
+      // After the starter board: the first such layout of the collection.
+      final starter = catalogue.isStarter(r.layoutId);
       final all = catalogue.chapterLayouts.toList();
-      final at = all.indexWhere((l) => l.id == r.layoutId);
+      final at = starter ? -1 : all.indexWhere((l) => l.id == r.layoutId);
       LayoutInfo? pick({required bool uncleared}) {
-        for (var k = 1; k < all.length; k++) {
+        for (var k = 1; k <= all.length; k++) {
           final cand = all[(at + k) % all.length];
+          if (cand.id == r.layoutId) continue;
           if (Unlocks.layout(catalogue, cand.id, progress).locked) continue;
           if (uncleared && (progress[cand.id]?.cleared ?? false)) continue;
           return cand;
@@ -291,7 +297,7 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
         return null;
       }
 
-      next = at < 0 ? null : (pick(uncleared: true) ?? pick(uncleared: false));
+      next = at < 0 && !starter ? null : (pick(uncleared: true) ?? pick(uncleared: false));
       nextOpen = next != null;
     }
 

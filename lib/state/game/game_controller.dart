@@ -74,6 +74,12 @@ class GameController extends Notifier<GameViewState> {
   int? _dailySeed;
   int _lastMatchMs = -kComboWindowMs * 2;
 
+  /// This board is the catalogue's starter board.
+  bool _starter = false;
+
+  /// The first-move coach is still waiting for this player's first match.
+  bool _coaching = false;
+
   /// Last published state (readable while disposing).
   GameViewState? _latest;
 
@@ -124,7 +130,8 @@ class GameController extends Notifier<GameViewState> {
       } else {
         info = catalogue.layout(launch.layoutId);
       }
-      final chapterName = catalogue.chapters.where((c) => c.id == info.chapterId).firstOrNull?.name ?? '';
+      final chapterName = catalogue.chapterName(info.chapterId);
+      _starter = !launch.daily && catalogue.isStarter(info.id);
 
       GameState? game;
       var elapsed = 0;
@@ -152,6 +159,8 @@ class GameController extends Notifier<GameViewState> {
       if (bonus > 0) game = cmd.grantHint(game, count: bonus).$1;
 
       _clock.reset(elapsed);
+      // A brand-new player's starter board coaches the first move.
+      _coaching = _starter && (_lifetimeClears ?? 0) == 0 && game.tilesMatched == 0;
       state = state.copyWith(
         phase: GamePhase.playing,
         info: info,
@@ -160,6 +169,7 @@ class GameController extends Notifier<GameViewState> {
         dealId: 1,
         resumed: resumed,
         dailyDate: dailyDate,
+        coach: () => _coaching ? cmd.findHint(game!) : null,
       );
       _logBoard(AnalyticsEvents.layoutStart, {
         'layout_id': info.id,
@@ -369,7 +379,7 @@ class GameController extends Notifier<GameViewState> {
   bool get canOfferSecondChance {
     final s = state;
     final g = s.game;
-    if (!_canPlay || g == null || !s.resumed || _ads.adsRemoved) return false;
+    if (!_canPlay || g == null || !s.resumed || _ads.adsRemoved || _starter) return false;
     if (g.freeHintsLeft > 0 && g.freeShufflesLeft > 0) return false;
     final last = ref.read(sharedPreferencesProvider).getInt(_secondChanceKey);
     return last == null || DateTime.now().millisecondsSinceEpoch - last >= kSecondChanceCooldown.inMilliseconds;
@@ -437,6 +447,7 @@ class GameController extends Notifier<GameViewState> {
       dealId: state.dealId + 1,
       pauseReason: () => null,
       hint: () => null,
+      coach: () => _coaching ? cmd.findHint(game) : null,
       combo: 0,
       resumed: false,
     );
@@ -547,7 +558,8 @@ class GameController extends Notifier<GameViewState> {
     }
     if (clearHint && state.hint != null) _clearHintTimer();
     if (hintPair != null && hintPair != state.hint) _startHintTimer();
-    state = state.copyWith(game: next, combo: nextCombo, hint: () => hintPair);
+    final coach = _nextCoach(next, matched: events.any((e) => e is Matched));
+    state = state.copyWith(game: next, combo: nextCombo, hint: () => hintPair, coach: () => coach);
     _emit(events, source: source, combo: nextCombo);
     if (!identical(prev, next)) {
       _dirty = true;
@@ -555,6 +567,20 @@ class GameController extends Notifier<GameViewState> {
     }
     final cleared = events.whereType<Cleared>().firstOrNull;
     if (cleared != null) unawaited(_onCleared(cleared.stats));
+  }
+
+  /// The coach pair after a change: gone for good after the first match;
+  /// re-picked when a shuffle has broken the shown pair.
+  (int, int)? _nextCoach(GameState next, {required bool matched}) {
+    if (!_coaching) return null;
+    if (matched) {
+      _coaching = false;
+      _log(AnalyticsEvents.coachComplete, {'layout_id': state.info!.id, 'time_ms': next.lastElapsedMs});
+      return null;
+    }
+    final c = state.coach;
+    if (c != null && next.availableMoves.contains(c)) return c;
+    return cmd.findHint(next);
   }
 
   void _emit(List<GameEvent> events, {required _Source source, int combo = 0}) {
@@ -613,7 +639,7 @@ class GameController extends Notifier<GameViewState> {
     final s = state;
     final info = s.info!;
     final game = s.game!;
-    state = s.copyWith(phase: GamePhase.cleared, hint: () => null);
+    state = s.copyWith(phase: GamePhase.cleared, hint: () => null, coach: () => null);
     _syncClock();
     final stars = starsFor(
       timeMs: stats.elapsedMs,

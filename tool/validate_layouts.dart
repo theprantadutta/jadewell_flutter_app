@@ -5,13 +5,21 @@
 //
 // Checks: layout geometry (engine validation), no overhang warnings, required
 // metadata, index.json consistency (every listed id has a file, every file is
-// listed exactly once, chapter/order agree), and that the dealer + independent
-// solver agree on N seeds per layout in production dealer mode.
+// listed exactly once, chapter/order agree, the starter board's file names the
+// starter chapter), and that the dealer + independent solver agree on N seeds
+// per layout in production dealer mode.
+//
+// Tile counts: 72–144, except the starter board (index.json `starter`), a
+// short first board for new players, which may have 36–144.
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:jadewell_flutter_app/engine/engine.dart';
+
+/// Tile-count floor for chapter and daily layouts, and for the starter board.
+const int kMinTiles = 72;
+const int kMinStarterTiles = 36;
 
 class LayoutReport {
   LayoutReport(this.id);
@@ -51,7 +59,9 @@ class LayoutReport {
     if (data.parMs == null || data.parMs! <= 0) report.problems.add('missing parMs');
     if (data.difficulty == null) report.problems.add('missing difficulty');
     if (data.chapter == null || data.order == null) report.problems.add('missing chapter/order');
-    if (data.tiles.length < 72 || data.tiles.length > 144) report.problems.add('tile count ${data.tiles.length} outside 72–144');
+    if (data.tiles.length < kMinStarterTiles || data.tiles.length > 144) {
+      report.problems.add('tile count ${data.tiles.length} outside $kMinStarterTiles–144');
+    }
     final errors = data.validate();
     report.problems.addAll(errors);
     if (errors.isNotEmpty) continue;
@@ -84,6 +94,17 @@ class LayoutReport {
   }
   final index = jsonDecode(indexFile.readAsStringSync()) as Map<String, dynamic>;
   final listed = <String>[];
+  final starter = index['starter'] as Map<String, dynamic>?;
+  if (starter != null) {
+    final id = starter['layout'] as String;
+    listed.add(id);
+    final m = meta[id];
+    if (m == null) {
+      catalogue.add('starter lists "$id" but there is no $id.json');
+    } else if (m.chapter != starter['id']) {
+      catalogue.add('"$id" is the starter (${starter['id']}) but its file says ${m.chapter}');
+    }
+  }
   for (final ch in (index['chapters'] as List).cast<Map<String, dynamic>>()) {
     final chapterId = ch['id'] as String;
     final layouts = (ch['layouts'] as List).cast<Map<String, dynamic>>();
@@ -105,6 +126,9 @@ class LayoutReport {
   }
   for (final id in meta.keys) {
     final n = listed.where((x) => x == id).length;
+    if (id != starter?['layout'] && meta[id]!.tiles.length < kMinTiles) {
+      catalogue.add('"$id" has ${meta[id]!.tiles.length} tiles; only the starter may have fewer than $kMinTiles');
+    }
     if (n == 0) catalogue.add('"$id".json is not listed in index.json');
     if (n > 1) catalogue.add('"$id" is listed $n times in index.json');
   }

@@ -458,8 +458,8 @@ class _CountersRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final reduce = JwReduceMotion.of(context);
-    final (tiles, pairs, hint, freeHints, combo, phase, paused) = ref.watch(
-      provider.select((s) => (s.tilesLeft, s.pairsOpen, s.hint, s.freeHintsLeft, s.combo, s.phase, s.paused)),
+    final (tiles, pairs, hint, freeHints, combo, phase, paused, coaching) = ref.watch(
+      provider.select((s) => (s.tilesLeft, s.pairsOpen, s.hint, s.freeHintsLeft, s.combo, s.phase, s.paused, s.coach != null)),
     );
     final Widget content;
     if (phase == GamePhase.loading || phase == GamePhase.failed) {
@@ -479,6 +479,14 @@ class _CountersRow extends ConsumerWidget {
           icon: JwIcons.hint,
           fill: JwFill.yellow,
         ),
+      );
+    } else if (coaching && !paused) {
+      // First-move coach (starter board, first board ever): one line until
+      // the first match; the pair it means glows on the board.
+      content = Padding(
+        key: const ValueKey('coach'),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: JwToast(message: l.gameCoachTip, icon: JwIcons.hint, fill: JwFill.mint),
       );
     } else {
       // Three chips (tiles, pairs, streak) can be wider than a phone: shrink
@@ -629,7 +637,7 @@ class _BoardArea extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (game, dealId, hint, paused) = ref.watch(provider.select((s) => (s.game, s.dealId, s.hint, s.paused)));
+    final (game, dealId, hint, paused) = ref.watch(provider.select((s) => (s.game, s.dealId, s.hint ?? s.coach, s.paused)));
     final tileSize = ref.watch(settingsProvider.select((s) => s.value?.tileSize ?? TileSizePreference.medium));
     if (game == null || faces == null) return const SizedBox.expand();
     return Padding(

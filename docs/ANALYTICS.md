@@ -10,8 +10,10 @@ Debug/profile builds print what release would send (`analytics: ...` in logcat).
 | Event | Params | When |
 |---|---|---|
 | `app_open` | | Splash, once per launch |
-| `onboarding_step` | `step` | Each onboarding page shown |
-| `onboarding_complete` | `step`, `skipped` | Finished or skipped |
+| `onboarding_step` | `step` | Legacy (app ≤ 1.0.6): each onboarding page shown. No longer sent |
+| `onboarding_complete` | `flow`, `step`, `skipped` | First run done (see "First run" below) |
+| `coach_complete` | `layout_id`, `time_ms` | First match on the starter board under the first-move coach |
+| `how_to_play_open` | `source` (`settings`) | Settings → How to play opened (the old onboarding pages) |
 | `layout_start` | `layout_id`, `daily`, `tiles`, `lifetime_clears`, `resumed` or `restart` | Board dealt, resumed or restarted |
 | `board_cleared` | `layout_id`, `daily`, `tiles`, `lifetime_clears`, `time_ms`, `hints`, `undos`, `shuffles`, `stars` | Board cleared |
 | `board_abandon` | `layout_id`, `daily`, `tiles`, `lifetime_clears`, `tiles_left`, `time_ms`, `trigger` (`quit`/`background`) | Left mid-board |
@@ -34,6 +36,28 @@ Debug/profile builds print what release would send (`analytics: ...` in logcat).
 `lifetime_clears` is the number of boards the player has cleared (counting this
 one on `board_cleared`), so `lifetime_clears = 0` on `layout_start` /
 `board_abandon` isolates players who have never finished a board.
+
+## First run (play first, after 1.0.6)
+
+A new player (`onboarding_done` unset) goes from the splash straight into the
+starter board (`layout_id = sprout`, 40 tiles, index.json `starter`). No intro
+pages: the board coaches the first move (the first matching free pair glows and
+a "Tap two matching free tiles" tip shows until the first match). The old
+onboarding pages are Settings → How to play.
+
+- `onboarding_complete` is logged when the splash hands over to the starter
+  board, and `onboarding_done` is set then, so leaving the board unfinished
+  never brings the intro back. Params: `flow = play_first`, `skipped = false`,
+  `step = 0` (no intro pages were shown). Older versions sent `step` 1–3 and
+  `skipped` true/false without `flow`; filter on `flow` to separate them.
+- `coach_complete` marks the first match (`time_ms` = board time to it). It is
+  logged at most once per board and only on the starter board for a player with
+  `lifetime_clears = 0`.
+- The starter board's `layout_start`, `board_cleared` and `board_abandon` carry
+  `layout_id = sprout` and `tiles = 40` like any board.
+
+**To register in GA4** (event-scoped dimensions; the lead does this): `flow`,
+`source`. `time_ms` on `coach_complete` is already a registered metric.
 
 ## User properties
 
@@ -61,12 +85,15 @@ Custom definitions in the same change.
 ## What to look at
 
 1. **First-board funnel** (Explore → Funnel): `first_open` → `onboarding_complete`
-   → `layout_start` → `board_cleared` with `lifetime_clears = 1`. This is the
-   number to move first.
+   → `layout_start` → `coach_complete` → `board_cleared` with
+   `lifetime_clears = 1`. This is the number to move first. From the release after 1.0.6 the first
+   board is the 40-tile starter (`layout_id = sprout`).
 2. **Where boards are left:** `board_abandon` by `layout_id`, `tiles`,
    `tiles_left` and `lifetime_clears`.
-3. **Onboarding drop-off:** `onboarding_step` by `step`, and
-   `onboarding_complete` by `skipped`.
+3. **Onboarding drop-off:** up to 1.0.6, `onboarding_step` by `step` and
+   `onboarding_complete` by `skipped`; after that there are no intro pages, so
+   look at `coach_complete` vs `board_abandon` on `sprout` instead, and
+   `how_to_play_open` for who wants the rules.
 4. **Retention:** Reports → Retention, and Explore → Cohort by first-session week.
 5. **Ad health:** `ad_load_failed` by `format` × `code` × `message` (code 3 =
    no fill, which is normal for a new app; anything else is a setup problem) and

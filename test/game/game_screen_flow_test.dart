@@ -209,6 +209,72 @@ void main() {
     });
   }
 
+  // The starter board, as a brand-new player meets it straight from the
+  // splash: the coach tip and glowing pair until the first match, then the
+  // usual counters; the cleared screen points at the first collection board
+  // and offers no video. Phone, narrow phone at large text, and tablet.
+  for (final (brightness, size, scale) in const [
+    (Brightness.light, Size(390, 844), 1.0),
+    (Brightness.dark, Size(360, 780), 1.3),
+    (Brightness.light, Size(600, 1005), 1.0),
+  ]) {
+    testWidgets('starter board: coach, then cleared ($brightness ${size.width.toInt()}x${size.height.toInt()} @$scale)', (tester) async {
+      tester.view
+        ..physicalSize = size * 2
+        ..devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final repo = MemoryProgressRepository();
+      final router = _router(AppRoutes.game('sprout'));
+      addTearDown(router.dispose);
+      await tester.pumpWidget(_app(router, brightness, repo));
+      for (var i = 0; i < 10; i++) {
+        await _wait(tester, 50);
+      }
+      final container = ProviderScope.containerOf(tester.element(find.byType(GameScreen)));
+      const launch = GameLaunch.layout('sprout');
+      GameViewState state() => container.read(gameControllerProvider(launch));
+      final c = container.read(gameControllerProvider(launch).notifier);
+      expect(state().phase, GamePhase.playing);
+      expect(state().tilesLeft, 40);
+      await _wait(tester, 2200);
+      await _shot(tester, 'starter_coach_${brightness.name}');
+
+      // The tip and the pair it means.
+      final coach = state().coach!;
+      expect(find.text('Tap two matching free tiles'), findsOneWidget);
+      expect(find.text('Warm-up'), findsOneWidget);
+      c
+        ..tap(coach.$1)
+        ..tap(coach.$2);
+      await _wait(tester, 900);
+      expect(state().coach, isNull);
+      expect(find.text('Tap two matching free tiles'), findsNothing);
+      expect(find.byType(GameCounterChip), findsWidgets);
+
+      while (!state().game!.isCleared) {
+        final (a, b) = findHint(state().game!)!;
+        c
+          ..tap(a)
+          ..tap(b);
+        await _wait(tester, 120);
+      }
+      await _wait(tester, 2100);
+      expect(find.byType(ClearedScreen), findsOneWidget);
+      await _wait(tester, 2800);
+      expect(find.text('Board cleared!'), findsOneWidget);
+      expect(find.text('Next: Pyramid'), findsOneWidget);
+      await _shot(tester, 'starter_cleared_${brightness.name}');
+      // No head-start (video) offer after the first board.
+      await _wait(tester, 2000);
+      expect(find.text('Head start'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    });
+  }
+
   testWidgets('a deadlocked board shows the no-moves sheet (screen 07)', (tester) async {
     tester.view
       ..physicalSize = const Size(780, 1688)

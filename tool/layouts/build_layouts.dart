@@ -87,8 +87,9 @@ class LayoutDef {
     this.difficulty,
     this.chapter,
     this.order,
-    this.layers,
-  );
+    this.layers, {
+    this.parSeconds,
+  });
 
   final String id;
   final String name;
@@ -99,9 +100,14 @@ class LayoutDef {
   /// layers[z] = tile positions on layer z.
   final List<Set<Cell>> layers;
 
+  /// Par override in seconds (the starter board's short par); null derives
+  /// it from the tile count and difficulty.
+  final int? parSeconds;
+
   int get tileCount => layers.fold(0, (n, l) => n + l.length);
 
   int get parMs {
+    if (parSeconds != null) return parSeconds! * 1000;
     final seconds = tileCount * kSecondsPerTile[difficulty]!;
     return (seconds / 5).round() * 5 * 1000;
   }
@@ -151,6 +157,38 @@ class LayoutDef {
     return b.toString();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Warm-up (the starter board, played first by a new player)
+// ---------------------------------------------------------------------------
+
+/// A seedling in a pot: 40 tiles, two layers, short rows so most tiles start
+/// free (27 of 40). One top tile sits on each leaf's middle (blocked anyway)
+/// and a 2 x 2 cap straddles the pot, so there is a little depth without
+/// hiding moves. Random play gets stuck in ~1.5% of games (the check allows
+/// 5%); the dealer guarantees a solution regardless. Par 75 s.
+LayoutDef sprout() => LayoutDef(
+  'sprout',
+  'Sprout',
+  Difficulty.easy,
+  'warmup',
+  1,
+  [
+    grid([
+      '##...##',
+      '###.###',
+      '.##.##.',
+      '...#...',
+      '...#...',
+      '...#...',
+      '#######',
+      '.#####.',
+      '.#####.',
+    ]),
+    at([(2, 2), (10, 2), (5, 13), (7, 13), (5, 15), (7, 15)]),
+  ],
+  parSeconds: 75,
+);
 
 // ---------------------------------------------------------------------------
 // Classics
@@ -671,6 +709,7 @@ LayoutDef bell() {
 // ---------------------------------------------------------------------------
 
 final List<LayoutDef> kLayouts = [
+  sprout(),
   pyramid(),
   fortress(),
   bridge(),
@@ -721,6 +760,11 @@ const List<Map<String, Object>> kChapters = [
   },
 ];
 
+/// The starter board for index.json: what a new player plays first. Kept out
+/// of `chapters`, so it never changes chapter counts, unlocks, the star total
+/// or the daily pool.
+const Map<String, Object> kStarter = {'id': 'warmup', 'name': 'Warm-up', 'layout': 'sprout'};
+
 String indexJson() {
   final chapters = [
     for (final c in kChapters)
@@ -742,7 +786,7 @@ String indexJson() {
     for (final l in kLayouts)
       if (l.chapter == 'daily') l.id,
   ];
-  final data = {'version': 1, 'chapters': chapters, 'dailyPool': daily};
+  final data = {'version': 1, 'starter': kStarter, 'chapters': chapters, 'dailyPool': daily};
   return '${const JsonEncoder.withIndent('  ').convert(data)}\n';
 }
 
