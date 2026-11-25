@@ -159,7 +159,10 @@ final reviewPrompterProvider = Provider<ReviewPrompter>(
   (ref) => ReviewPrompter(
     store: ref.watch(storeListingProvider),
     prefs: () => ref.read(sharedPreferencesProvider),
-    stats: () => ref.read(statsProvider.future),
+    // A one-shot repository read: `statsProvider.future` may never resolve
+    // when nothing is watching the stream, which silently blocked the review
+    // prompt and every cleared-screen offer after it.
+    stats: () => ref.read(statsRepositoryProvider).watch().first,
   ),
 );
 
