@@ -13,9 +13,13 @@ import 'notification_service.dart';
 /// * Android: inexact alarms (`inexactAllowWhileIdle`), so no exact-alarm
 ///   permission; the small icon is the white `ic_stat_jadewell` drawable
 ///   (kept through resource shrinking by `res/raw/keep.xml`); channel
-///   `daily_reminder` at default importance (sound, no heads-up).
+///   `daily_reminder` at default importance (sound, no heads-up). Each
+///   reminder times out after [reminderLifetime] (20 h), so an ignored one
+///   is gone before the next day's arrives, and all of them share one
+///   group ([_group]) so the shade never shows a stack.
 /// * iOS: initialised without asking; [requestPermission] asks for alert
-///   and sound only.
+///   and sound only. Reminders share one thread ([_group]), so
+///   Notification Center collapses them.
 /// * Times are scheduled as UTC instants, so no time-zone database is
 ///   needed: the policy already picked the local wall-clock time.
 class LocalNotificationService implements NotificationService {
@@ -30,6 +34,11 @@ class LocalNotificationService implements NotificationService {
 
   static const _channelId = 'daily_reminder';
   static const _smallIcon = 'ic_stat_jadewell';
+  static const _group = 'jadewell.daily_reminder';
+
+  /// How long a shown reminder stays in the Android shade (the chain is a
+  /// day apart).
+  static const reminderLifetime = Duration(hours: 20);
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   final StreamController<String> _taps = StreamController<String>.broadcast();
@@ -110,8 +119,15 @@ class LocalNotificationService implements NotificationService {
           icon: _smallIcon,
           color: accent,
           category: AndroidNotificationCategory.reminder,
+          timeoutAfter: reminderLifetime.inMilliseconds,
+          groupKey: _group,
         ),
-        iOS: const DarwinNotificationDetails(presentAlert: true, presentSound: true, presentBadge: false),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
+          presentBadge: false,
+          threadIdentifier: _group,
+        ),
       );
 
   @override

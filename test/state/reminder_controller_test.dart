@@ -110,64 +110,134 @@ void main() {
     c.dispose();
   });
 
-  group('pre-prompt', () {
+  group('primer', () {
     setUp(() => service.permitted = false);
 
-    test('offered once: declining records the decision without the OS dialog', () async {
+    test('first ask after a clear; "Not now" records it without the OS dialog', () async {
       final c = controller();
-      expect(await c.shouldOfferPrompt(), isTrue);
-      expect(await c.answerPrompt(accepted: false), ReminderPromptResult.declined);
+      expect(await c.homePromptAttempt(), 1);
+      expect(await c.answerPrompt(accepted: false, source: ReminderPromptSource.home), ReminderPromptResult.declined);
       expect(service.requests, 0);
-      expect(await c.shouldOfferPrompt(), isFalse);
-      expect(events(AnalyticsEvents.reminderPrompt).single.$2, {'result': 'declined', 'source': 'cleared'});
+      expect(prefs.getInt(ReminderController.asksKey), 1);
+      expect(prefs.getInt(ReminderController.lastAskKey), now.millisecondsSinceEpoch);
+      expect(prefs.getInt(ReminderController.clearsAtAskKey), 1);
+      expect(events(AnalyticsEvents.reminderPrompt).single.$2, {'result': 'declined', 'source': 'home', 'attempt': 1});
     });
 
-    test('Yes asks the OS: accepted or os_denied', () async {
-      expect(await controller().answerPrompt(accepted: true), ReminderPromptResult.accepted);
+    test('second ask: 3 days and 3 clears after "Not now", then never again', () async {
+      await controller().answerPrompt(accepted: false, source: ReminderPromptSource.home);
+      now = now.add(const Duration(days: 3));
+      expect(await controller().homePromptAttempt(), isNull); // no new clears yet
+      stats = const PlayerStats(gamesPlayed: 5, boardsCleared: 4);
+      final c = controller();
+      expect(await c.homePromptAttempt(), 2);
+      await c.answerPrompt(accepted: false, source: ReminderPromptSource.home);
+      expect(events(AnalyticsEvents.reminderPrompt).last.$2['attempt'], 2);
+      now = now.add(const Duration(days: 60));
+      stats = const PlayerStats(gamesPlayed: 50, boardsCleared: 40);
+      expect(await controller().homePromptAttempt(), isNull);
+    });
+
+    test('at most once per app session', () async {
+      final c = controller();
+      c.markPrimerShown();
+      expect(await c.homePromptAttempt(), isNull);
+      expect(await controller().homePromptAttempt(), 1);
+    });
+
+    test('waits when the review sheet was requested this session', () async {
+      var reviewed = true;
+      final c = ReminderController(
+        service: service,
+        analytics: analytics,
+        texts: (m, streak) => (title: '', body: ''),
+        prefs: () => prefs,
+        settings: () async => settings,
+        saveEnabled: (on) async {},
+        stats: () async => stats,
+        daily: () async => daily,
+        otherPromptThisSession: () => reviewed,
+        clock: () => now,
+      );
+      expect(await c.homePromptAttempt(), isNull);
+      reviewed = false;
+      expect(await c.homePromptAttempt(), 1);
+    });
+
+    test('yes asks the OS: accepted closes it; os_denied closes it too', () async {
+      expect(await controller().answerPrompt(accepted: true, source: ReminderPromptSource.home), ReminderPromptResult.accepted);
       expect(service.requests, 1);
       expect(settings.dailyReminder, isTrue);
+      expect(prefs.getBool(ReminderController.acceptedKey), isTrue);
 
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
       service = FakeNotifications(grantOnRequest: false);
-      expect(await controller().answerPrompt(accepted: true), ReminderPromptResult.osDenied);
+      expect(await controller().answerPrompt(accepted: true, source: ReminderPromptSource.home), ReminderPromptResult.osDenied);
+      expect(prefs.getBool(ReminderController.osDeniedKey), isTrue);
+      now = now.add(const Duration(days: 30));
+      stats = const PlayerStats(gamesPlayed: 20, boardsCleared: 20);
+      expect(await controller().homePromptAttempt(), isNull);
+      expect(await controller().settingsNeedsPrimer(), isFalse); // Settings asks the OS directly now
       expect(events(AnalyticsEvents.reminderPrompt).map((e) => e.$2['result']), ['accepted', 'os_denied']);
     });
 
-    test('not after the 3rd clear, nor when already allowed or switched off', () async {
-      stats = const PlayerStats(gamesPlayed: 3, boardsCleared: 3);
-      expect(await controller().shouldOfferPrompt(), isFalse);
+    test('not before the first clear, nor when already allowed or switched off', () async {
+      stats = const PlayerStats(gamesPlayed: 1);
+      expect(await controller().homePromptAttempt(), isNull);
       stats = const PlayerStats(gamesPlayed: 1, boardsCleared: 1);
       service.permitted = true;
-      expect(await controller().shouldOfferPrompt(), isFalse);
+      expect(await controller().homePromptAttempt(), isNull);
       service.permitted = false;
       settings = settings.copyWith(dailyReminder: false);
-      expect(await controller().shouldOfferPrompt(), isFalse);
+      expect(await controller().homePromptAttempt(), isNull);
+    });
+
+    test('an answered old cleared-screen ask counts as the first answer', () async {
+      await prefs.setBool(ReminderController.legacyDecidedKey, true);
+      expect(await controller().homePromptAttempt(), isNull);
+      expect(prefs.getInt(ReminderController.asksKey), 1);
+      expect(prefs.containsKey(ReminderController.legacyDecidedKey), isFalse);
+      now = now.add(const Duration(days: 3));
+      stats = const PlayerStats(gamesPlayed: 4, boardsCleared: 4);
+      expect(await controller().homePromptAttempt(), 2);
     });
   });
 
   group('Settings toggle', () {
-    test('off saves and cancels; on asks the OS when needed', () async {
+    test('primer first only while the OS permission is missing', () async {
       service.permitted = false;
+      expect(await controller().settingsNeedsPrimer(), isTrue);
+      service.permitted = true;
+      expect(await controller().settingsNeedsPrimer(), isFalse);
+    });
+
+    test('"Not now" from Settings counts as an answer', () async {
+      service.permitted = false;
+      await controller().answerPrompt(accepted: false, source: ReminderPromptSource.settings);
+      expect(events(AnalyticsEvents.reminderPrompt).single.$2, {'result': 'declined', 'source': 'settings', 'attempt': 1});
+      expect(await controller().homePromptAttempt(), isNull);
+    });
+
+    test('off saves and cancels; on with permission just saves', () async {
       final c = controller();
       expect(await c.setEnabled(false), isFalse);
       expect(settings.dailyReminder, isFalse);
       expect(service.cancelled.last, [7101, 7102, 7103]);
-
       expect(await c.setEnabled(true), isTrue);
-      expect(service.requests, 1);
+      expect(service.requests, 0);
       expect(settings.dailyReminder, isTrue);
-      expect(events(AnalyticsEvents.reminderPrompt).single.$2, {'result': 'accepted', 'source': 'settings'});
-      // Deciding in Settings also retires the cleared-screen ask.
-      service.permitted = false;
-      expect(await c.shouldOfferPrompt(), isFalse);
+      expect(events(AnalyticsEvents.reminderPrompt), isEmpty);
     });
 
-    test('on with the OS refusing stays off', () async {
+    test('after an OS refusal: asks the OS directly and stays off if it refuses again', () async {
       service = FakeNotifications(grantOnRequest: false);
+      await prefs.setBool(ReminderController.osDeniedKey, true);
       settings = settings.copyWith(dailyReminder: false);
       expect(await controller().setEnabled(true), isFalse);
+      expect(service.requests, 1);
       expect(settings.dailyReminder, isFalse);
+      expect(events(AnalyticsEvents.reminderPrompt).single.$2, {'result': 'os_denied', 'source': 'settings', 'attempt': 1});
     });
   });
 }

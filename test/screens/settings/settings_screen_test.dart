@@ -10,6 +10,7 @@ import 'package:jadewell_flutter_app/state/app_providers.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/entitlement_providers.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
+import 'package:jadewell_flutter_app/state/reminder_controller.dart';
 import 'package:jadewell_flutter_app/state/session_controller.dart';
 import 'package:jadewell_flutter_app/state/social_providers.dart';
 import 'package:jadewell_flutter_app/ui/screens/settings/settings_screen.dart';
@@ -119,7 +120,7 @@ void main() {
     expect(find.text('High refresh rate'), findsNothing);
   });
 
-  testWidgets('daily reminder: on only with permission; switching on asks the OS; off persists', (tester) async {
+  testWidgets('daily reminder: switching on without permission opens the primer; Turn on asks the OS; off persists', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final notifications = FakeNotifications();
@@ -130,10 +131,18 @@ void main() {
     expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
 
     tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+    expect(find.text('Never miss a daily board'), findsOneWidget);
+    expect(notifications.requests, 0); // nothing from the OS before a yes
+    await tester.tap(find.text('Turn on reminders'));
+    await tester.pumpAndSettle();
     expect(notifications.requests, 1);
     expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isTrue);
     expect((await repo.read()).dailyReminder, isTrue);
+    expect(
+      analytics.events.where((e) => e.$1 == 'reminder_prompt').single.$2,
+      {'result': 'accepted', 'source': 'settings', 'attempt': 1},
+    );
 
     tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(false);
     await tester.pump(const Duration(milliseconds: 100));
@@ -141,6 +150,27 @@ void main() {
     expect(notifications.cancelled, isNotEmpty);
     expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
     expect(analytics.events.where((e) => e.$1 == 'settings_changed').last.$2, {'setting': 'daily_reminder'});
+
+    // Allowed already: back on straight away, no primer.
+    tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Never miss a daily board'), findsNothing);
+    expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isTrue);
+  });
+
+  testWidgets('daily reminder: "Not now" on the primer leaves it off without the OS dialog', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final notifications = FakeNotifications();
+    await pump(tester, notifications: notifications, prefs: prefs);
+    tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(find.text('Never miss a daily board'), findsNothing);
+    expect(notifications.requests, 0);
+    expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
+    expect(find.textContaining('Notifications are off for Jadewell'), findsNothing);
   });
 
   testWidgets('daily reminder: the OS refusing leaves it off and says where to turn it on', (tester) async {
@@ -148,8 +178,23 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     await pump(tester, notifications: FakeNotifications(grantOnRequest: false), prefs: prefs);
     tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Turn on reminders'));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(tester.widget<JwToggle>(toggleFor('Daily reminder')).value, isFalse);
+    expect(find.textContaining('Notifications are off for Jadewell'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('daily reminder: once the OS said no, no primer, straight to the toast', (tester) async {
+    SharedPreferences.setMockInitialValues({ReminderController.osDeniedKey: true});
+    final prefs = await SharedPreferences.getInstance();
+    final notifications = FakeNotifications(grantOnRequest: false);
+    await pump(tester, notifications: notifications, prefs: prefs);
+    tester.widget<JwToggle>(toggleFor('Daily reminder')).onChanged!(true);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Never miss a daily board'), findsNothing);
+    expect(notifications.requests, 1);
     expect(find.textContaining('Notifications are off for Jadewell'), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));
   });

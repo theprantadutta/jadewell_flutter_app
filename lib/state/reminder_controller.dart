@@ -12,6 +12,7 @@ import 'app_providers.dart';
 import 'data_providers.dart';
 import 'platform_providers.dart';
 import 'reminder_policy.dart';
+import 'store_listing_controller.dart';
 
 /// Title and body for a reminder. main.dart supplies the localised copy
 /// (`app_en.arb` → `reminder*`); the default is for tests.
@@ -43,17 +44,24 @@ final reminderControllerProvider = Provider<ReminderController>((ref) {
     saveEnabled: (on) => ref.read(settingsProvider.notifier).change((s) => s.copyWith(dailyReminder: on)),
     stats: () => ref.read(statsRepositoryProvider).watch().first,
     daily: () async => (await ref.read(dailyRepositoryProvider.future)).watchToday().first,
+    // Another one-time question this app session (the in-app review): the
+    // primer waits for a later open.
+    otherPromptThisSession: () => ref.read(reviewPrompterProvider).askedThisSession,
     debugDelay: kReminderDebugDelaySeconds > 0 ? Duration(seconds: kReminderDebugDelaySeconds) : null,
   );
   ref.onDispose(c.dispose);
   return c;
 });
 
-/// Result of the soft pre-prompt / OS dialog (`reminder_prompt` `result`).
+/// Result of the primer / OS dialog (`reminder_prompt` `result`).
 enum ReminderPromptResult { accepted, declined, osDenied }
 
+/// Where the primer was answered (`reminder_prompt` `source`).
+enum ReminderPromptSource { home, settings }
+
 /// The daily-board reminder: schedules on background, cancels on open,
-/// asks for permission at a good moment, and logs `reminder_*` events.
+/// decides when Home may open the primer, asks the OS only after a yes, and
+/// logs `reminder_*` events.
 /// Decisions are [ReminderPolicy] / [ReminderPromptPolicy]; this class only
 /// gathers their inputs and talks to the [NotificationService].
 class ReminderController {
@@ -66,6 +74,7 @@ class ReminderController {
     required this.saveEnabled,
     required this.stats,
     required this.daily,
+    this.otherPromptThisSession,
     this.policy = const ReminderPolicy(),
     this.promptPolicy = const ReminderPromptPolicy(),
     this.debugDelay,
@@ -75,9 +84,19 @@ class ReminderController {
   /// Notification ids of the reminder chain (day 1 … day 3).
   static const baseId = 7101;
 
-  /// SharedPreferences: the player answered the pre-prompt (or decided in
-  /// Settings), so the cleared screen never asks again. Device-only.
-  static const decidedKey = 'reminder.decided';
+  /// SharedPreferences (device-only) for [ReminderAskHistory]: answers so
+  /// far, when the last one was given, `boardsCleared` then, and whether
+  /// the player said yes / the OS dialog said no.
+  static const asksKey = 'reminder.asks';
+  static const lastAskKey = 'reminder.lastAskMs';
+  static const clearsAtAskKey = 'reminder.clearsAtAsk';
+  static const acceptedKey = 'reminder.accepted';
+  static const osDeniedKey = 'reminder.osDenied';
+
+  /// The old one-shot cleared-screen ask: true once it was answered (or the
+  /// player decided in Settings). Migrated to one answer given at the first
+  /// read, so that player gets at most one more ask, 3 days and 3 clears on.
+  static const legacyDecidedKey = 'reminder.decided';
 
   final NotificationService service;
   final AnalyticsService analytics;
@@ -87,6 +106,7 @@ class ReminderController {
   final Future<void> Function(bool on) saveEnabled;
   final Future<PlayerStats> Function() stats;
   final Future<DailyStatus> Function() daily;
+  final bool Function()? otherPromptThisSession;
   final ReminderPolicy policy;
   final ReminderPromptPolicy promptPolicy;
   final Duration? debugDelay;
@@ -94,6 +114,7 @@ class ReminderController {
 
   StreamSubscription<String>? _tapSub;
   int _generation = 0;
+  bool _primerShownThisSession = false;
 
   Iterable<int> get _ids => [for (var i = 0; i < policy.maxUnanswered; i++) baseId + i];
 
@@ -180,62 +201,132 @@ class ReminderController {
   Stream<ReminderPayload> get taps =>
       service.taps.map(ReminderPayload.parse).where((p) => p != null).cast<ReminderPayload>();
 
-  /// Cleared screen: may the soft pre-prompt appear after this clear?
-  Future<bool> shouldOfferPrompt() async {
-    if (!service.isSupported) return false;
+  ReminderAskHistory _history() {
+    final p = prefs();
+    final last = p.getInt(lastAskKey);
+    return ReminderAskHistory(
+      asks: p.getInt(asksKey) ?? 0,
+      lastAsk: last == null ? null : DateTime.fromMillisecondsSinceEpoch(last),
+      clearsAtLastAsk: p.getInt(clearsAtAskKey) ?? 0,
+      closed: (p.getBool(acceptedKey) ?? false) || (p.getBool(osDeniedKey) ?? false),
+    );
+  }
+
+  Future<void> _migrateLegacy() async {
+    final p = prefs();
+    if (!(p.getBool(legacyDecidedKey) ?? false)) return;
+    if (!p.containsKey(asksKey)) {
+      await p.setInt(asksKey, 1);
+      await p.setInt(lastAskKey, _clock().millisecondsSinceEpoch);
+      await p.setInt(clearsAtAskKey, (await stats()).boardsCleared);
+    }
+    await p.remove(legacyDecidedKey);
+  }
+
+  /// Records one answer (Home or Settings) and returns its ask number.
+  Future<int> _recordAsk() async {
+    await _migrateLegacy();
+    final p = prefs();
+    final attempt = (p.getInt(asksKey) ?? 0) + 1;
+    await p.setInt(asksKey, attempt);
+    await p.setInt(lastAskKey, _clock().millisecondsSinceEpoch);
     try {
-      if (prefs().getBool(decidedKey) ?? false) return false;
+      await p.setInt(clearsAtAskKey, (await stats()).boardsCleared);
+    } catch (e) {
+      debugPrint('reminder: stats read failed: $e');
+    }
+    return attempt;
+  }
+
+  /// Home: the ask number (1 or 2) if the primer may open now, else null.
+  /// At most once per app session, and never in the same session as
+  /// another one-time question.
+  Future<int?> homePromptAttempt() async {
+    if (!service.isSupported || _primerShownThisSession) return null;
+    try {
+      if (otherPromptThisSession?.call() ?? false) return null;
+      await _migrateLegacy();
       final s = await settings();
       final st = await stats();
-      return promptPolicy.shouldOffer(
+      return promptPolicy.attempt(
         supported: true,
-        alreadyDecided: false,
         enabled: s.dailyReminder,
         permitted: await service.hasPermission(),
         boardsCleared: st.boardsCleared,
+        history: _history(),
+        now: _clock(),
       );
     } catch (e) {
       debugPrint('reminder: prompt check failed: $e');
-      return false;
+      return null;
     }
   }
 
-  /// The player answered the pre-prompt: [accepted] shows the OS dialog.
-  Future<ReminderPromptResult> answerPrompt({required bool accepted}) async {
-    await prefs().setBool(decidedKey, true);
+  /// Home is opening the primer: nothing else this session.
+  void markPrimerShown() => _primerShownThisSession = true;
+
+  /// Settings, switching the reminder on: the primer goes first unless the
+  /// OS already allows notifications or already said no once (then the
+  /// switch asks the OS directly and points to the phone's settings).
+  Future<bool> settingsNeedsPrimer() async {
+    if (!service.isSupported) return false;
+    if (prefs().getBool(osDeniedKey) ?? false) return false;
+    return !await service.hasPermission();
+  }
+
+  /// The player answered the primer: only [accepted] shows the OS dialog.
+  Future<ReminderPromptResult> answerPrompt({required bool accepted, required ReminderPromptSource source}) async {
+    _primerShownThisSession = true;
+    final attempt = await _recordAsk();
     final result = !accepted
         ? ReminderPromptResult.declined
         : await service.requestPermission()
             ? ReminderPromptResult.accepted
             : ReminderPromptResult.osDenied;
-    if (result == ReminderPromptResult.accepted) await saveEnabled(true);
-    _logPrompt(result, 'cleared');
+    await _recordOutcome(result);
+    _logPrompt(result, source, attempt);
     return result;
   }
 
-  /// Settings → Daily reminder. Off cancels; on asks the OS when needed and
-  /// resolves to whether reminders are now really on.
+  Future<void> _recordOutcome(ReminderPromptResult result) async {
+    switch (result) {
+      case ReminderPromptResult.accepted:
+        await prefs().setBool(acceptedKey, true);
+        await saveEnabled(true);
+      case ReminderPromptResult.osDenied:
+        await prefs().setBool(osDeniedKey, true);
+      case ReminderPromptResult.declined:
+        break;
+    }
+  }
+
+  /// Settings → Daily reminder, past the primer ([settingsNeedsPrimer]).
+  /// Off cancels; on asks the OS when needed and resolves to whether
+  /// reminders are now really on.
   Future<bool> setEnabled(bool on) async {
-    await prefs().setBool(decidedKey, true);
     if (!on) {
       await saveEnabled(false);
       await service.cancel(_ids);
       return false;
     }
-    final had = await service.hasPermission();
-    final granted = had || await service.requestPermission();
-    if (granted) await saveEnabled(true);
-    if (!had) _logPrompt(granted ? ReminderPromptResult.accepted : ReminderPromptResult.osDenied, 'settings');
-    return granted;
+    if (await service.hasPermission()) {
+      await saveEnabled(true);
+      return true;
+    }
+    final attempt = await _recordAsk();
+    final result = await service.requestPermission() ? ReminderPromptResult.accepted : ReminderPromptResult.osDenied;
+    await _recordOutcome(result);
+    _logPrompt(result, ReminderPromptSource.settings, attempt);
+    return result == ReminderPromptResult.accepted;
   }
 
-  void _logPrompt(ReminderPromptResult r, String source) {
+  void _logPrompt(ReminderPromptResult r, ReminderPromptSource source, int attempt) {
     final result = switch (r) {
       ReminderPromptResult.accepted => 'accepted',
       ReminderPromptResult.declined => 'declined',
       ReminderPromptResult.osDenied => 'os_denied',
     };
-    unawaited(analytics.log(AnalyticsEvents.reminderPrompt, {'result': result, 'source': source}));
+    unawaited(analytics.log(AnalyticsEvents.reminderPrompt, {'result': result, 'source': source.name, 'attempt': attempt}));
   }
 
   void dispose() {

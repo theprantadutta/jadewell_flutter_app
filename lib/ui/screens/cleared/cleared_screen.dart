@@ -16,7 +16,6 @@ import '../../../state/game/game_controller.dart' show kHeadStartHints;
 import '../../../state/game/game_providers.dart';
 import '../../../state/game/game_view_state.dart';
 import '../../../state/platform_providers.dart';
-import '../../../state/reminder_controller.dart';
 import '../../../state/store_listing_controller.dart';
 import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -29,7 +28,6 @@ import '../../widgets/widgets.dart';
 import '../game/game_modals.dart';
 import '../game/game_widgets.dart';
 import '../home/layout_labels.dart' show JwContentWidth;
-import 'reminder_prompt_sheet.dart';
 
 /// Beat-sheet time (MOTION_SPEC §3, t0 = last pair gone) at which the game
 /// screen hands over to this screen; the timeline continues from here.
@@ -150,11 +148,6 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
       return;
     }
     if (!mounted) return;
-    // First or second clear, once ever: the soft daily-reminder ask (the
-    // review sheet needs 3+ clears, and won it above anyway). Not after an
-    // interstitial, and the head-start offer waits for another board.
-    if (!ref.read(clearInterstitialShownProvider) && await _maybeOfferReminder()) return;
-    if (!mounted) return;
     // Never stack a rewarded interstitial on top of an interstitial, and
     // never offer a video right after the starter board (a new player's
     // first clear).
@@ -175,19 +168,6 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
       ),
     );
     if ((granted ?? false) && mounted) _showToast(AppLocalizations.of(context).clearedHeadStartGranted);
-  }
-
-  /// The "Want a daily reminder?" sheet, then the OS dialog on Yes. True
-  /// when the sheet was shown (so nothing else stacks on it).
-  Future<bool> _maybeOfferReminder() async {
-    final reminders = ref.read(reminderControllerProvider);
-    if (!await reminders.shouldOfferPrompt() || !mounted) return false;
-    final yes = await showGameModal<bool>(context, bottom: true, builder: (_) => const ReminderPromptSheet());
-    final result = await reminders.answerPrompt(accepted: yes ?? false);
-    if (result == ReminderPromptResult.accepted && mounted) {
-      _showToast(AppLocalizations.of(context).reminderPromptOn, icon: JwIcons.cal, fill: JwFill.mint);
-    }
-    return true;
   }
 
   void _showToast(String message, {String icon = JwIcons.hint, JwFill fill = JwFill.yellow}) {

@@ -13,14 +13,12 @@ import 'package:jadewell_flutter_app/state/data_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_providers.dart';
 import 'package:jadewell_flutter_app/state/game/game_view_state.dart';
 import 'package:jadewell_flutter_app/state/platform_providers.dart';
-import 'package:jadewell_flutter_app/state/reminder_controller.dart';
 import 'package:jadewell_flutter_app/state/store_listing_controller.dart';
 import 'package:jadewell_flutter_app/ui/screens/cleared/cleared_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../state/fake_notifications.dart';
 import '../../ui/golden_helpers.dart' show loadJwFonts;
-import '../meta_checks.dart';
 import '../settings/harness.dart';
 
 /// Serves `assets/` from disk so the real catalogue loads.
@@ -122,49 +120,26 @@ void main() {
     }
   }
 
-  const title = 'Want a daily reminder?';
+  // The reminder primer moved to Home: the cleared screen never asks.
+  const primer = 'Never miss a daily board';
 
-  testWidgets('after the first clear: the soft ask, and the head-start offer waits for another board', (tester) async {
+  testWidgets('first clear: no reminder ask; the head-start offer follows the beats', (tester) async {
     await pump(tester);
     await finishBeats(tester);
-    expect(find.text(title), findsOneWidget);
-    expect(find.text('Head start'), findsNothing);
-
-    await tester.tap(find.text('Not now'));
-    await finishBeats(tester);
-    expect(find.text(title), findsNothing);
-    expect(find.text('Head start'), findsNothing); // not stacked on the ask
-    expect(notifications.requests, 0);
-    expect(prefs.getBool(ReminderController.decidedKey), isTrue);
-    expect(analytics.events.where((e) => e.$1 == 'reminder_prompt').single.$2, {'result': 'declined', 'source': 'cleared'});
-  });
-
-  testWidgets('Yes shows the OS dialog and confirms', (tester) async {
-    await pump(tester);
-    await finishBeats(tester);
-    await tester.tap(find.text('Yes, remind me'));
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(notifications.requests, 1);
-    expect(find.text('Daily reminder is on'), findsOneWidget);
-    await finishBeats(tester);
-  });
-
-  testWidgets('asked once: the next clear gets the head-start offer instead', (tester) async {
-    await prefs.setBool(ReminderController.decidedKey, true);
-    await pump(tester, boardsCleared: 2);
-    await finishBeats(tester);
-    expect(find.text(title), findsNothing);
+    expect(find.text(primer), findsNothing);
     expect(find.text('Head start'), findsOneWidget);
     await tester.tap(find.text('Skip'));
     await finishBeats(tester);
+    expect(notifications.requests, 0);
+    expect(analytics.events.where((e) => e.$1 == 'reminder_prompt'), isEmpty);
   });
 
   testWidgets('never stacked with the review sheet', (tester) async {
-    final review = await pump(tester, reviewAsks: true);
+    final review = await pump(tester, reviewAsks: true, boardsCleared: 3);
     await finishBeats(tester);
     expect(review.calls, 1);
-    expect(find.text(title), findsNothing);
-    expect(prefs.getBool(ReminderController.decidedKey), isNull); // still to ask on a later clear
+    expect(find.text('Head start'), findsNothing);
+    expect(find.text(primer), findsNothing);
   });
 
   testWidgets('never after an interstitial', (tester) async {
@@ -172,29 +147,7 @@ void main() {
     final container = ProviderScope.containerOf(tester.element(find.byType(ClearedScreen)));
     container.read(clearInterstitialShownProvider.notifier).set(true);
     await finishBeats(tester);
-    expect(find.text(title), findsNothing);
+    expect(find.text('Head start'), findsNothing);
+    expect(find.text(primer), findsNothing);
   });
-
-  testWidgets('not after the third clear', (tester) async {
-    await pump(tester, boardsCleared: 3);
-    await finishBeats(tester);
-    expect(find.text(title), findsNothing);
-    expect(find.text('Head start'), findsOneWidget);
-    await tester.tap(find.text('Skip'));
-    await finishBeats(tester);
-  });
-
-  for (final size in layoutSizes.entries) {
-    for (final scale in textScales) {
-      testWidgets('reminder sheet · ${size.key} · text ${scale}x: no overflow', (tester) async {
-        setTextScale(tester, scale);
-        await pump(tester, size: size.value);
-        await finishBeats(tester);
-        expect(find.text(title), findsOneWidget);
-        await expectNoOverflow(tester);
-        await tester.tap(find.text('Not now'));
-        await finishBeats(tester);
-      });
-    }
-  }
 }

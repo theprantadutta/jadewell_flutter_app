@@ -119,23 +119,68 @@ class ReminderPolicy {
   }
 }
 
-/// When the soft "Want a daily reminder?" sheet may appear on the cleared
-/// screen: once ever, after the player's first or second cleared board,
-/// only while the setting is on and the OS permission is still missing.
-/// The cleared screen adds the stacking rules (never with the review sheet
-/// or after an interstitial).
+/// What the player has answered so far to the reminder primer (persisted by
+/// `ReminderController` in SharedPreferences, device-only).
+class ReminderAskHistory {
+  const ReminderAskHistory({this.asks = 0, this.lastAsk, this.clearsAtLastAsk = 0, this.closed = false});
+
+  /// Times the primer was answered ("Turn on reminders", "Not now" or a
+  /// dismiss), on Home or in Settings.
+  final int asks;
+
+  /// When the last answer was given.
+  final DateTime? lastAsk;
+
+  /// `PlayerStats.boardsCleared` at the last answer.
+  final int clearsAtLastAsk;
+
+  /// The player said yes (reminders are on) or the OS dialog said no: Home
+  /// never asks again either way. Settings still works.
+  final bool closed;
+}
+
+/// When the reminder primer ("Never miss a daily board") may open by itself
+/// on Home. Apple's guidance: ask in context, explain the value first, and
+/// keep the one-shot OS dialog for an explicit yes.
+///
+/// * Never unless the setting is on and the OS permission is missing.
+/// * Ask 1: once the player has cleared [minClears] board (the Sprout
+///   warm-up counts).
+/// * Ask 2, only after a "Not now": no sooner than [retryAfter] (3 days)
+///   after the first answer AND [retryClears] (3) more clears since then.
+/// * After [maxAsks] (2) answers, a yes, or an OS refusal: never again.
+///
+/// Home adds the moment (current route, a settle delay, nothing else
+/// one-time in the same app session).
 class ReminderPromptPolicy {
-  const ReminderPromptPolicy({this.minClears = 1, this.maxClears = 2});
+  const ReminderPromptPolicy({
+    this.minClears = 1,
+    this.maxAsks = 2,
+    this.retryAfter = const Duration(days: 3),
+    this.retryClears = 3,
+  });
 
   final int minClears;
-  final int maxClears;
+  final int maxAsks;
+  final Duration retryAfter;
+  final int retryClears;
 
-  bool shouldOffer({
+  /// The ask number (1 … [maxAsks]) if the primer may open now, else null.
+  int? attempt({
     required bool supported,
-    required bool alreadyDecided,
     required bool enabled,
     required bool permitted,
     required int boardsCleared,
-  }) =>
-      supported && !alreadyDecided && enabled && !permitted && boardsCleared >= minClears && boardsCleared <= maxClears;
+    required ReminderAskHistory history,
+    required DateTime now,
+  }) {
+    if (!supported || !enabled || permitted || history.closed || history.asks >= maxAsks) return null;
+    if (boardsCleared < minClears) return null;
+    if (history.asks > 0) {
+      final last = history.lastAsk;
+      if (last == null || now.difference(last) < retryAfter) return null;
+      if (boardsCleared - history.clearsAtLastAsk < retryClears) return null;
+    }
+    return history.asks + 1;
+  }
 }

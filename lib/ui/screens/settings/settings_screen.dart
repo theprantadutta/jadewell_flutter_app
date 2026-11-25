@@ -22,6 +22,7 @@ import '../../theme/jw_theme.dart';
 import '../../theme/jw_tokens.dart';
 import '../../widgets/widgets.dart';
 import '../legal/legal_screen.dart';
+import '../reminder/reminder_primer_sheet.dart';
 import 'screen_chrome.dart';
 
 /// Settings (screen 15): feedback, display, account and legal groups. Every change
@@ -106,8 +107,11 @@ class SettingsScreen extends ConsumerWidget {
                   change('haptics', (x) => x.copyWith(haptics: v));
                 }),
               ),
-              // On only when the setting and the OS permission both are:
-              // switching it on asks the OS when needed.
+              // On only when the setting and the OS permission both are.
+              // Switching it on without the permission opens the primer
+              // first; only "Turn on reminders" asks the OS, "Not now"
+              // leaves it off. Once the OS said no, it asks the OS directly
+              // and points to the phone's settings.
               if (notifications.isSupported)
                 JwListRow(
                   icon: JwIcons.cal,
@@ -115,7 +119,18 @@ class SettingsScreen extends ConsumerWidget {
                   title: l.settingsDailyReminder,
                   trailing: toggle(l.settingsDailyReminder, s.dailyReminder && reminderPermitted, (v) async {
                     unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.settingsChanged, {'setting': 'daily_reminder'}));
-                    final on = await ref.read(reminderControllerProvider).setEnabled(v);
+                    final reminders = ref.read(reminderControllerProvider);
+                    if (v && await reminders.settingsNeedsPrimer()) {
+                      if (!context.mounted) return;
+                      final yes = await showReminderPrimer(context);
+                      final result = await reminders.answerPrompt(accepted: yes, source: ReminderPromptSource.settings);
+                      ref.invalidate(reminderPermissionProvider);
+                      if (result == ReminderPromptResult.osDenied && context.mounted) {
+                        showJwToast(context, l.settingsDailyReminderBlocked);
+                      }
+                      return;
+                    }
+                    final on = await reminders.setEnabled(v);
                     ref.invalidate(reminderPermissionProvider);
                     if (v && !on && context.mounted) showJwToast(context, l.settingsDailyReminderBlocked);
                   }),

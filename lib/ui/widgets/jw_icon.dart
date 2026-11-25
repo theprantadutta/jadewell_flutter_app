@@ -4,9 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/jw_theme.dart';
 
-/// The 43 icons in `assets/icons/` (24 pt grid, 2 pt round stroke).
+/// The 44 icons in `assets/icons/` (24 pt grid, 2 pt round stroke).
 abstract final class JwIcons {
-  static const arrow = 'arrow', back = 'back', bag = 'bag', cal = 'cal';
+  static const arrow = 'arrow', back = 'back', bag = 'bag', bell = 'bell', cal = 'cal';
   static const chart = 'chart', check = 'check', chev = 'chev', clock = 'clock';
   static const door = 'door', download = 'download', eye = 'eye', fire = 'fire', flame = 'flame';
   static const gauge = 'gauge', gear = 'gear', grid = 'grid', heart = 'heart', hint = 'hint';
@@ -18,7 +18,7 @@ abstract final class JwIcons {
   static const undo = 'undo', user = 'user', vib = 'vib', video = 'video', x = 'x';
 
   static const all = [
-    arrow, back, bag, cal, chart, check, chev, clock, door, download, eye, fire, //
+    arrow, back, bag, bell, cal, chart, check, chev, clock, door, download, eye, fire, //
     flame, gauge, gear, grid, heart, hint, info, lock, mail, moon, motion, pairs, pause, play,
     replay, restore, shield, shuffle, sound, sparkle, star, sun, text, tile,
     trash, trophy, undo, user, vib, video, x,

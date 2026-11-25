@@ -22,6 +22,7 @@ import '../../widgets/jw_logo_tile.dart';
 import '../../widgets/skeleton/jw_skeleton.dart';
 import '../../widgets/widgets.dart';
 import '../daily/countdown.dart';
+import 'home_reminder_primer.dart';
 import 'layout_card_parts.dart';
 import 'layout_labels.dart';
 import 'unlock_sheet.dart';
@@ -29,7 +30,8 @@ import 'unlock_sheet.dart';
 /// Layout select: header with the star chip, daily hero, collection cards
 /// and chapters (screen 11); the first-run "start here" variant (17a),
 /// pointing at the starter board; the starter as a "Warm-up" row under the
-/// chapters once first run is over; skeleton (18).
+/// chapters once first run is over; skeleton (18). Opens the daily-reminder
+/// primer at a calm moment ([HomeReminderPrimer]).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -42,28 +44,30 @@ class HomeScreen extends ConsumerWidget {
     final loading = catalogue == null || progress == null;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: jw.isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        body: JwBackground(
-          blobs: HomeScreen.blobs,
-          // No top inset: the list runs under the status bar and fades out
-          // there (JwScrollFade in _HomeContent) instead of being cut off.
-          child: SafeArea(
-            top: false,
-            bottom: false,
-            child: JwContentWidth(
-              maxWidth: 720,
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final columns = _columnsFor(box.maxWidth);
-                  return JwSkeletonSwitcher(
-                    loading: loading,
-                    skeleton: Padding(
-                      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-                      child: JwSkeletonHome(columns: columns, semanticLabel: l.commonLoading),
-                    ),
-                    builder: (context) => _HomeContent(catalogue: catalogue!, progress: progress!, columns: columns),
-                  );
-                },
+      child: HomeReminderPrimer(
+        child: Scaffold(
+          body: JwBackground(
+            blobs: HomeScreen.blobs,
+            // No top inset: the list runs under the status bar and fades out
+            // there (JwScrollFade in _HomeContent) instead of being cut off.
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: JwContentWidth(
+                maxWidth: 720,
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    final columns = _columnsFor(box.maxWidth);
+                    return JwSkeletonSwitcher(
+                      loading: loading,
+                      skeleton: Padding(
+                        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+                        child: JwSkeletonHome(columns: columns, semanticLabel: l.commonLoading),
+                      ),
+                      builder: (context) => _HomeContent(catalogue: catalogue!, progress: progress!, columns: columns),
+                    );
+                  },
+                ),
               ),
             ),
           ),

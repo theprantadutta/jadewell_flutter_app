@@ -106,9 +106,33 @@ Compare by app version and country before drawing conclusions.
 
 ## Daily reminder (local notifications)
 
+**How the permission is asked** (Apple's guidance: ask in context, explain the
+value in Jadewell's own UI first, and keep the one-shot OS dialog for an
+explicit yes). The primer sheet "Never miss a daily board" lists three benefits
+and offers "Turn on reminders" / "Not now"; only "Turn on reminders" shows the
+OS dialog, so "Not now" leaves it unused for later.
+
+- **Home, by itself:** never on the cleared screen. It opens on Home ~900 ms
+  after Home appears, only while Home is the current route (nothing pushed or
+  open on top), once the player has cleared at least one board (the Sprout
+  warm-up counts), with the setting on and the OS permission missing, at most
+  once per app session, and never in a session where the in-app review was
+  requested. Ask 1 comes on the first Home visit after the first clear. After
+  "Not now" there is at most one more ask (ask 2), no sooner than 3 days later
+  AND after 3 more clears. After that, a yes, or an OS refusal, Home never asks
+  again. Rules: `ReminderPromptPolicy` (`lib/state/reminder_policy.dart`);
+  history in SharedPreferences (`reminder.asks`, `reminder.lastAskMs`,
+  `reminder.clearsAtAsk`, `reminder.accepted`, `reminder.osDenied`; the old
+  cleared-screen ask's `reminder.decided` migrates to one answer given).
+- **Settings → Daily reminder:** switching it on while the OS permission is
+  missing opens the same primer; "Not now" leaves it off (and counts as an
+  answer for the Home rules). Once the OS has said no, the switch skips the
+  primer, asks the OS directly and, if it is still blocked, shows a toast
+  pointing to the phone's settings.
+
 | Event | Params | When |
 |---|---|---|
-| `reminder_prompt` | `result` (`accepted` / `declined` / `os_denied`), `source` (`cleared` / `settings`) | The player answered the "Want a daily reminder?" sheet on the cleared screen (`declined` = Not now or dismissed; `os_denied` = Yes, then the OS dialog said no or is blocked), or switched Settings → Daily reminder on while the OS permission was missing |
+| `reminder_prompt` | `result` (`accepted` / `declined` / `os_denied`), `source` (`home` / `settings`), `attempt` (int, which answer this is: 1 or 2 from Home; Settings can go higher) | The player answered the reminder primer on Home or in Settings (`declined` = Not now or dismissed; `os_denied` = Turn on reminders, then the OS dialog said no or is blocked), or switched Settings → Daily reminder on after an earlier OS refusal (no primer then). Earlier builds (cleared-screen ask) logged `source: cleared` without `attempt` |
 | `reminder_scheduled` | `hours_ahead` (int, hours until the day-1 reminder), `variant` (`streak` / `daily`) | The app went to the background and reminders were (re)scheduled. Fires on every background, so use it for counts per user, not per session |
 | `reminder_open` | `day` (1–3, which reminder of the chain), `variant` (`streak` / `daily` / `comeback`) | The app was launched or brought back by tapping a reminder (`notification_open` is reserved by Firebase) |
 
@@ -118,6 +142,7 @@ Settings → Daily reminder also logs the existing `settings_changed` with `sett
 
 - `result` (dimension)
 - `source` (dimension)
+- `attempt` (dimension; already registered for `ad_load_failed`, same meaning "try number")
 - `variant` (dimension)
 - `day` (dimension)
 - `hours_ahead` (custom metric, unit: standard)

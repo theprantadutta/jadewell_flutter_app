@@ -175,7 +175,7 @@ Drift's generated `*.g.dart` files are gitignored: after a fresh clone (or any t
 - **Crashlytics**: enabled only when `kReleaseMode`; `FlutterError.onError` + `PlatformDispatcher.onError` routed to it.
 - **Audio**: `flutter_soloud`, serial queue, all assets preloaded in memory; music loop crossfades between 2–3 royalty-free tracks; SFX for select, match, mismatch, blocked, shuffle, undo, hint, clear, star, button. Audio session (`audio_session`) configured to **mix with others** (ambient) by default.
 - **Haptics**: `HapticService` with semantic methods matching the motion spec (light, medium, selection-error double tick).
-- **Notifications**: FCM token registered silently; permission soft-asked after the first daily clear; optional local daily reminder.
+- **Notifications**: FCM token registered silently; optional local daily reminder, its permission asked through a primer sheet on Home after the first clear (or from Settings), the OS dialog only after a yes.
 
 ## 7. Ads and IAP (built in Phase 8, designed now)
 

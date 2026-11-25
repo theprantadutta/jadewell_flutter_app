@@ -185,6 +185,10 @@ class ReviewPrompter {
   final DateTime Function() _clock;
   bool _askedThisSession = false;
 
+  /// The review sheet was requested in this app session (other one-time
+  /// questions, like the reminder primer, wait for a later open).
+  bool get askedThisSession => _askedThisSession;
+
   /// After a cleared board with [stars]: shows the review sheet when the
   /// policy allows. True when it asked (so the caller stacks nothing on top).
   Future<bool> maybeAskAfterClear({required int stars}) async {

@@ -97,21 +97,51 @@ void main() {
 
   group('prompt policy', () {
     const p = ReminderPromptPolicy();
-    bool offer({bool supported = true, bool decided = false, bool enabled = true, bool permitted = false, int clears = 1}) =>
-        p.shouldOffer(supported: supported, alreadyDecided: decided, enabled: enabled, permitted: permitted, boardsCleared: clears);
+    final t0 = DateTime(2026, 11, 20, 18);
+    int? attempt({
+      bool supported = true,
+      bool enabled = true,
+      bool permitted = false,
+      int clears = 1,
+      ReminderAskHistory history = const ReminderAskHistory(),
+      DateTime? now,
+    }) =>
+        p.attempt(
+          supported: supported,
+          enabled: enabled,
+          permitted: permitted,
+          boardsCleared: clears,
+          history: history,
+          now: now ?? t0,
+        );
 
-    test('after the 1st or 2nd clear only', () {
-      expect(offer(clears: 0), isFalse);
-      expect(offer(clears: 1), isTrue);
-      expect(offer(clears: 2), isTrue);
-      expect(offer(clears: 3), isFalse);
+    test('first ask once a board is cleared (the warm-up counts)', () {
+      expect(attempt(clears: 0), isNull);
+      expect(attempt(clears: 1), 1);
+      expect(attempt(clears: 12), 1);
     });
 
-    test('never once decided, when off, when already allowed, or unsupported', () {
-      expect(offer(decided: true), isFalse);
-      expect(offer(enabled: false), isFalse);
-      expect(offer(permitted: true), isFalse);
-      expect(offer(supported: false), isFalse);
+    test('never when off, already allowed, or unsupported', () {
+      expect(attempt(enabled: false), isNull);
+      expect(attempt(permitted: true), isNull);
+      expect(attempt(supported: false), isNull);
+    });
+
+    test('after "Not now": one more ask, 3+ days and 3+ clears later', () {
+      final declined = ReminderAskHistory(asks: 1, lastAsk: t0, clearsAtLastAsk: 1);
+      final later = t0.add(const Duration(days: 3));
+      expect(attempt(history: declined, clears: 4, now: t0.add(const Duration(days: 2, hours: 23))), isNull);
+      expect(attempt(history: declined, clears: 3, now: later), isNull); // only 2 more clears
+      expect(attempt(history: declined, clears: 4, now: later), 2);
+      expect(attempt(history: declined, clears: 30, now: later.add(const Duration(days: 40))), 2);
+      expect(attempt(history: const ReminderAskHistory(asks: 1), clears: 9, now: later), isNull); // no time on record
+    });
+
+    test('never after the second answer, a yes, or an OS refusal', () {
+      final far = t0.add(const Duration(days: 100));
+      expect(attempt(history: ReminderAskHistory(asks: 2, lastAsk: t0, clearsAtLastAsk: 1), clears: 50, now: far), isNull);
+      expect(attempt(history: ReminderAskHistory(asks: 1, lastAsk: t0, clearsAtLastAsk: 1, closed: true), clears: 50, now: far), isNull);
+      expect(attempt(history: const ReminderAskHistory(closed: true), clears: 5), isNull);
     });
   });
 }
