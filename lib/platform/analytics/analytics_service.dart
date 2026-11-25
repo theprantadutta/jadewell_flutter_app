@@ -41,6 +41,12 @@ abstract final class AnalyticsEvents {
   static const accountLinked = 'account_linked';
   static const secondChance = 'second_chance';
 
+  // Daily-board reminder (local notifications, docs/ANALYTICS.md).
+  // `notification_open` is reserved by Firebase, hence `reminder_open`.
+  static const reminderPrompt = 'reminder_prompt'; // result (accepted / declined / os_denied), source
+  static const reminderScheduled = 'reminder_scheduled'; // hours_ahead, message
+  static const reminderOpen = 'reminder_open'; // day, message
+
   // Remove ads (IAP). iap_error carries a short `code` only.
   static const iapView = 'iap_view';
   static const iapStart = 'iap_start';

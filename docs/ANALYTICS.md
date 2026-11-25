@@ -76,3 +76,25 @@ Custom definitions in the same change.
 Closed-testing data is noisy: Play pre-launch devices (`app_clear_data`, US/NL/SG
 traffic) and tester-exchange installs inflate users and deflate engagement.
 Compare by app version and country before drawing conclusions.
+
+## Daily reminder (local notifications)
+
+| Event | Params | When |
+|---|---|---|
+| `reminder_prompt` | `result` (`accepted` / `declined` / `os_denied`), `source` (`cleared` / `settings`) | The player answered the "Want a daily reminder?" sheet on the cleared screen (`declined` = Not now or dismissed; `os_denied` = Yes, then the OS dialog said no or is blocked), or switched Settings → Daily reminder on while the OS permission was missing |
+| `reminder_scheduled` | `hours_ahead` (int, hours until the day-1 reminder), `variant` (`streak` / `daily`) | The app went to the background and reminders were (re)scheduled. Fires on every background, so use it for counts per user, not per session |
+| `reminder_open` | `day` (1–3, which reminder of the chain), `variant` (`streak` / `daily` / `comeback`) | The app was launched or brought back by tapping a reminder (`notification_open` is reserved by Firebase) |
+
+Settings → Daily reminder also logs the existing `settings_changed` with `setting: daily_reminder`.
+
+**To register in GA4** (Admin → Custom definitions, event-scoped custom dimensions; the lead does this):
+
+- `result` (dimension)
+- `source` (dimension)
+- `variant` (dimension)
+- `day` (dimension)
+- `hours_ahead` (custom metric, unit: standard)
+
+Skip any that are already registered for another event: GA4 custom definitions are per parameter name, not per event.
+
+Mark `reminder_open` as a key event if reminder-driven sessions should show up in the acquisition reports.

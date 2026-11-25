@@ -5,6 +5,7 @@ import '../platform/analytics/analytics_service.dart';
 import '../platform/audio/audio_service.dart';
 import '../platform/display/display_service.dart';
 import '../platform/haptics/haptic_service.dart';
+import '../platform/notifications/notification_service.dart';
 import '../platform/store_listing/store_listing_service.dart';
 
 // Defaults are no-op/fake so screens and tests run anywhere; main.dart
@@ -15,3 +16,4 @@ final hapticsProvider = Provider<HapticService>((ref) => const NoOpHaptics());
 final adServiceProvider = Provider<AdService>((ref) => FakeAdService());
 final displayServiceProvider = Provider<DisplayService>((ref) => const NoOpDisplay());
 final storeListingProvider = Provider<StoreListingService>((ref) => const NoOpStoreListing());
+final notificationServiceProvider = Provider<NotificationService>((ref) => const NoOpNotifications());

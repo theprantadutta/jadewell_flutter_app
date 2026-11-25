@@ -16,6 +16,7 @@ import '../../../state/game/game_controller.dart' show kHeadStartHints;
 import '../../../state/game/game_providers.dart';
 import '../../../state/game/game_view_state.dart';
 import '../../../state/platform_providers.dart';
+import '../../../state/reminder_controller.dart';
 import '../../../state/store_listing_controller.dart';
 import '../../components/components.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -28,6 +29,7 @@ import '../../widgets/widgets.dart';
 import '../game/game_modals.dart';
 import '../game/game_widgets.dart';
 import '../home/layout_labels.dart' show JwContentWidth;
+import 'reminder_prompt_sheet.dart';
 
 /// Beat-sheet time (MOTION_SPEC §3, t0 = last pair gone) at which the game
 /// screen hands over to this screen; the timeline continues from here.
@@ -66,6 +68,8 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
   int _starsPopped = 0;
   bool _headStartChecked = false;
   String? _toast;
+  String _toastIcon = JwIcons.hint;
+  JwFill _toastFill = JwFill.yellow;
 
   double get _t => kClearedHandoffMs + _beat.value * (ClearedBeats.end - kClearedHandoffMs);
 
@@ -146,6 +150,11 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
       return;
     }
     if (!mounted) return;
+    // First or second clear, once ever: the soft daily-reminder ask (the
+    // review sheet needs 3+ clears, and won it above anyway). Not after an
+    // interstitial, and the head-start offer waits for another board.
+    if (!ref.read(clearInterstitialShownProvider) && await _maybeOfferReminder()) return;
+    if (!mounted) return;
     // Never stack a rewarded interstitial on top of an interstitial.
     if (ads.adsRemoved || ref.read(headStartBonusProvider) > 0 || ref.read(clearInterstitialShownProvider)) return;
     final granted = await showGameModal<bool>(
@@ -162,10 +171,29 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
         },
       ),
     );
-    if ((granted ?? false) && mounted) {
-      setState(() => _toast = AppLocalizations.of(context).clearedHeadStartGranted);
-      _after(const Duration(milliseconds: 2600), () => setState(() => _toast = null));
+    if ((granted ?? false) && mounted) _showToast(AppLocalizations.of(context).clearedHeadStartGranted);
+  }
+
+  /// The "Want a daily reminder?" sheet, then the OS dialog on Yes. True
+  /// when the sheet was shown (so nothing else stacks on it).
+  Future<bool> _maybeOfferReminder() async {
+    final reminders = ref.read(reminderControllerProvider);
+    if (!await reminders.shouldOfferPrompt() || !mounted) return false;
+    final yes = await showGameModal<bool>(context, bottom: true, builder: (_) => const ReminderPromptSheet());
+    final result = await reminders.answerPrompt(accepted: yes ?? false);
+    if (result == ReminderPromptResult.accepted && mounted) {
+      _showToast(AppLocalizations.of(context).reminderPromptOn, icon: JwIcons.cal, fill: JwFill.mint);
     }
+    return true;
+  }
+
+  void _showToast(String message, {String icon = JwIcons.hint, JwFill fill = JwFill.yellow}) {
+    setState(() {
+      _toast = message;
+      _toastIcon = icon;
+      _toastFill = fill;
+    });
+    _after(const Duration(milliseconds: 2600), () => setState(() => _toast = null));
   }
 
   @override
@@ -220,7 +248,7 @@ class _ClearedScreenState extends ConsumerState<ClearedScreen> with TickerProvid
                             duration: JwMotion.quick,
                             child: _toast == null
                                 ? const SizedBox.shrink()
-                                : JwToast(key: ValueKey(_toast), message: _toast!, icon: JwIcons.hint, fill: JwFill.yellow),
+                                : JwToast(key: ValueKey(_toast), message: _toast!, icon: _toastIcon, fill: _toastFill),
                           ),
                         ),
                       ),

@@ -83,3 +83,14 @@ full legacy size set (20-1024, iPhone + iPad + marketing, opaque RGB). Verify it
 a simulator in light, dark and tinted home-screen modes on the Mac. If you prefer
 the Xcode 15+ single-size format with dedicated dark and tinted variants, it lives
 in the design package at `design/icons/ios/AppIcon-single-size.appiconset`.
+
+## Daily reminder (local notifications)
+
+`flutter_local_notifications` schedules a local reminder chain when the app goes to the background (policy in `lib/state/reminder_policy.dart`). No push, no APNs, no Info.plist keys and no background mode are needed. Done on Windows: `AppDelegate.swift` sets `UNUserNotificationCenter.current().delegate` (the plugin's setup step); the plugin is initialised with every `request*Permission` flag off, so iOS never asks at launch. Only the cleared-screen sheet ("Yes, remind me") and Settings → Daily reminder call `requestPermissions(alert, sound)`. Verify on the Mac:
+
+- [ ] Fresh install: no notification permission alert at launch or during onboarding
+- [ ] Clear the first board: the "Want a daily reminder?" sheet appears once (not with the review sheet); Yes shows the iOS alert; Allow → toast "Daily reminder is on"; Don't Allow → nothing more, Settings → Daily reminder stays off and switching it on shows "Notifications are off for Jadewell…" (iOS never re-shows the alert)
+- [ ] Quick trigger: run with `--dart-define=JW_REMINDER_DELAY_SECONDS=20` (debug/profile only), allow notifications, play a board, go to the Home Screen: the day-1 reminder arrives ~20 s later, days 2 and 3 at 40 s and 60 s; reopening the app cancels the rest
+- [ ] Tap the reminder with the app suspended (on Home): the Daily screen opens; with the app killed: the app launches to Home. Both log `reminder_open`
+- [ ] Reminder shows the Jadewell app icon, title/body from `app_en.arb` (`reminder*` keys); no badge is set
+- [ ] Settings → Daily reminder off → nothing arrives after backgrounding (`Settings → Notifications → Jadewell` in iOS still lists the app)

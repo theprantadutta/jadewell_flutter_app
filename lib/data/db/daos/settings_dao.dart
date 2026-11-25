@@ -29,6 +29,7 @@ class SettingsDao extends DatabaseAccessor<AppDatabase> with _$SettingsDaoMixin 
           tileSize: Value(s.tileSize),
           reduceMotion: Value(s.reduceMotion),
           highRefreshRate: Value(s.highRefreshRate),
+          dailyReminder: Value(s.dailyReminder),
           onboardingDone: Value(s.onboardingDone),
         ),
       );
@@ -42,6 +43,7 @@ class SettingsDao extends DatabaseAccessor<AppDatabase> with _$SettingsDaoMixin 
         tileSize: r.tileSize,
         reduceMotion: r.reduceMotion,
         highRefreshRate: r.highRefreshRate,
+        dailyReminder: r.dailyReminder,
         onboardingDone: r.onboardingDone,
       );
 }

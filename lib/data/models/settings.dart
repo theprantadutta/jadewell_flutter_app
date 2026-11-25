@@ -13,6 +13,7 @@ class AppSettings {
     this.tileSize = TileSizePreference.medium,
     this.reduceMotion = false,
     this.highRefreshRate = false,
+    this.dailyReminder = true,
     this.onboardingDone = false,
   });
 
@@ -30,6 +31,10 @@ class AppSettings {
   /// default. Off by default: Jadewell is built for 60 Hz and faster costs
   /// battery, so it is the player's choice (docs/PERFORMANCE.md).
   final bool highRefreshRate;
+
+  /// The local daily-board reminder (`ReminderPolicy`). On by default,
+  /// but nothing is scheduled until the OS notification permission is granted.
+  final bool dailyReminder;
   final bool onboardingDone;
 
   AppSettings copyWith({
@@ -41,6 +46,7 @@ class AppSettings {
     TileSizePreference? tileSize,
     bool? reduceMotion,
     bool? highRefreshRate,
+    bool? dailyReminder,
     bool? onboardingDone,
   }) =>
       AppSettings(
@@ -52,6 +58,7 @@ class AppSettings {
         tileSize: tileSize ?? this.tileSize,
         reduceMotion: reduceMotion ?? this.reduceMotion,
         highRefreshRate: highRefreshRate ?? this.highRefreshRate,
+        dailyReminder: dailyReminder ?? this.dailyReminder,
         onboardingDone: onboardingDone ?? this.onboardingDone,
       );
 }

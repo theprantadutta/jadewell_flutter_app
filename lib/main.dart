@@ -25,15 +25,20 @@ import 'platform/haptics/haptic_service_impl.dart';
 import 'platform/iap/openiap_store_adapter_impl.dart';
 import 'platform/iap/pending_verifications.dart';
 import 'platform/iap/purchase_service_impl.dart';
+import 'platform/notifications/notification_service_impl.dart';
 import 'platform/store_listing/store_listing_service_impl.dart';
 import 'state/app_providers.dart';
 import 'state/data_providers.dart';
 import 'state/entitlement_providers.dart';
 import 'state/platform_bridge.dart';
 import 'state/platform_providers.dart';
+import 'state/reminder_controller.dart';
+import 'state/reminder_policy.dart';
 import 'state/session_controller.dart';
 import 'ui/demo/demo_driver.dart' show kDemoMode;
+import 'ui/l10n/generated/app_localizations.dart';
 import 'ui/theme/jw_fonts.dart';
+import 'ui/theme/jw_tokens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,6 +86,15 @@ Future<void> main() async {
       // Play in-app updates and reviews. The iOS App Store id goes here once
       // the iOS app is listed (Rate Jadewell is hidden on iOS until then).
       if (!kDemoMode) storeListingProvider.overrideWithValue(PlayStoreListingService(packageName: 'com.pranta.jadewell')),
+      // Daily-board reminder (local notifications; never in demo mode).
+      if (!kDemoMode) ...[
+        notificationServiceProvider.overrideWithValue(LocalNotificationService(
+          channelName: _l10n.reminderChannelName,
+          channelDescription: _l10n.reminderChannelDescription,
+          accent: JwColors.light.jadeDeep,
+        )),
+        reminderTextsProvider.overrideWithValue(_reminderTexts),
+      ],
       // Demo mode (profile runs, docs/PERFORMANCE.md): no ads, and progress,
       // stats and dailies stay in memory, so the self-playing app never
       // touches the player's data, the outbox or the leaderboards.
@@ -130,6 +144,23 @@ Future<void> main() async {
   if (!kDemoMode) WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(container.read(adServiceProvider).init()));
 
   runApp(UncontrolledProviderScope(container: container, child: const JadewellApp()));
+}
+
+/// Copy outside a widget tree (notifications): the device locale, English
+/// when it isn't supported.
+AppLocalizations get _l10n {
+  final device = PlatformDispatcher.instance.locale;
+  final supported = AppLocalizations.supportedLocales.any((l) => l.languageCode == device.languageCode);
+  return lookupAppLocalizations(supported ? Locale(device.languageCode) : const Locale('en'));
+}
+
+({String title, String body}) _reminderTexts(ReminderMessage message, int streak) {
+  final l = _l10n;
+  return switch (message) {
+    ReminderMessage.streak => (title: l.reminderStreakTitle(streak), body: l.reminderStreakBody),
+    ReminderMessage.daily => (title: l.reminderDailyTitle, body: l.reminderDailyBody),
+    ReminderMessage.comeback => (title: l.reminderComebackTitle, body: l.reminderComebackBody),
+  };
 }
 
 String? _nonEmpty(String? s) => (s == null || s.trim().isEmpty) ? null : s.trim();

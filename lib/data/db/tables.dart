@@ -24,6 +24,9 @@ class SettingsTable extends Table {
 
   /// Added in schema 2.
   BoolColumn get highRefreshRate => boolean().withDefault(const Constant(false))();
+
+  /// Added in schema 3.
+  BoolColumn get dailyReminder => boolean().withDefault(const Constant(true))();
   BoolColumn get onboardingDone => boolean().withDefault(const Constant(false))();
 
   @override

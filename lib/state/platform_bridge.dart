@@ -9,6 +9,7 @@ import '../platform/analytics/analytics_service.dart';
 import 'data_providers.dart';
 import 'entitlement_providers.dart';
 import 'platform_providers.dart';
+import 'reminder_controller.dart';
 import 'session_controller.dart';
 import 'store_listing_controller.dart';
 
@@ -30,6 +31,9 @@ final analyticsRouteObserverProvider =
 ///   competing with the first frames) and on every resume.
 /// * Analytics user properties (account, ads_removed, onboarding_done,
 ///   theme), sent only when a value changes.
+/// * Daily reminder: scheduled when the app goes to the background,
+///   cancelled after the first frame and on every resume
+///   (`ReminderController`, `ReminderPolicy`).
 ///
 /// Created once in main.dart; [dispose] undoes everything.
 class PlatformBridge {
@@ -51,6 +55,7 @@ class PlatformBridge {
     final audio = _container.read(audioProvider);
     final haptics = _container.read(hapticsProvider);
     final display = _container.read(displayServiceProvider);
+    final reminders = _container.read(reminderControllerProvider);
 
     _settings = _container.listen<AsyncValue<AppSettings>>(settingsProvider, (_, next) {
       final s = next.value;
@@ -88,9 +93,13 @@ class PlatformBridge {
         case AppLifecycleState.paused:
         case AppLifecycleState.detached:
           audio.onBackground();
+          if (state == AppLifecycleState.paused) unawaited(reminders.onBackground());
         case AppLifecycleState.resumed:
           audio.onForeground();
           _checkForUpdate();
+          unawaited(reminders.onForeground());
+          // The player may have changed it in system settings.
+          _container.invalidate(reminderPermissionProvider);
         case AppLifecycleState.inactive:
         case AppLifecycleState.hidden:
           break; // shade pulled down, app switcher: keep playing
@@ -102,6 +111,7 @@ class PlatformBridge {
       final state = WidgetsBinding.instance.lifecycleState;
       if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) audio.onBackground();
       unawaited(audio.init());
+      unawaited(reminders.start());
       _updateCheck = Timer(const Duration(seconds: 4), _checkForUpdate);
     });
   }

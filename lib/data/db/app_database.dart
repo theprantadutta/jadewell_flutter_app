@@ -34,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +47,8 @@ class AppDatabase extends _$AppDatabase {
           // Step by step from the installed version; never drop user data.
           // 1 → 2: Settings → High refresh rate.
           if (from < 2) await m.addColumn(settingsTable, settingsTable.highRefreshRate);
+          // 2 → 3: Settings → Daily reminder (on).
+          if (from < 3) await m.addColumn(settingsTable, settingsTable.dailyReminder);
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
