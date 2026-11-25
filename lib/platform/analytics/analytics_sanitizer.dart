@@ -60,6 +60,24 @@ abstract final class AnalyticsSanitizer {
     return s;
   }
 
+  static const int maxUserPropertyNameLength = 24;
+  static const int maxUserPropertyValueLength = 36;
+
+  /// A valid user property name (≤ 24 chars, not reserved), or null.
+  static String? userPropertyName(String raw) {
+    final s = name(raw);
+    if (s == null) return null;
+    return s.length > maxUserPropertyNameLength ? s.substring(0, maxUserPropertyNameLength) : s;
+  }
+
+  /// A user property value: ≤ 36 chars, never an e-mail address.
+  static String? userPropertyValue(String? raw) {
+    if (raw == null) return null;
+    final s = raw.trim();
+    if (s.isEmpty || _email.hasMatch(s)) return null;
+    return s.length > maxUserPropertyValueLength ? s.substring(0, maxUserPropertyValueLength) : s;
+  }
+
   /// Screen names allow any text but are capped like string values.
   static String screenName(String raw) => _cap(raw.trim().isEmpty ? 'unknown' : raw.trim());
 

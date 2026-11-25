@@ -48,4 +48,15 @@ class FirebaseAnalyticsImpl implements AnalyticsService {
       debugPrint('analytics: screen failed: $e');
     }
   }
+
+  @override
+  Future<void> setUserProperty(String name, String? value) async {
+    final key = AnalyticsSanitizer.userPropertyName(name);
+    if (key == null) return;
+    try {
+      await _analytics.setUserProperty(name: key, value: AnalyticsSanitizer.userPropertyValue(value));
+    } catch (e) {
+      debugPrint('analytics: user property $key failed: $e');
+    }
+  }
 }

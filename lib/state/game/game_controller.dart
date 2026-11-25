@@ -55,6 +55,11 @@ class GameController extends Notifier<GameViewState> {
   late GameClock _clock;
   late ProgressRepository _repo;
   late AnalyticsService _analytics;
+  late StatsRepository _stats;
+
+  /// Boards this player has cleared (analytics `lifetime_clears`); null if
+  /// stats could not be read. Read once per load, bumped on each clear.
+  int? _lifetimeClears;
   late AudioService _audio;
   late HapticService _haptics;
   late AdService _ads;
@@ -91,6 +96,7 @@ class GameController extends Notifier<GameViewState> {
     _clock = ref.read(gameClockFactoryProvider)();
     _repo = ref.read(progressRepositoryProvider);
     _analytics = ref.read(analyticsProvider);
+    _stats = ref.read(statsRepositoryProvider);
     _audio = ref.read(audioProvider);
     _haptics = ref.read(hapticsProvider);
     _ads = ref.read(adServiceProvider);
@@ -137,7 +143,9 @@ class GameController extends Notifier<GameViewState> {
         }
       }
       final resumed = game != null;
+      final clears = _readLifetimeClears(); // runs alongside the deal
       game ??= await ref.read(gameDealerProvider)(info.layout, _newSeed(), info.parMs);
+      _lifetimeClears = await clears;
       if (!ref.mounted) return;
 
       final bonus = ref.read(headStartBonusProvider.notifier).take();
@@ -153,7 +161,12 @@ class GameController extends Notifier<GameViewState> {
         resumed: resumed,
         dailyDate: dailyDate,
       );
-      _log(AnalyticsEvents.layoutStart, {'layout_id': info.id, 'daily': launch.daily ? 1 : 0, 'resumed': resumed ? 1 : 0});
+      _logBoard(AnalyticsEvents.layoutStart, {
+        'layout_id': info.id,
+        'daily': launch.daily ? 1 : 0,
+        'resumed': resumed ? 1 : 0,
+        'tiles': info.tileCount,
+      });
       if (launch.daily) _log(AnalyticsEvents.dailyStart, {'layout_id': info.id});
       _syncClock();
       _ads.onBoardStarted(); // a late interstitial for the previous clear must not land on this board
@@ -427,7 +440,12 @@ class GameController extends Notifier<GameViewState> {
       combo: 0,
       resumed: false,
     );
-    _log(AnalyticsEvents.layoutStart, {'layout_id': info.id, 'daily': launch.daily ? 1 : 0, 'restart': 1});
+    _logBoard(AnalyticsEvents.layoutStart, {
+      'layout_id': info.id,
+      'daily': launch.daily ? 1 : 0,
+      'restart': 1,
+      'tiles': info.tileCount,
+    });
     _syncClock();
   }
 
@@ -492,9 +510,10 @@ class GameController extends Notifier<GameViewState> {
 
   void _logAbandon(String trigger) {
     final s = state;
-    _log(AnalyticsEvents.boardAbandon, {
+    _logBoard(AnalyticsEvents.boardAbandon, {
       'layout_id': s.info?.id ?? launch.layoutId,
       'daily': launch.daily ? 1 : 0,
+      'tiles': ?s.info?.tileCount,
       'tiles_left': s.tilesLeft,
       'time_ms': _clock.elapsedMs,
       'trigger': trigger,
@@ -641,9 +660,11 @@ class GameController extends Notifier<GameViewState> {
     if (!ref.mounted) return;
     ref.read(lastClearedProvider.notifier).set(cleared);
     state = state.copyWith(result: cleared);
-    _log(AnalyticsEvents.boardCleared, {
+    if (_lifetimeClears != null) _lifetimeClears = _lifetimeClears! + 1;
+    _logBoard(AnalyticsEvents.boardCleared, {
       'layout_id': info.id,
       'daily': launch.daily ? 1 : 0,
+      'tiles': info.tileCount,
       'time_ms': stats.elapsedMs,
       'hints': stats.hintsUsed,
       'undos': stats.undos,
@@ -692,6 +713,21 @@ class GameController extends Notifier<GameViewState> {
   }
 
   void _log(String event, Map<String, Object> params) => unawaited(_guard(_analytics.log(event, params)));
+
+  /// Board events also carry `lifetime_clears` (boards this player has
+  /// cleared, counting this one for `board_cleared`), so first-board outcomes
+  /// can be told apart from a regular's.
+  void _logBoard(String event, Map<String, Object> params) =>
+      _log(event, {...params, 'lifetime_clears': ?_lifetimeClears});
+
+  Future<int?> _readLifetimeClears() async {
+    try {
+      return (await _stats.watch().first.timeout(const Duration(seconds: 2))).boardsCleared;
+    } catch (e) {
+      debugPrint('game: lifetime clears unavailable: $e');
+      return null;
+    }
+  }
 
   void _dispose() {
     final pending = _dirty || (_saveTimer?.isActive ?? false);

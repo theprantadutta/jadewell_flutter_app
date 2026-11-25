@@ -500,7 +500,12 @@ class AdServiceImpl implements AdService {
     void failed(LoadAdError e) {
       _loading.remove(f);
       debugPrint('ads: ${f.key} failed to load (${e.code}): ${e.message}');
-      _log(AnalyticsEvents.adLoadFailed, {'format': f.key, 'code': e.code});
+      _log(AnalyticsEvents.adLoadFailed, {
+        'format': f.key,
+        'code': e.code,
+        'message': e.message,
+        'attempt': (_attempts[f] ?? 0) + 1,
+      });
       _scheduleRetry(f);
       _notify();
     }

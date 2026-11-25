@@ -4,6 +4,7 @@ import 'package:jadewell_flutter_app/platform/analytics/analytics_route_observer
 import 'package:jadewell_flutter_app/platform/analytics/analytics_sanitizer.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
 import 'package:jadewell_flutter_app/platform/analytics/debug_print_analytics_impl.dart';
+import 'package:jadewell_flutter_app/state/platform_bridge.dart';
 
 class _Recorder implements AnalyticsService {
   final screens = <String>[];
@@ -11,6 +12,9 @@ class _Recorder implements AnalyticsService {
   Future<void> log(String event, [Map<String, Object> params = const {}]) async {}
   @override
   Future<void> screen(String name) async => screens.add(name);
+  @override
+  Future<void> setUserProperty(String name, String? value) async => userProperties[name] = value;
+  final userProperties = <String, String?>{};
 }
 
 void main() {
@@ -100,6 +104,49 @@ void main() {
     test('screen names are capped', () {
       expect(AnalyticsSanitizer.screenName('s' * 200), hasLength(100));
       expect(AnalyticsSanitizer.screenName('  '), 'unknown');
+    });
+  });
+
+  group('user properties', () {
+    test('names capped at 24 chars and cleaned like event names', () {
+      expect(AnalyticsSanitizer.userPropertyName('ads_removed'), 'ads_removed');
+      expect(AnalyticsSanitizer.userPropertyName('a' * 30), 'a' * 24);
+      expect(AnalyticsSanitizer.userPropertyName('firebase_x'), 'jw_x');
+      expect(AnalyticsSanitizer.userPropertyName('???'), isNull);
+    });
+
+    test('values capped at 36 chars; e-mail addresses and blanks dropped', () {
+      expect(AnalyticsSanitizer.userPropertyValue('google'), 'google');
+      expect(AnalyticsSanitizer.userPropertyValue('x' * 40), 'x' * 36);
+      expect(AnalyticsSanitizer.userPropertyValue('a@b.co'), isNull);
+      expect(AnalyticsSanitizer.userPropertyValue('  '), isNull);
+      expect(AnalyticsSanitizer.userPropertyValue(null), isNull);
+    });
+
+    test('every AnalyticsUserProperties name is valid and unchanged', () {
+      for (final n in const [
+        AnalyticsUserProperties.account,
+        AnalyticsUserProperties.adsRemoved,
+        AnalyticsUserProperties.onboardingDone,
+        AnalyticsUserProperties.theme,
+      ]) {
+        expect(AnalyticsSanitizer.userPropertyName(n), n);
+      }
+    });
+
+    test('account kind from the Firebase providers', () {
+      expect(PlatformBridge.accountKind(const []), 'guest');
+      expect(PlatformBridge.accountKind(const ['google.com']), 'google');
+      expect(PlatformBridge.accountKind(const ['apple.com', 'google.com']), 'apple');
+      expect(PlatformBridge.accountKind(const ['password']), 'other');
+    });
+
+    test('DebugPrintAnalytics prints the sanitised user property', () async {
+      final lines = <String>[];
+      final a = DebugPrintAnalytics(printer: lines.add);
+      await a.setUserProperty('account', 'guest');
+      await a.setUserProperty('???', 'x');
+      expect(lines, ['analytics: user property account = guest', 'analytics: dropped invalid user property "???"']);
     });
   });
 

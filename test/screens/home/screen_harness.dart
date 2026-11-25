@@ -67,6 +67,9 @@ class RecordingAnalytics implements AnalyticsService {
   Future<void> log(String event, [Map<String, Object> params = const {}]) async => events.add((event, params));
   @override
   Future<void> screen(String name) async {}
+  @override
+  Future<void> setUserProperty(String name, String? value) async => userProperties[name] = value;
+  final userProperties = <String, String?>{};
   Iterable<String> get names => events.map((e) => e.$1);
 }
 

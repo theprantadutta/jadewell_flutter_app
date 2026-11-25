@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/settings.dart';
 import '../platform/analytics/analytics_route_observer.dart';
+import '../platform/analytics/analytics_service.dart';
 import 'data_providers.dart';
+import 'entitlement_providers.dart';
 import 'platform_providers.dart';
+import 'session_controller.dart';
 import 'store_listing_controller.dart';
 
 /// Screen-view tracking for the router: `observers: [ref.read(analyticsRouteObserverProvider)]`.
@@ -25,6 +28,8 @@ final analyticsRouteObserverProvider =
 ///   player who turned music off never hears a note of it.
 /// * Play in-app updates: checked a few seconds after start-up (never
 ///   competing with the first frames) and on every resume.
+/// * Analytics user properties (account, ads_removed, onboarding_done,
+///   theme), sent only when a value changes.
 ///
 /// Created once in main.dart; [dispose] undoes everything.
 class PlatformBridge {
@@ -32,6 +37,9 @@ class PlatformBridge {
 
   final ProviderContainer _container;
   ProviderSubscription<AsyncValue<AppSettings>>? _settings;
+  ProviderSubscription<AsyncValue<BackendSession>>? _session;
+  ProviderSubscription<Entitlement>? _entitlement;
+  final Map<String, String?> _userProperties = {};
   AppLifecycleListener? _lifecycle;
   bool _musicStarted = false;
   bool? _highRefresh;
@@ -55,6 +63,8 @@ class PlatformBridge {
         _highRefresh = s.highRefreshRate;
         unawaited(display.setHighRefreshRate(s.highRefreshRate));
       }
+      _setUserProperty(AnalyticsUserProperties.theme, s.theme.name);
+      _setUserProperty(AnalyticsUserProperties.onboardingDone, s.onboardingDone ? '1' : '0');
       if (!_musicStarted) {
         // First real settings value: flags are now correct, music may start.
         // startMusic() only records the wish until the engine is ready, and
@@ -62,6 +72,15 @@ class PlatformBridge {
         _musicStarted = true;
         unawaited(audio.startMusic());
       }
+    }, fireImmediately: true);
+
+    _session = _container.listen<AsyncValue<BackendSession>>(sessionProvider, (_, next) {
+      final identity = next.value?.identity;
+      if (identity != null) _setUserProperty(AnalyticsUserProperties.account, accountKind(identity.providers));
+    }, fireImmediately: true);
+
+    _entitlement = _container.listen<Entitlement>(entitlementProvider, (_, next) {
+      _setUserProperty(AnalyticsUserProperties.adsRemoved, next.removeAds ? '1' : '0');
     }, fireImmediately: true);
 
     _lifecycle = AppLifecycleListener(onStateChange: (state) {
@@ -87,11 +106,26 @@ class PlatformBridge {
     });
   }
 
+  /// `guest`, `google`, `apple` or `other`, from the Firebase providers.
+  static String accountKind(List<String> providers) {
+    if (providers.contains('apple.com')) return 'apple';
+    if (providers.contains('google.com')) return 'google';
+    return providers.isEmpty ? 'guest' : 'other';
+  }
+
+  void _setUserProperty(String name, String? value) {
+    if (_userProperties.containsKey(name) && _userProperties[name] == value) return;
+    _userProperties[name] = value;
+    unawaited(_container.read(analyticsProvider).setUserProperty(name, value));
+  }
+
   void _checkForUpdate() => unawaited(_container.read(appUpdateProvider.notifier).checkInBackground());
 
   void dispose() {
     _updateCheck?.cancel();
     _settings?.close();
+    _session?.close();
+    _entitlement?.close();
     _lifecycle?.dispose();
   }
 }

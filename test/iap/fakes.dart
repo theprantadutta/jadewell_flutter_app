@@ -152,6 +152,9 @@ class RecordingAnalytics implements AnalyticsService {
 
   @override
   Future<void> screen(String name) async {}
+  @override
+  Future<void> setUserProperty(String name, String? value) async => userProperties[name] = value;
+  final userProperties = <String, String?>{};
 }
 
 /// A [PurchaseService] whose status the test drives.

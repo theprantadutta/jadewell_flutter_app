@@ -33,6 +33,9 @@ class RecordingAnalytics implements AnalyticsService {
 
   @override
   Future<void> screen(String name) async {}
+  @override
+  Future<void> setUserProperty(String name, String? value) async => userProperties[name] = value;
+  final userProperties = <String, String?>{};
 }
 
 class TestAds implements AdService {
@@ -205,7 +208,10 @@ void main() {
       expect(s.chapterName, 'Classics');
       expect(s.resumed, isFalse);
       expect(h.clock.isRunning, isTrue);
-      expect(h.analytics.named(AnalyticsEvents.layoutStart).single['layout_id'], 'turtle');
+      final start = h.analytics.named(AnalyticsEvents.layoutStart).single;
+      expect(start['layout_id'], 'turtle');
+      expect(start['tiles'], 144);
+      expect(start['lifetime_clears'], 0);
     });
 
     test('resumes the saved board with its elapsed time', () async {
@@ -384,7 +390,9 @@ void main() {
       expect(result.firstClear, isTrue);
       expect(h.state(launch).result, isNotNull);
       expect(h.ads.clearedCalls, 1);
-      expect(h.analytics.named(AnalyticsEvents.boardCleared).single['stars'], 3);
+      final clearedEvent = h.analytics.named(AnalyticsEvents.boardCleared).single;
+      expect(clearedEvent['stars'], 3);
+      expect(clearedEvent['lifetime_clears'], 1, reason: 'counts this clear');
       expect(h.analytics.named(AnalyticsEvents.dailyComplete), hasLength(1));
       expect(await h.repo.loadSavedGame('pair'), isNull);
     });
@@ -423,7 +431,10 @@ void main() {
       c.handleLifecycle(AppLifecycleState.inactive);
       expect(h.clock.isRunning, isFalse);
       c.handleLifecycle(AppLifecycleState.paused);
-      expect(h.analytics.named(AnalyticsEvents.boardAbandon).single['tiles_left'], 142);
+      final abandon = h.analytics.named(AnalyticsEvents.boardAbandon).single;
+      expect(abandon['tiles_left'], 142);
+      expect(abandon['tiles'], 144);
+      expect(abandon['lifetime_clears'], 0);
       expect(h.state(launch).pauseReason, PauseReason.background);
       await Future<void>.delayed(Duration.zero);
       expect(h.repo.results, isEmpty);

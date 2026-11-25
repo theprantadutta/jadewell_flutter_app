@@ -25,4 +25,14 @@ class DebugPrintAnalytics implements AnalyticsService {
   Future<void> screen(String name) async {
     _print('analytics: screen ${AnalyticsSanitizer.screenName(name)}');
   }
+
+  @override
+  Future<void> setUserProperty(String name, String? value) async {
+    final key = AnalyticsSanitizer.userPropertyName(name);
+    if (key == null) {
+      _print('analytics: dropped invalid user property "$name"');
+      return;
+    }
+    _print('analytics: user property $key = ${AnalyticsSanitizer.userPropertyValue(value)}');
+  }
 }

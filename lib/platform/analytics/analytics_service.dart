@@ -4,6 +4,19 @@
 abstract interface class AnalyticsService {
   Future<void> log(String event, [Map<String, Object> params = const {}]);
   Future<void> screen(String name);
+
+  /// Sets (or clears, with null) a user property. Names and values are
+  /// sanitised like events (names ≤ 24 chars, values ≤ 36 chars).
+  Future<void> setUserProperty(String name, String? value);
+}
+
+/// User property names in one place. Each is registered as a user-scoped
+/// custom dimension in GA4 (docs/ANALYTICS.md).
+abstract final class AnalyticsUserProperties {
+  static const account = 'account'; // guest, google, apple
+  static const adsRemoved = 'ads_removed'; // 0, 1
+  static const onboardingDone = 'onboarding_done'; // 0, 1
+  static const theme = 'theme'; // system, light, dark
 }
 
 /// Event names in one place so they stay consistent.
@@ -41,7 +54,7 @@ abstract final class AnalyticsEvents {
   static const adGate = 'ad_gate'; // trigger, reason: every gate decision
   static const adShown = 'ad_shown'; // format, placement, reason
   static const adReward = 'jw_ad_reward'; // placement, format
-  static const adLoadFailed = 'ad_load_failed'; // format, code
+  static const adLoadFailed = 'ad_load_failed'; // format, code, message
   static const adRevenue = 'ad_revenue'; // format, value_micros, currency, precision
 }
 
@@ -51,4 +64,6 @@ class NoOpAnalytics implements AnalyticsService {
   Future<void> log(String event, [Map<String, Object> params = const {}]) async {}
   @override
   Future<void> screen(String name) async {}
+  @override
+  Future<void> setUserProperty(String name, String? value) async {}
 }
