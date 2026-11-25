@@ -1,9 +1,9 @@
 # Privacy Policy for Jadewell: Mahjong Solitaire
 
 **Legal Version: 1.0**  
-**Policy Version: 1.0**  
+**Policy Version: 1.1**  
 **Effective Date: November 18, 2026**  
-**Last Updated: November 18, 2026**
+**Last Updated: November 25, 2026**
 
 Jadewell ("we," "our," or "us") is a mahjong solitaire game made by Pranta Dutta, an independent developer based in Bangladesh. This policy explains what Jadewell collects, why, who else handles it, how long it is kept, and how to delete it.
 
@@ -14,6 +14,8 @@ The short version: you can play Jadewell without giving us your name or email. I
 ### Information stored only on your device
 
 Your settings, layouts cleared, best times and stars, the board you are playing, your daily results and streak, and a list of results waiting to be sent to our server are stored on your device.
+
+**Daily reminders (optional).** If you turn on the daily reminder, your phone schedules a local notification about the day's board. It is created and shown by your device alone, uses your streak and today's daily result already stored on the device to choose the message, and nothing about it is sent to our server or anyone else. Jadewell asks for notification permission only after you choose to turn reminders on, and you can turn them off at any time in Settings or in your phone's notification settings.
 
 ### Information sent to our server
 
@@ -30,13 +32,13 @@ Your settings, layouts cleared, best times and stars, the board you are playing,
 
 ### Information collected by Google services in the app
 
-- **Analytics (Firebase Analytics).** In the released app only: anonymous events about how the game is played, for example a board started, cleared or left, a hint or shuffle used, a daily board completed, a setting changed, or an ad or purchase screen shown, with details like the layout and time taken. We strip identifiers such as names, emails and friend codes from these events, and we do not link them to your account. Firebase also collects standard device information (model, OS version, app version, language and an app-instance ID) and, on Android, may collect the advertising ID.
+- **Analytics (Firebase Analytics).** In the released app only: anonymous events about how the game is played, for example a board started, cleared or left, a hint or shuffle used, a daily board completed, a setting changed, a daily reminder turned on or opened, or an ad or purchase screen shown, with details like the layout and time taken. We strip identifiers such as names, emails and friend codes from these events, and we do not link them to your account. Firebase also collects standard device information (model, OS version, app version, language and an app-instance ID) and, on Android, may collect the advertising ID.
 - **Crash reports (Firebase Crashlytics).** In the released app only, when the app crashes or hits an error: the stack trace, device model, OS version, app version and an installation ID.
 - **Advertising (Google AdMob).** To show ads, AdMob processes your device's advertising ID, IP address and device information. With your consent (where consent is required), ads may be personalized; otherwise they are non-personalized.
 
 ### What we do not collect
 
-We do not collect your real name, phone number, contacts, photos, precise location, or payment card details. We collect your email address only if you choose to sign in. Jadewell does not send push notifications. Payments are handled entirely by Google Play or the Apple App Store.
+We do not collect your real name, phone number, contacts, photos, precise location, or payment card details. We collect your email address only if you choose to sign in. Jadewell does not send push notifications from a server; the optional daily reminder is a local notification created on your device. Payments are handled entirely by Google Play or the Apple App Store.
 
 ## 2. How we use it
 
