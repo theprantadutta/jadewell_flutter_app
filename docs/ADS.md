@@ -72,7 +72,7 @@ Interstitial, checked in this order (first failing rule is the logged reason):
 1. `ads_removed`: Remove ads bought.
 2. `ads_off`: no consent / SDK not ready.
 3. `no_unit`: release id empty.
-4. `first_boards`: none in a new install's first **2** completed boards (so the first possible one is board 3).
+4. `first_boards`: none in a new install's first **3** completed boards (so the first possible one is board 4; the 40-tile Sprout warm-up is one of the three).
 5. `cadence`: at most **1 per 3** completed boards.
 6. `interstitial_gap`: at least **4 min** since the last interstitial.
 7. `fullscreen_gap`: at least **2 min** since any full-screen ad (an opt-in rewarded watch is never chased by an interstitial).
@@ -81,7 +81,7 @@ Interstitial, checked in this order (first failing rule is the logged reason):
 
 Restart, abandon, deadlock and leaving a board never reach the gate (only `onBoardCleared` counts boards). Daily boards are allowed, after their result is on screen (the delay above). Counters persisted in SharedPreferences: completed boards, boards since the last interstitial, last interstitial time, last full-screen ad time.
 
-App open: `ads_removed`, `ads_off`, `no_unit`, `cold_start` (no `paused` → `resumed` trip; a cold start, first session or not, never shows one), `suppressed` (returning from the privacy form / ATT), `first_boards` (fewer than 2 completed boards), `short_away` (< **30 min** away, counted from `paused` only; our own ads' pauses are ignored), `app_open_gap` (< 30 min since the last one), `fullscreen_gap`, `ad_showing`, `not_loaded`, `shown`.
+App open: `ads_removed`, `ads_off`, `no_unit`, `cold_start` (no `paused` → `resumed` trip; a cold start, first session or not, never shows one), `suppressed` (returning from the privacy form / ATT), `first_boards` (fewer than 3 completed boards), `short_away` (< **30 min** away, counted from `paused` only; our own ads' pauses are ignored), `app_open_gap` (< 30 min since the last one), `fullscreen_gap`, `ad_showing`, `not_loaded`, `shown`.
 
 Tunables live in `AdGateRules`.
 

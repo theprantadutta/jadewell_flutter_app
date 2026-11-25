@@ -84,13 +84,14 @@ List<int> _simulate(int boards, {int minutesPerBoard = 5, AdGateCounters start =
 
 void main() {
   group('interstitial after a cleared board', () {
-    test('never in a new install\'s first 2 completed boards', () {
+    test('never in a new install\'s first 3 completed boards (Sprout is one)', () {
       expect(_clear(_fresh(1)), (format: null, reason: AdGateReason.firstBoards));
       expect(_clear(_fresh(2)), (format: null, reason: AdGateReason.firstBoards));
+      expect(_clear(_fresh(3)), (format: null, reason: AdGateReason.firstBoards));
     });
 
-    test('the first one can show on the 3rd completed board', () {
-      expect(_clear(_fresh(3)), (format: AdFormat.interstitial, reason: AdGateReason.shown));
+    test('the first one can show on the 4th completed board', () {
+      expect(_clear(_fresh(4)), (format: AdFormat.interstitial, reason: AdGateReason.shown));
     });
 
     test('at most one per 3 completed boards', () {
@@ -136,7 +137,7 @@ void main() {
     });
 
     test('daily boards are allowed (shown after the result, by the service)', () {
-      expect(_clear(_fresh(3), isDaily: true).format, AdFormat.interstitial);
+      expect(_clear(_fresh(4), isDaily: true).format, AdFormat.interstitial);
     });
 
     test('rule order: the cheapest, most general reason wins', () {
@@ -151,14 +152,14 @@ void main() {
       expect(_clear(c, now: _t0 - 24 * 60 * _min).format, AdFormat.interstitial);
     });
 
-    test('a long session: boards 3, 6, 9… when boards take 5 minutes', () {
-      expect(_simulate(12), [3, 6, 9, 12]);
+    test('a long session: boards 4, 7, 10… when boards take 5 minutes', () {
+      expect(_simulate(12), [4, 7, 10]);
     });
 
     test('quick boards: the 4-minute gap stretches the cadence', () {
       // a board a minute: board 3 shows; boards 6 (3 min later) is too soon;
       // 7 is exactly 4 minutes later.
-      expect(_simulate(12, minutesPerBoard: 1), [3, 7, 11]);
+      expect(_simulate(12, minutesPerBoard: 1), [4, 8, 12]);
     });
   });
 
@@ -208,9 +209,9 @@ void main() {
       expect(_resume(played, backgroundedAt: _t0 - 30 * _min + 1).reason, AdGateReason.shortAway);
     });
 
-    test('never before the player has completed 2 boards', () {
-      expect(_resume(_fresh(1), backgroundedAt: away).reason, AdGateReason.firstBoards);
-      expect(_resume(_fresh(2), backgroundedAt: away).format, AdFormat.appOpen);
+    test('never before the player has completed 3 boards', () {
+      expect(_resume(_fresh(2), backgroundedAt: away).reason, AdGateReason.firstBoards);
+      expect(_resume(_fresh(3), backgroundedAt: away).format, AdFormat.appOpen);
     });
 
     test('Remove ads, no consent, no unit id: off', () {

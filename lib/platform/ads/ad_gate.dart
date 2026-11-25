@@ -34,7 +34,7 @@ enum AdTrigger {
 /// The tunables, in one place (docs/ADS.md lists them).
 class AdGateRules {
   const AdGateRules({
-    this.freeBoards = 2,
+    this.freeBoards = 3,
     this.boardsPerInterstitial = 3,
     this.interstitialMinGap = const Duration(minutes: 4),
     this.fullScreenMinGap = const Duration(minutes: 2),
@@ -43,6 +43,7 @@ class AdGateRules {
   });
 
   /// A new install's first N completed boards never get an interstitial
+  /// (3: the 40-tile Sprout warm-up is one of them)
   /// (and no app open ad shows before N boards either).
   final int freeBoards;
 
