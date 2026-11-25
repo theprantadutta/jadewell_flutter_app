@@ -38,6 +38,7 @@ Future<void> _pumpHome(WidgetTester tester, {required Size size, required double
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   final repo = MemoryProgressRepository();
   if (populated) {
+    await repo.recordResult(_clear('sprout', 61000, 3)); // the Warm-up row with a best time
     await repo.recordResult(_clear('pyramid', 228000, 3));
     await repo.recordResult(_clear('fortress', 3662000, 2)); // over an hour: h:mm:ss
     await repo.recordResult(_clear('crab', 375000, 1));

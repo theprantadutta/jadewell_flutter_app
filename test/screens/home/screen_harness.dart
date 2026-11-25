@@ -30,9 +30,11 @@ LayoutInfo _info(String id, String name, String chapter, int order, {int require
     );
 
 /// Classics (always) · Creatures (3 Classics clears; Dragon needs 1 Creature
-/// clear) · Wonders (8 total clears) · one daily layout.
+/// clear) · Wonders (8 total clears) · one daily layout · the Warm-up starter
+/// board (Sprout).
 Catalogue testCatalogue() {
   final layouts = <String, LayoutInfo>{
+    'sprout': _info('sprout', 'Sprout', 'warmup', 1),
     'pyramid': _info('pyramid', 'Pyramid', 'classics', 1),
     'turtle': _info('turtle', 'Turtle', 'classics', 2, difficulty: 'medium'),
     'fortress': _info('fortress', 'Fortress', 'classics', 3, difficulty: 'hard'),
@@ -51,6 +53,7 @@ Catalogue testCatalogue() {
     ],
     layouts: layouts,
     dailyPool: const ['lotus'],
+    starter: const ChapterInfo(id: 'warmup', name: 'Warm-up', order: 0, unlock: UnlockAlways(), layoutIds: ['sprout']),
   );
 }
 

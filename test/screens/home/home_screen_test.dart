@@ -110,6 +110,35 @@ void main() {
     expect(find.text('0/24'), findsOneWidget);
     expect(find.text('START HERE'), findsOneWidget);
     expect(find.text('Play first board'), findsOneWidget);
+    // It points at the starter board; no Warm-up row while it does.
+    expect(find.text('Sprout'), findsOneWidget);
+    expect(find.byKey(const ValueKey('warmup-row')), findsNothing);
+    await tester.tap(find.text('Play first board'));
+    await tester.pumpAndSettle();
+    expect(find.text('route:/game/sprout'), findsOneWidget);
+  });
+
+  testWidgets('an unfinished starter board keeps the start-here card', (tester) async {
+    await _pump(tester, seed: (repo) => repo.saveGame('sprout', stateJson: const {}, elapsedMs: 1000, fractionCleared: 0.2));
+    expect(find.text('START HERE'), findsOneWidget);
+    expect(find.text('Sprout'), findsOneWidget);
+  });
+
+  testWidgets('after the starter board: normal home, Warm-up row, chapters untouched', (tester) async {
+    await _pump(tester, seed: (repo) => repo.recordResult(_clear('sprout', 52000, 3)));
+    expect(find.text('Ready for a board?'), findsOneWidget);
+    expect(find.text('START HERE'), findsNothing);
+    // The starter counts towards no chapter and no star total.
+    expect(find.text('0/24'), findsOneWidget);
+    expect(find.text('0/4'), findsOneWidget);
+    final row = find.byKey(const ValueKey('warmup-row'));
+    await _scrollTo(tester, row);
+    expect(find.descendant(of: row, matching: find.text('Warm-up')), findsOneWidget);
+    expect(find.descendant(of: row, matching: find.text('Sprout · Best 0:52')), findsOneWidget);
+    expect(tester.widget<StarRow>(find.descendant(of: row, matching: find.byType(StarRow))).earned, 3);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.text('route:/game/sprout'), findsOneWidget);
   });
 
   testWidgets('layout lock within an open chapter names the first layout', (tester) async {

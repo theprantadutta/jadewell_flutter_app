@@ -54,6 +54,7 @@ abstract final class Unlocks {
     final prog = p[layoutId];
     if (info.isDaily) return const LayoutAccess.open();
     final isNew = prog == null || (prog.clears == 0 && prog.lastPlayedAt == null && !prog.hasSavedGame);
+    if (c.isStarter(layoutId)) return LayoutAccess.open(isNew: isNew); // the starter board is always open
     if (prog?.adUnlocked ?? false) return LayoutAccess.open(isNew: isNew);
 
     final ch = chapter(c, info.chapterId, p);

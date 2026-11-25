@@ -2,7 +2,8 @@
 //
 //   dart run tool/layouts/check_geometry.dart [--passes 2000] [--seed 1]
 //
-// Checks every layout file (except index.json): even tile count in 72..144,
+// Checks every layout file (except index.json): even tile count in 72..144
+// (36..144 for index.json's starter board),
 // no overlap on a layer, support for every tile on z > 0, bounding box within
 // 22 x 30 half-units, unique ids, and that every id in index.json has a file.
 //
@@ -23,6 +24,11 @@ import 'dart:math';
 /// reshape; its lone cap tile gets random removal stuck often, which the
 /// dealer's backtrack/reseed absorbs.
 const Set<String> kStuckRateWarnOnly = {'turtle'};
+
+/// Smallest regular layout; the starter board (index.json `starter`) may be
+/// as small as [kMinStarterTiles].
+const int kMinTiles = 72;
+const int kMinStarterTiles = 36;
 
 const int kMaxWidth = 22;
 const int kMaxHeight = 30;
@@ -91,11 +97,12 @@ class Geometry {
   }
 }
 
-List<String> validate(List<Tile> tiles) {
+List<String> validate(List<Tile> tiles, {bool starter = false}) {
   final errors = <String>[];
   final n = tiles.length;
+  final minTiles = starter ? kMinStarterTiles : kMinTiles;
   if (n.isOdd) errors.add('odd tile count $n');
-  if (n < 72 || n > 144) errors.add('tile count $n outside 72..144');
+  if (n < minTiles || n > 144) errors.add('tile count $n outside $minTiles..144');
   final byZ = <int, List<Tile>>{};
   for (final t in tiles) {
     if (t.z < 0) errors.add('negative z at (${t.x},${t.y})');
@@ -154,6 +161,12 @@ void main(List<String> args) {
   final dir = Directory('${root.path}/assets/layouts');
   var failed = false;
   final ids = <String, String>{};
+  final indexFile = File('${dir.path}/index.json');
+  String? starter;
+  if (indexFile.existsSync()) {
+    final json = jsonDecode(indexFile.readAsStringSync()) as Map<String, Object?>;
+    starter = (json['starter'] as Map<String, Object?>?)?['layout'] as String?;
+  }
   final files =
       dir
           .listSync()
@@ -188,7 +201,7 @@ void main(List<String> args) {
               .cast<Map<String, Object?>>())
         Tile(t['x']! as int, t['y']! as int, t['z']! as int),
     ];
-    errors.addAll(validate(tiles));
+    errors.addAll(validate(tiles, starter: id == starter));
 
     var stuck = 0;
     var stuckLeft = 0;
@@ -246,6 +259,7 @@ void main(List<String> args) {
             in (c! as Map<String, Object?>)['layouts']! as List<Object?>)
           (l! as Map<String, Object?>)['id']! as String,
       for (final d in json['dailyPool']! as List<Object?>) d! as String,
+      ?starter,
     ];
     final seen = <String>{};
     for (final id in referenced) {
