@@ -86,6 +86,7 @@ class GameViewState {
     this.dealId = 0,
     this.pauseReason,
     this.hint,
+    this.coach,
     this.combo = 0,
     this.busy,
     this.resumed = false,
@@ -110,6 +111,11 @@ class GameViewState {
 
   /// The hinted pair while the hint is showing (clears after 2.1 s or a tap).
   final (int, int)? hint;
+
+  /// First-move coach on the starter board for a player who has never
+  /// cleared a board: the pair to highlight (with the "tap two matching free
+  /// tiles" tip) until the first match. Null otherwise.
+  final (int, int)? coach;
 
   /// Matches in a row with at most 4 s between each (chip from ×3).
   final int combo;
@@ -150,6 +156,7 @@ class GameViewState {
     int? dealId,
     PauseReason? Function()? pauseReason,
     (int, int)? Function()? hint,
+    (int, int)? Function()? coach,
     int? combo,
     RewardBusy? Function()? busy,
     bool? resumed,
@@ -165,6 +172,7 @@ class GameViewState {
     dealId: dealId ?? this.dealId,
     pauseReason: pauseReason != null ? pauseReason() : this.pauseReason,
     hint: hint != null ? hint() : this.hint,
+    coach: coach != null ? coach() : this.coach,
     combo: combo ?? this.combo,
     busy: busy != null ? busy() : this.busy,
     resumed: resumed ?? this.resumed,

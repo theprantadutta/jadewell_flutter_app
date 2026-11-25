@@ -25,10 +25,12 @@ import '../../widgets/widgets.dart';
 /// two tiles at the native size and position), then plays A's last beats:
 /// blobs fade in, the mint beads pop, the wordmark fades up and the
 /// "Every board is solvable" chip appears (~600 ms); then hands over to
-/// onboarding (first run) or home.
+/// home, or on first run straight into the starter board (play first: the
+/// board coaches the first move, and the old onboarding pages live on as
+/// Settings → How to play).
 ///
-/// Never waits on the network: the only wait is the local settings read,
-/// capped at [settingsTimeout].
+/// Never waits on the network: the only waits are the local settings and
+/// catalogue reads, each capped at [settingsTimeout].
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -97,9 +99,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       await _ctrl.forward().orCancel.catchError((Object _) {});
     }
     final settings = await settingsFuture;
+    final starter = settings.onboardingDone ? null : await _starterLayoutId();
     await Future<void>.delayed(reduce ? const Duration(milliseconds: 200) : SplashScreen.hold);
     if (!mounted) return;
-    context.go(settings.onboardingDone ? AppRoutes.home : AppRoutes.onboarding);
+    if (starter == null) {
+      context.go(AppRoutes.home);
+      return;
+    }
+    // First run is done once the player reaches the first board: leaving it
+    // unfinished goes home like any board, and the next launch goes home too.
+    unawaited(ref.read(analyticsProvider).log(AnalyticsEvents.onboardingComplete, {
+      'flow': 'play_first',
+      'skipped': false,
+      'step': 0,
+    }));
+    unawaited(
+      ref.read(settingsProvider.notifier).change((s) => s.copyWith(onboardingDone: true)).catchError((Object e) {
+        debugPrint('splash: could not save onboardingDone: $e');
+      }),
+    );
+    context.go(AppRoutes.game(starter));
+  }
+
+  /// The catalogue's starter board, or null (home) if it can't be read.
+  Future<String?> _starterLayoutId() async {
+    try {
+      final catalogue = await ref.read(catalogueProvider.future).timeout(SplashScreen.settingsTimeout);
+      return catalogue.starterLayout?.id;
+    } catch (e) {
+      debugPrint('splash: starter board unavailable: $e');
+      return null;
+    }
   }
 
   static bool get _a12 => defaultTargetPlatform == TargetPlatform.android;

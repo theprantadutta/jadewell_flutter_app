@@ -39,6 +39,7 @@ Future<void> pumpScreen(
         AppRoutes.store,
         AppRoutes.dailyPlay,
         AppRoutes.settings,
+        AppRoutes.howToPlay,
         for (final d in LegalDoc.values) AppRoutes.legal(d),
       ])
         GoRoute(path: p, builder: (_, _) => Scaffold(body: Center(child: Text('route:$p')))),

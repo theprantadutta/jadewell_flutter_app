@@ -71,8 +71,8 @@ class _DemoDriverState extends State<DemoDriver> {
 
   Future<void> _run() async {
     debugPrint('JWPERF demo start');
-    // Splash → home (or onboarding on a fresh install: skip it).
-    await _waitFor(() => _path == AppRoutes.home || _path == AppRoutes.onboarding, timeoutMs: 20000);
+    // Splash → home (or the starter board on a fresh install: skip it).
+    await _waitFor(() => _path == AppRoutes.home || _path.startsWith('/game/'), timeoutMs: 20000);
     if (_stopped) return;
     if (_path != AppRoutes.home) _router.go(AppRoutes.home);
     await _wait(1500);

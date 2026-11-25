@@ -213,6 +213,15 @@ class SettingsScreen extends ConsumerWidget {
           JwListGroup(
             children: [
               JwListRow(
+                key: const ValueKey('settings-how-to-play'),
+                icon: JwIcons.info,
+                badgeFill: JwFill.sky,
+                title: l.settingsHowToPlay,
+                chevron: true,
+                onHaptic: haptic,
+                onTap: () => context.push(AppRoutes.howToPlay),
+              ),
+              JwListRow(
                 icon: JwIcons.mail,
                 badgeFill: JwFill.coral,
                 title: l.settingsContactUs,

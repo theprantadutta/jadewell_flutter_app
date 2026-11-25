@@ -53,7 +53,7 @@ lib/
     theme/               jw_tokens.dart (generated, untouched), JwTheme ThemeExtension, ClayDecoration + picture cache
     widgets/             clay buttons, chips, pills, toggles, segmented, list groups, sheets, dialogs, toasts, tool knobs, silhouettes
     board/               BoardView, TileWidget, TileFacePainter (from tile-faces.json), animations driven by GameEvents
-    screens/             splash, onboarding×3, home/layout select, game, cleared, daily, leaderboard, stats, settings, store, friends, account
+    screens/             splash, how to play×3 (the old onboarding), home/layout select, game, cleared, daily, leaderboard, stats, settings, store, friends, account
     motion/              JwMotion helpers, reduce-motion resolver
     l10n/                ARB files (app_en.arb) → generated AppLocalizations
   platform/
@@ -164,7 +164,7 @@ Drift's generated `*.g.dart` files are gitignored: after a fresh clone (or any t
 - **Motion**: every entry of `MOTION_SPEC.md` with `JwMotion` durations/curves, reduce-motion from the setting **or** `MediaQuery.disableAnimations`; shared-element layout → board, cleared beat sheet, combo chips, counter rolls. Input never blocked except the first 60% of board entry.
 - **Stars in the UI** (new vs the design, in the same clay language): three star beads on the cleared screen (drop in with the medal beat), small star row on layout cards next to Best, star column on leaderboard rows.
 - **Friends**: a Friends screen (your code, share invite link, add by code, pending requests) reached from the leaderboard's Friends tab and Settings → Account.
-- **Splash**: `flutter_native_splash` (static final frame of option A, both themes) → Flutter continuation (beads pop + wordmark fade, ≈600 ms) → onboarding or home.
+- **Splash**: `flutter_native_splash` (static final frame of option A, both themes) → Flutter continuation (beads pop + wordmark fade, ≈600 ms) → home, or the starter board on first run (play first; no intro pages).
 - **Back navigation**: go_router with Android predictive back enabled and iOS edge-swipe (Cupertino page transitions on iOS).
 - **Responsive**: portrait-only; `responsive.dart` (snake-classic pattern) scales layout on tablets; text scale clamped to 1.3× at the root.
 

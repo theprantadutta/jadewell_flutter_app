@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jadewell_flutter_app/data/repositories/memory_repositories.dart';
 import 'package:jadewell_flutter_app/platform/analytics/analytics_service.dart';
 import 'package:jadewell_flutter_app/state/data_providers.dart';
@@ -18,15 +19,20 @@ void main() {
   setUpAll(loadJwFonts);
   final faces = TileFaceSpec.parse(File(TileFaceSpec.assetPath).readAsStringSync());
 
+  /// Settings → How to play: the screen is pushed over settings.
   Future<(MemorySettingsRepository, RecordingAnalytics)> pump(WidgetTester tester) async {
     final settings = MemorySettingsRepository();
     final analytics = RecordingAnalytics();
     await pumpScreen(
       tester,
-      initial: '/onboarding',
+      initial: '/settings',
       screens: {
-        '/onboarding': (_) => const OnboardingScreen(),
-        '/home': (_) => const Scaffold(body: Text('home')),
+        '/settings': (context) => Scaffold(
+              body: Center(
+                child: TextButton(onPressed: () => context.push('/how-to-play'), child: const Text('settings')),
+              ),
+            ),
+        '/how-to-play': (_) => const OnboardingScreen(),
       },
       overrides: [
         settingsRepositoryProvider.overrideWithValue(settings),
@@ -34,11 +40,12 @@ void main() {
         onboardingFacesProvider.overrideWith((ref) async => faces),
       ],
     );
+    await tester.tap(find.text('settings'));
     await tester.pumpAndSettle();
     return (settings, analytics);
   }
 
-  testWidgets('Next x2 then Start sets onboardingDone and goes home', (tester) async {
+  testWidgets('How to play: Next x2 then Got it goes back, touching no first-run state', (tester) async {
     final (settings, analytics) = await pump(tester);
     expect(find.text('1 of 3'), findsOneWidget);
     expect(find.text('Match identical pairs'), findsOneWidget);
@@ -52,25 +59,24 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('onboarding-next')));
     await tester.pumpAndSettle();
     expect(find.text('3 of 3'), findsOneWidget);
-    expect(find.text('Start playing'), findsOneWidget);
+    expect(find.text('Got it'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('onboarding-next')));
     await tester.pumpAndSettle();
 
-    expect((await settings.read()).onboardingDone, isTrue);
-    expect(find.text('home'), findsOneWidget);
-    expect(analytics.events.where((e) => e.$1 == AnalyticsEvents.onboardingStep).map((e) => e.$2['step']), [1, 2, 3]);
-    expect(analytics.names, contains(AnalyticsEvents.onboardingComplete));
+    expect(find.text('settings'), findsOneWidget);
+    expect((await settings.read()).onboardingDone, isFalse);
+    final open = analytics.events.single;
+    expect(open.$1, AnalyticsEvents.howToPlayOpen);
+    expect(open.$2, {'source': 'settings'});
   });
 
-  testWidgets('Skip finishes immediately', (tester) async {
-    final (settings, analytics) = await pump(tester);
+  testWidgets('Close goes back immediately', (tester) async {
+    final (_, analytics) = await pump(tester);
     await tester.tap(find.byKey(const ValueKey('onboarding-skip')));
     await tester.pumpAndSettle();
-    expect((await settings.read()).onboardingDone, isTrue);
-    expect(find.text('home'), findsOneWidget);
-    final done = analytics.events.singleWhere((e) => e.$1 == AnalyticsEvents.onboardingComplete);
-    expect(done.$2['skipped'], isTrue);
+    expect(find.text('settings'), findsOneWidget);
+    expect(analytics.names, isNot(contains(AnalyticsEvents.onboardingComplete)));
   });
 
   test('solvable board marks edge tiles free and covered tiles blocked', () {
